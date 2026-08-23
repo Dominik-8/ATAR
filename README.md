@@ -68,6 +68,17 @@ atar card --name bob --out card.json
 atar dashboard --seed "did:agent:..." --scope coding --out dash.html
 ```
 
+**Real vs demo network.** `agents.toml` holds only *real running agents*
+(`seed_agent` seed + `daily_brief` cron). The larger graph in `demo.toml` is an
+*illustration* — those agents are not real processes and are never in the
+default bootstrap. ATAR's value is a trust layer over real agents; demo nodes
+exist only to show the shape of a bigger graph.
+
+```bash
+atar bootstrap --config agents.toml   # real agents only
+atar bootstrap --config demo.toml     # demo illustration, not real
+```
+
 ## How it works
 
 1. **Identity** — Ed25519 keypair; `did:agent:` derived from the public key.

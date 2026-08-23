@@ -1,0 +1,58 @@
+# ATAR demo network — ILLUSTRATION ONLY.
+# These agents are NOT real running processes. They exist to show what a
+# multi-agent trust graph looks like once you bring real agents online.
+# Run:  atar bootstrap --config demo.toml
+#
+# For the REAL network use agents.toml (seed_agent + daily_brief only).
+
+[[agents]]
+name = "seed_agent"
+seed = true
+
+[[agents]]
+name = "daily_brief"
+
+[[agents]]
+name = "research"      # (demo) deep-research / web agent
+
+[[agents]]
+name = "market"        # (demo) market & competitor scan agent
+
+[[agents]]
+name = "founder_intel" # (demo) founder/strategy signal agent
+
+[[vouches]]
+issuer = "seed_agent"
+subject = "daily_brief"
+score = 0.95
+scope = "intelligence"
+
+[[vouches]]
+issuer = "seed_agent"
+subject = "research"
+score = 0.90
+scope = "intelligence"
+
+[[vouches]]
+issuer = "seed_agent"
+subject = "market"
+score = 0.80
+scope = "intelligence"
+
+[[vouches]]
+issuer = "research"
+subject = "founder_intel"
+score = 0.70
+scope = "intelligence"
+
+[[vouches]]
+issuer = "market"
+subject = "founder_intel"
+score = 0.60
+scope = "intelligence"
+
+[[vouches]]
+issuer = "daily_brief"
+subject = "research"
+score = 0.75
+scope = "intelligence"
