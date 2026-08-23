@@ -241,6 +241,51 @@ def list():
 
 
 @cli.command()
+@click.option("--config", required=True, help="TOML file declaring agents + vouches")
+def bootstrap(config: str):
+    """Build/refresh your agent network from a config file (idempotent).
+
+    The config declares agents (with an optional seed) and vouches between them.
+    Re-running is safe: existing identities are kept (DIDs stay stable) and
+    vouches are deduplicated. After bootstrap, `atar serve` shows your network.
+
+    Config shape (TOML):
+        [[agents]]
+        name = "seed_agent"
+        seed = true
+        [[agents]]
+        name = "research"
+        [[vouches]]
+        issuer = "seed_agent"
+        subject = "research"
+        score = 0.9
+        scope = "intelligence"
+    """
+    import tomllib
+    from .agent_bootstrap import AgentRegistry, seed_trust_root
+    with open(config, "rb") as f:
+        cfg = tomllib.load(f)
+    reg = AgentRegistry()
+    seed_name = None
+    for a in cfg.get("agents", []):
+        reg.register(a["name"])
+        if a.get("seed"):
+            seed_name = a["name"]
+    if seed_name:
+        seed_trust_root(seed_name)
+        reg = AgentRegistry()  # reload so seed_did is set
+    added = 0
+    for v in cfg.get("vouches", []):
+        if reg.vouch(v["issuer"], v["subject"],
+                     score=float(v["score"]), scope=v["scope"]):
+            added += 1
+    click.echo(f"bootstrap done: {len(reg._agents) - 1} agents, "
+               f"{added} new vouch(es) added")
+    if seed_name:
+        click.echo(f"seed of trust: {reg.did_of(seed_name)}")
+
+
+@cli.command()
 @click.option("--port", default=8765, help="port to serve on (localhost only)")
 def serve(port: int):
     """Serve the live Know-Your-Agent dashboard at http://localhost:PORT.

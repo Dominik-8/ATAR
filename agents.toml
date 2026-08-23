@@ -1,0 +1,56 @@
+# ATAR agent network — reproducible bootstrap config.
+# Run:  atar bootstrap --config agents.toml
+# Then: atar serve   (open http://localhost:8765)
+
+[[agents]]
+name = "seed_agent"
+seed = true            # root of trust
+
+[[agents]]
+name = "daily_brief"   # the ATAR nightly brief cron job
+
+[[agents]]
+name = "research"      # deep-research / web agent
+
+[[agents]]
+name = "market"        # market & competitor scan agent
+
+[[agents]]
+name = "founder_intel" # founder/strategy signal agent
+
+# --- trust edges (who vouches for whom, in scope "intelligence") ---
+[[vouches]]
+issuer = "seed_agent"
+subject = "daily_brief"
+score = 0.95
+scope = "intelligence"
+
+[[vouches]]
+issuer = "seed_agent"
+subject = "research"
+score = 0.90
+scope = "intelligence"
+
+[[vouches]]
+issuer = "seed_agent"
+subject = "market"
+score = 0.80
+scope = "intelligence"
+
+[[vouches]]
+issuer = "research"
+subject = "founder_intel"
+score = 0.70
+scope = "intelligence"
+
+[[vouches]]
+issuer = "market"
+subject = "founder_intel"
+score = 0.60
+scope = "intelligence"
+
+[[vouches]]
+issuer = "daily_brief"
+subject = "research"
+score = 0.75
+scope = "intelligence"
