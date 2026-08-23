@@ -102,7 +102,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
             else:
                 body = build_dashboard_response_multi()
         except Exception as exc:  # pragma: no cover - defensive
-            body = f"<h1>ATAR dashboard error</h1><pre>{exc}</pre>"
+            import html as _html
+            body = f"<h1>ATAR dashboard error</h1><pre>{_html.escape(str(exc))}</pre>"
         payload = body.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")

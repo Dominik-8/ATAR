@@ -124,10 +124,11 @@ def _revocations_path_for(net: dict) -> str:
     return os.path.join(home, "revocations.json")
 
 
-def render_dashboard_html(net: dict, *, scope: str) -> str:
-    """Render the Know-Your-Agent dashboard as a standalone HTML page."""
+def render_cards(net: dict, *, scope: str) -> str:
+    """Render only the agent cards (no HTML page wrapper). Shared by the
+    single-scope and multi-scope renderers."""
+    import html as _html
     data = dashboard_data(net, scope=scope)
-
     cards = []
     for a in data["agents"]:
         cls = "card seed" if a["is_seed"] else "card"
@@ -138,24 +139,24 @@ def render_dashboard_html(net: dict, *, scope: str) -> str:
             badge = "REVOKED"
         path_txt = ""
         if a["paths"]:
-            parts = [f"via {p['via']} ({p['score']:.2f})" for p in a["paths"]]
+            parts = [f"via {_html.escape(str(p['via']))} ({p['score']:.2f})" for p in a["paths"]]
             path_txt = f'<div class="paths">trust path: {", ".join(parts)}</div>'
         rev_txt = ""
         if a["revoked"]:
             rev_txt = (f'<div class="paths" style="color:#ff6b6b;">'
-                       f'revoked by {a["revoked_by"]}</div>')
+                       f'revoked by {_html.escape(str(a["revoked_by"]))}</div>')
         trust_label = "REVOKED" if a["revoked"] else f"trust={a['trust']:.3f}"
         cards.append(f'''
   <div class="{cls}">
     <div class="card-head">
-      <h2>{a["name"]}</h2>
+      <h2>{_html.escape(str(a["name"]))}</h2>
       <span class="badge {"revoked" if a["revoked"] else ""}">{badge}</span>
     </div>
     <div class="agent">
       <div class="a-top">
         <div>
-          <div class="a-name">{a["name"]}</div>
-          <div class="a-did">{a["did"]}</div>
+          <div class="a-name">{_html.escape(str(a["name"]))}</div>
+          <div class="a-did">{_html.escape(str(a["did"]))}</div>
         </div>
         <span class="score">{trust_label}</span>
       </div>
@@ -163,7 +164,13 @@ def render_dashboard_html(net: dict, *, scope: str) -> str:
       {rev_txt}
     </div>
   </div>''')
+    return "".join(cards)
 
+
+def render_dashboard_html(net: dict, *, scope: str) -> str:
+    """Render the Know-Your-Agent dashboard as a standalone HTML page."""
+    data = dashboard_data(net, scope=scope)
+    cards = render_cards(net, scope=scope)
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -179,7 +186,7 @@ def render_dashboard_html(net: dict, *, scope: str) -> str:
       <h1>Know Your Agent</h1>
       <div class="sub">trust network &middot; scope: {data['scope']}</div>
     </div>
-    {''.join(cards) if cards else '<div class="empty">No agents in this scope yet.</div>'}
+    {cards if cards else '<div class="empty">No agents in this scope yet.</div>'}
   </div>
 </body>
 </html>"""
@@ -191,16 +198,11 @@ def render_multi_scope_html(net: dict, *, scopes: list[str]) -> str:
     sections = []
     for scope in scopes:
         data = dashboard_data(net, scope=scope)
-        # reuse the single-scope renderer but swap the title/sub for section mode
-        body = render_dashboard_html(net, scope=scope)
-        # strip the outer html wrapper, keep inner cards
-        inner = body.split("<body>")[-1].split("</body>")[0]
-        # replace the hero so we don't repeat it
-        inner = inner.split("</div>\n  </div>")[-1] if "</div>\n  </div>" in inner else inner
+        cards = render_cards(net, scope=scope)
         sections.append(f'<section class="scope-sec">\n'
                         f'<div class="scope-title">scope: {_html.escape(scope)}'
                         f' &middot; {len(data["agents"])} agents</div>\n'
-                        f'{inner}\n</section>')
+                        f'{cards}\n</section>')
     tabs = " &middot; ".join(f'<span class="tab">{_html.escape(s)}</span>' for s in scopes)
     return f"""<!doctype html>
 <html lang="en">

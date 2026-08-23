@@ -80,5 +80,6 @@ def verify_vouch(vouch: dict) -> bool:
         pub = Ed25519PublicKey.from_public_bytes(raw)
         pub.verify(bytes.fromhex(sig_hex), _canonical(payload))
         return True
-    except (InvalidSignature, KeyError, ValueError, Exception):
+    except (InvalidSignature, KeyError, ValueError):
+        # InvalidSignature: bad signature. KeyError/ValueError: malformed vouch.
         return False

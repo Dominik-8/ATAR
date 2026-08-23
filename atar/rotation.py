@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from .identity import Identity, did_from_public
 from .vouch import create_vouch, verify_vouch, _canonical
 from .transparency import canonical_vouch_id
+from cryptography.exceptions import InvalidSignature
 
 
 @dataclass
@@ -88,7 +89,7 @@ def verify_rotation(stmt: RotationStatement) -> bool:
         }
         pub.verify(bytes.fromhex(stmt.signature), _canonical(payload))
         return True
-    except Exception:
+    except (InvalidSignature, ValueError, KeyError):
         return False
 
 

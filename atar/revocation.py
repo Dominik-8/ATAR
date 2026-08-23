@@ -27,6 +27,7 @@ import os
 import time
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.exceptions import InvalidSignature
 from .identity import Identity, did_from_public
 from .transparency import canonical_vouch_id
 from .vouch import verify_vouch
@@ -69,7 +70,8 @@ class RevocationList:
             msg = f"{vid}|{revoked_by}|{ts}".encode("utf-8")
             try:
                 verify_key.verify(b64decode(signature), msg)
-            except Exception:
+            except (InvalidSignature, ValueError, KeyError):
+                # InvalidSignature: bad signature. ValueError/KeyError: malformed.
                 return False
         self.entries[vid] = {
             "vid": vid,
