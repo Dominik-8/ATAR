@@ -240,10 +240,24 @@ def _store_path() -> str:
 @cli.command()
 @click.argument("path")
 def add(path: str):
-    """Add a vouch blob file to the persistent local store (dedup + verify)."""
+    """Add a vouch blob file to the persistent local store (dedup + verify).
+
+    Rejects invalid, duplicate, OR revoked vouches — a revoked vouch (even with a
+    still-valid signature) is never admitted to the store. This is defense-in-depth:
+    revocation is enforced at the insertion point, not just at verify time.
+    """
     from .store import VouchStore
     with open(path, "r", encoding="utf-8") as f:
         blob = json.load(f)
+    # revocation check BEFORE admitting to the store
+    try:
+        from .revocation import RevocationList, revoke_payload_id
+        rl = RevocationList.load(_revocations_path())
+        if rl.is_revoked(revoke_payload_id(blob)):
+            click.echo("rejected (vouch is REVOKED)")
+            sys.exit(1)
+    except Exception:
+        pass
     s = VouchStore(_store_path())
     if s.add(blob):
         click.echo(f"added (store now has {s.count()} vouch(es))")
@@ -301,7 +315,14 @@ def auto_sync():
             continue
         peer_store = VouchStore(os.path.join(p, "vouches.json"))
         peer_rl = RevocationList.load(os.path.join(p, "revocations.json"))
-        added_self = sum(1 for v in peer_store.all() if self_store.add(v))
+        # pull vouches, but skip any that are revoked (defense-in-depth)
+        added_self = 0
+        for v in peer_store.all():
+            from .revocation import revoke_payload_id as _rid
+            if self_rl.is_revoked(_rid(v)):
+                continue
+            if self_store.add(v):
+                added_self += 1
         added_peer = sum(1 for v in self_store.all() if peer_store.add(v))
         added_rev_self = sum(1 for e in peer_rl.all()
                              if self_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"]))
