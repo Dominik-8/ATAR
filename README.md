@@ -1,5 +1,6 @@
 # ATAR — Agent Trust & Attribution Root
 
+> [![ATAR-design](https://img.shields.io/badge/design-ATAR%20dark%20%7C%20%2339ff14-neon)](https://github.com/Dominik-8/ATAR)
 > The free, decentralized **trust layer** for AI agents — the `SSL/CA` of the agent era.
 > No servers. No blockchain. No cost.
 
@@ -10,6 +11,24 @@ anyone can verify who an agent is and who vouches for it — offline, for $0.
 
 This is the still-unclaimed **top layer** of the AI era: transport (MCP/A2A) is
 solved, but *trust & attribution* is not. ATAR is the open protocol for it.
+
+## Visual identity (ATAR-style)
+
+ATAR shares ATAR's dark, ATAR-corporate look so the two projects read as one
+family:
+
+| Token | Value | Use |
+|---|---|---|
+| `--bg` | `#0a0a0b` | near-black background |
+| `--accent` | `#39ff14` | gift-green / neon (trust, valid, verified) |
+| `--accent-dim` | `#1f7a12` | dimmed green borders/badges |
+| `--accent-blue` | `#2f81f7` | GitHub-blue, for `did:agent:` identifiers |
+| `--text` | `#e8e8ea` | primary text |
+| `--muted` | `#8a8a90` | secondary text |
+| Font | Segoe UI / -apple-system | system UI stack |
+
+The canonical tokens live in [`atar/theme.css`](atar/theme.css) — reuse them for
+any ATAR UI, web page, or ATAR digest so the design stays consistent.
 
 ## Quickstart
 
