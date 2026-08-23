@@ -222,5 +222,39 @@ def dashboard(seed: str, scope: str, out: str, home: str | None):
     click.echo(f"dashboard written to {out} ({loaded} vouches, scope={scope})")
 
 
+def _store_path() -> str:
+    return os.path.join(_home(), "vouches.json")
+
+
+@cli.command()
+@click.argument("path")
+def add(path: str):
+    """Add a vouch blob file to the persistent local store (dedup + verify)."""
+    from .store import VouchStore
+    with open(path, "r", encoding="utf-8") as f:
+        blob = json.load(f)
+    s = VouchStore(_store_path())
+    if s.add(blob):
+        click.echo(f"added (store now has {s.count()} vouch(es))")
+    else:
+        click.echo("rejected (invalid or duplicate vouch)")
+        sys.exit(1)
+
+
+@cli.command()
+def list():
+    """List all vouches in the persistent local store."""
+    from .store import VouchStore
+    s = VouchStore(_store_path())
+    if not s.all():
+        click.echo("store is empty")
+        return
+    click.echo(f"{s.count()} vouches:")
+    for v in s.all():
+        p = v["payload"]
+        click.echo(f"  {p['issuer']} -> {p['subject']}  "
+                    f"score={p['score']} scope={p['scope']}")
+
+
 if __name__ == "__main__":
     cli()
