@@ -241,6 +241,44 @@ def list():
 
 
 @cli.command()
+def auto_sync():
+    """Gossip with all known peers from atar_peers.json (for cron/agent hooks).
+
+    Reads $ATAR_HOME/atar_peers.json ({"peers": ["/path/to/peer/home", ...]}) and
+    runs `sync` against each. Intended to be called automatically after an agent
+    produces output (e.g. a ATAR brief), so trust propagates hands-free. Missing
+    peer dirs are skipped; an empty/missing peer list is a no-op, not an error.
+    """
+    from .store import VouchStore
+    peers_file = os.path.join(_home(), "atar_peers.json")
+    if not os.path.exists(peers_file):
+        click.echo("no peers configured (atar_peers.json absent) — nothing to sync")
+        return
+    try:
+        peers = json.load(open(peers_file)).get("peers", [])
+    except (json.JSONDecodeError, KeyError):
+        click.echo("atar_peers.json malformed — skipped")
+        return
+    if not peers:
+        click.echo("no peers configured — nothing to sync")
+        return
+    self_store = VouchStore(_store_path())
+    before = self_store.count()
+    total_new = 0
+    for p in peers:
+        if not os.path.isdir(p):
+            click.echo(f"  (peer {p}: dir missing, skipped)")
+            continue
+        peer_store = VouchStore(os.path.join(p, "vouches.json"))
+        added_self = sum(1 for v in peer_store.all() if self_store.add(v))
+        added_peer = sum(1 for v in self_store.all() if peer_store.add(v))
+        total_new += added_self
+        click.echo(f"  synced {p}: +{added_self} to us, +{added_peer} to peer")
+    after = self_store.count()
+    click.echo(f"auto-sync done: {before} -> {after} vouches ({total_new} new)")
+
+
+@cli.command()
 @click.option("--with", "peer", required=True, multiple=True,
               help="peer ATAR_HOME directory to exchange vouches with (repeatable)")
 def sync(peer):
