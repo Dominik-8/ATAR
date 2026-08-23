@@ -4,19 +4,22 @@
 
 [[agents]]
 name = "seed_agent"
-seed = true            # root of trust
+seed = true            # root of trust — this is your real ATAR agent
 
 [[agents]]
-name = "daily_brief"   # the ATAR nightly brief cron job
+name = "daily_brief"   # REAL: the ATAR nightly brief cron job
+
+# --- The agents below are SEED/DEMO agents (not yet real running processes) ---
+# Replace them with your actual agents as you bring them online. They illustrate
+# the multi-agent trust graph ATAR supports.
+[[agents]]
+name = "research"      # (demo) deep-research / web agent
 
 [[agents]]
-name = "research"      # deep-research / web agent
+name = "market"        # (demo) market & competitor scan agent
 
 [[agents]]
-name = "market"        # market & competitor scan agent
-
-[[agents]]
-name = "founder_intel" # founder/strategy signal agent
+name = "founder_intel" # (demo) founder/strategy signal agent
 
 # --- trust edges (who vouches for whom, in scope "intelligence") ---
 [[vouches]]
