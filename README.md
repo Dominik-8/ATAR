@@ -106,6 +106,8 @@ See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 | `atar bootstrap --config agents.toml` | reproducible agent network |
 | `atar serve [--port P]` | live multi-scope dashboard (http://localhost:P) |
 | `atar audit [--max-age N]` | health-check: counts valid/revoked/expired/invalid per scope |
+| `atar export [--include-keys] FILE` | bundle trust graph (or full identity) to `.atpkg` |
+| `atar import FILE` | restore a network bundle into the local store |
 
 ## Visual identity (ATAR-style)
 
@@ -147,6 +149,7 @@ any ATAR UI, web page, or digest so the design stays consistent.
 | 24 | Freshness / TTL (`--max-age`) | ✅ |
 | 27 / 27b | Key rotation + `reissue --commit` | ✅ |
 | 29 | `atar audit` CLI (trust health-check) | ✅ |
+| 30 | `atar export` / `atar import` (portable `.atpkg` bundle) | ✅ |
 
 All phases implemented and tested (78 tests, CI green). See
 [`SPEC.md`](SPEC.md) for the authoritative protocol specification.

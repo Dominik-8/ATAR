@@ -574,6 +574,87 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
 
 
 @cli.command()
+@click.option("--out", default="atar-network.atpkg", help="output bundle file")
+@click.option("--include-keys", is_flag=True,
+              help="ALSO bundle private keys (for full migration). "
+                   "NEVER share the result — it contains secrets.")
+def export(out: str, include_keys: bool):
+    """Export your trust network as a portable bundle (.atpkg).
+
+    By default this contains only the *trust graph* — vouches + revocations +
+    registry (who vouched for whom). Your private keys stay local. Use
+    --include-keys only for a full migration to another machine, and treat the
+    resulting file as a secret.
+    """
+    from .store import VouchStore
+    from .revocation import RevocationList
+    from .agent_bootstrap import AgentRegistry
+    store = VouchStore(_store_path())
+    rl = RevocationList.load(_revocations_path())
+    bundle = {
+        "format": "atar-network/1.0",
+        "vouches": store.all(),
+        "revocations": rl.all(),
+    }
+    if include_keys:
+        try:
+            bundle["keys"] = _load_keys()
+        except Exception:
+            pass
+    else:
+        # still record agent names so imports rebuild the registry
+        try:
+            reg = AgentRegistry()
+            bundle["agents"] = {n: d["did"] for n, d in reg._agents.items()
+                                 if n != "_seed"}
+        except Exception:
+            bundle["agents"] = {}
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(bundle, f, indent=2)
+    click.echo(f"exported {len(bundle['vouches'])} vouch(es), "
+               f"{len(bundle['revocations'])} revocation(s) -> {out}"
+               + (" (WITH PRIVATE KEYS — keep secret)" if include_keys else ""))
+
+
+@cli.command()
+@click.argument("bundle")
+@click.option("--force", is_flag=True, help="overwrite existing store entries")
+def import_cmd(bundle: str, force: bool):
+    """Import a trust network bundle (.atpkg) exported by `atar export`.
+
+    Restores vouches + revocations into your local store. Private keys are
+    imported only if the bundle contains them (--include-keys export).
+    """
+    from .store import VouchStore
+    from .revocation import RevocationList, revoke_payload_id
+    with open(bundle, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    store = VouchStore(_store_path())
+    added = 0
+    for v in data.get("vouches", []):
+        if force or store.add(v):
+            added += 1
+    rl = RevocationList.load(_revocations_path())
+    revoked = 0
+    for e in data.get("revocations", []):
+        if not rl.is_revoked(e["vid"]):
+            rl.entries[e["vid"]] = e
+            revoked += 1
+    rl.save(_revocations_path())
+    # restore keys if present
+    keys_restored = 0
+    if "keys" in data:
+        keys = _load_keys()
+        for name, k in data["keys"].items():
+            if name not in keys or force:
+                keys[name] = k
+                keys_restored += 1
+        _save_keys(keys)
+    click.echo(f"imported {added} vouch(es), {revoked} revocation(s)"
+               + (f", {keys_restored} key(s)" if keys_restored else ""))
+
+
+@cli.command()
 @click.option("--max-age", "max_age", default=None, type=int,
               help="treat vouches older than N seconds as EXPIRED (default: off)")
 def audit(max_age):

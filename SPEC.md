@@ -287,6 +287,8 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar bootstrap --config agents.toml` | reproducible network |
 | `atar serve [--port P]` | live multi-scope dashboard |
 | `atar audit [--max-age N]` | health-check: counts valid/revoked/expired/invalid per scope |
+| `atar export [--include-keys] FILE` | bundle trust graph (or full identity) to `.atpkg` |
+| `atar import FILE` | restore a network bundle into the local store |
 
 ---
 
