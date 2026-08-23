@@ -240,5 +240,17 @@ def list():
                     f"score={p['score']} scope={p['scope']}")
 
 
+@cli.command()
+@click.option("--port", default=8765, help="port to serve on (localhost only)")
+def serve(port: int):
+    """Serve the live Know-Your-Agent dashboard at http://localhost:PORT.
+
+    Local only (binds 127.0.0.1), no external exposure, no cost. Re-renders
+    from the persistent store on every request.
+    """
+    from .web import run_server
+    run_server(port=port)
+
+
 if __name__ == "__main__":
     cli()
