@@ -392,6 +392,35 @@ def bootstrap(config: str):
 
 
 @cli.command()
+def scopes():
+    """List all trust scopes in your network with their agent counts.
+
+    A scope is a capability domain (e.g. coding, intelligence, finance). An agent
+    may be trusted in one scope but unknown in another — this shows the shape of
+    your trust graph at a glance, without rendering the full dashboard.
+    """
+    from .store import VouchStore
+    from .dashboard import dashboard_data
+    from .agent_bootstrap import AgentRegistry
+    store = VouchStore(_store_path())
+    if not store.all():
+        click.echo("no vouches yet — network is empty")
+        return
+    # collect all scopes present in the vouches
+    scope_set = sorted({v["payload"].get("scope") for v in store.all()
+                        if v["payload"].get("scope")})
+    reg = AgentRegistry()
+    click.echo(f"scopes in network: {len(scope_set)}")
+    for scope in scope_set:
+        net = reg.build_network(scope=scope)
+        data = dashboard_data(net, scope=scope)
+        # count reachable agents (exclude the seed itself from the "agents" count? keep all)
+        n = len(data["agents"])
+        click.echo(f"  • {scope:14s} {n} agent(s)")
+    click.echo("(use `atar dashboard --scope <name>` for the full view)")
+
+
+@cli.command()
 @click.option("--port", default=8765, help="port to serve on (localhost only)")
 def serve(port: int):
     """Serve the live Know-Your-Agent dashboard at http://localhost:PORT.
