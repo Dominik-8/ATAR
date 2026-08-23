@@ -123,7 +123,8 @@ def verify(path: str, max_age):
         if rl.is_revoked(revoke_payload_id(blob)):
             click.echo("REVOKED")
             sys.exit(2)
-    except Exception:
+    except FileNotFoundError:
+        # no revocation list yet — nothing to check
         pass
     # freshness (Phase 24): if a max-age is set, reject stale vouches
     if max_age is not None and not is_fresh(blob, ttl=max_age):
@@ -174,7 +175,8 @@ def verify_card(path: str):
         rl = RevocationList.load(_revocations_path())
         revoked = [v for v in report["valid_vouches"]
                    if rl.is_revoked(revoke_payload_id(v))]
-    except Exception:
+    except FileNotFoundError:
+        # no revocation list yet — nothing to check
         revoked = []
     if revoked:
         click.echo(f"REVOKED vouches  : {len(revoked)}")
