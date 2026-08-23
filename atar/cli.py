@@ -250,6 +250,7 @@ def auto_sync():
     peer dirs are skipped; an empty/missing peer list is a no-op, not an error.
     """
     from .store import VouchStore
+    from .revocation import RevocationList
     peers_file = os.path.join(_home(), "atar_peers.json")
     if not os.path.exists(peers_file):
         click.echo("no peers configured (atar_peers.json absent) — nothing to sync")
@@ -263,19 +264,31 @@ def auto_sync():
         click.echo("no peers configured — nothing to sync")
         return
     self_store = VouchStore(_store_path())
+    self_rl = RevocationList.load(_revocations_path())
     before = self_store.count()
     total_new = 0
+    rev_new = 0
     for p in peers:
         if not os.path.isdir(p):
             click.echo(f"  (peer {p}: dir missing, skipped)")
             continue
         peer_store = VouchStore(os.path.join(p, "vouches.json"))
+        peer_rl = RevocationList.load(os.path.join(p, "revocations.json"))
         added_self = sum(1 for v in peer_store.all() if self_store.add(v))
         added_peer = sum(1 for v in self_store.all() if peer_store.add(v))
+        added_rev_self = sum(1 for e in peer_rl.all()
+                             if self_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"]))
+        added_rev_peer = sum(1 for e in self_rl.all()
+                             if peer_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"]))
+        peer_rl.save(os.path.join(p, "revocations.json"))
+        self_rl.save(_revocations_path())
         total_new += added_self
-        click.echo(f"  synced {p}: +{added_self} to us, +{added_peer} to peer")
+        rev_new += added_rev_self
+        click.echo(f"  synced {p}: +{added_self} vouches, +{added_rev_self} revocations "
+                   f"(to peer: +{added_peer} vouches, +{added_rev_peer} revocations)")
     after = self_store.count()
-    click.echo(f"auto-sync done: {before} -> {after} vouches ({total_new} new)")
+    click.echo(f"auto-sync done: {before} -> {after} vouches ({total_new} new), "
+               f"{rev_new} new revocation(s)")
 
 
 @cli.command()
@@ -290,10 +303,13 @@ def sync(peer):
     peer-to-peer without a central operator. Repeatable and idempotent.
     """
     from .store import VouchStore
+    from .revocation import RevocationList
     self_path = _store_path()
     self_store = VouchStore(self_path)
+    self_rl = RevocationList.load(_revocations_path())
     before = self_store.count()
     total_in = 0
+    rev_in = 0
     for p in peer:
         peer_path = os.path.join(p, "vouches.json")
         # VouchStore creates the file on first add, so a missing peer store is
@@ -305,14 +321,29 @@ def sync(peer):
             if self_store.add(v):
                 added_to_self += 1
         # push: vouches we have that peer lacks
-        added_to_peer = 0
+        added_peer = 0
         for v in self_store.all():
             if peer_store.add(v):
-                added_to_peer += 1
+                added_peer += 1
+        # --- revocation gossip (Phase 17): exchange revocation lists too ---
+        peer_rl = RevocationList.load(os.path.join(p, "revocations.json"))
+        added_rev_self = 0
+        for e in peer_rl.all():
+            if self_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"]):
+                added_rev_self += 1
+        added_rev_peer = 0
+        for e in self_rl.all():
+            if peer_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"]):
+                added_rev_peer += 1
+        peer_rl.save(os.path.join(p, "revocations.json"))
+        self_rl.save(_revocations_path())
+        rev_in += added_rev_self
         total_in += added_to_self
-        click.echo(f"  synced {p}: +{added_to_self} to us, +{added_to_peer} to peer")
+        click.echo(f"  synced {p}: +{added_to_self} vouches, +{added_rev_self} revocations "
+                   f"(to peer: +{added_peer} vouches, +{added_rev_peer} revocations)")
     after = self_store.count()
-    click.echo(f"sync done: {before} -> {after} vouches ({total_in} new)")
+    click.echo(f"sync done: {before} -> {after} vouches ({total_in} new), "
+               f"{rev_in} new revocation(s)")
 
 
 @cli.command()
