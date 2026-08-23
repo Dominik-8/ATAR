@@ -150,5 +150,42 @@ def verify_card(path: str):
         sys.exit(1)
 
 
+@cli.command()
+@click.option("--seed", required=True, help="trusted seed DID to compute trust from")
+@click.option("--scope", required=True, help="capability scope to evaluate")
+@click.option("--home", "home", default=None, help="override ATAR_HOME (vouch store)")
+def graph(seed: str, scope: str, home: str | None):
+    """Compute transitive trust from a seed DID over all locally stored vouches.
+
+    Loads every *.json vouch in $ATAR_HOME, builds a TrustGraph, and prints a
+    ranked report of every reachable agent and its trust score.
+    """
+    if home:
+        os.environ["ATAR_HOME"] = home
+    from .transparency import TrustGraph
+    g = TrustGraph()
+    loaded = 0
+    for fn in os.listdir(_home()):
+        if not fn.endswith(".json") or fn == "keys.json":
+            continue
+        try:
+            with open(os.path.join(_home(), fn), "r", encoding="utf-8") as f:
+                blob = json.load(f)
+            if g.add(blob):
+                loaded += 1
+        except (json.JSONDecodeError, KeyError):
+            continue
+    trust = g.compute_trust(seed_did=seed, scope=scope)
+    ranked = sorted(trust.items(), key=lambda kv: kv[1], reverse=True)
+    click.echo(f"seed  : {seed}")
+    click.echo(f"scope : {scope}")
+    click.echo(f"vouches loaded : {loaded}")
+    click.echo(f"reachable agents: {len(ranked)}")
+    click.echo("--- trust ranking ---")
+    for did, score in ranked:
+        marker = " (seed)" if did == seed else ""
+        click.echo(f"  {did}  trust={score:.3f}{marker}")
+
+
 if __name__ == "__main__":
     cli()
