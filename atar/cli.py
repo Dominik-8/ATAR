@@ -514,14 +514,20 @@ def rotate(name: str, out: str):
 @click.option("--name", required=True, help="identity name whose vouches to re-issue")
 @click.option("--scope", default=None, help="re-issue only this scope (default: all)")
 @click.option("--out", default="reissued.json", help="output file (JSON list)")
-def reissue(name: str, scope: str | None, out: str):
+@click.option("--commit", is_flag=True, help="write re-issued vouches to the store AND "
+              "revoke the old-key (pre-rotation) vouches — closes the rotation loop")
+def reissue(name: str, scope: str | None, out: str, commit: bool):
     """Re-sign this agent's out-going vouches under its CURRENT (post-rotation)
     key with fresh timestamps (Phase 24). Preserves score/scope/subject.
 
-    Use after `atar rotate` to carry trust forward under the new DID.
+    Use after `atar rotate` to carry trust forward under the new DID. With
+    --commit, the re-issued vouches are written to the store and the old-key
+    (pre-rotation) vouches are revoked — the rotation is then complete and the
+    old key can be considered fully retired.
     """
     from .rotation import reissue_vouch
     from .store import VouchStore
+    from .revocation import RevocationList, revoke_payload_id
     new_id = _identity_from_name(name)  # Ed25519PrivateKey (post-rotation)
     store = VouchStore(_store_path())
     my_did = did_from_public(new_id.public_key())
@@ -531,6 +537,7 @@ def reissue(name: str, scope: str | None, out: str):
     keys = _load_keys()
     old_did = keys.get(name, {}).get("rotated_from")
     reissued = []
+    old_vouches = []
     for v in store.all():
         issuer = v["payload"]["issuer"]
         # match either the old issuer (pre-rotation vouches) or already-new
@@ -540,9 +547,30 @@ def reissue(name: str, scope: str | None, out: str):
             continue
         r = reissue_vouch(new_id, new_id, v)  # re-sign under the new key
         reissued.append(r)
+        if issuer == old_did:
+            old_vouches.append(v)
     with open(os.path.join(_home(), out), "w", encoding="utf-8") as f:
         json.dump(reissued, f, indent=2)
     click.echo(f"re-issued {len(reissued)} vouch(es) under {my_did[:20]}... -> {os.path.join(_home(), out)}")
+    if not commit:
+        return
+    # commit: add re-issued vouches + revoke the old-key ones
+    added = sum(1 for r in reissued if store.add(r))
+    rl = RevocationList.load(_revocations_path())
+    revoked = 0
+    for v in old_vouches:
+        vid = revoke_payload_id(v)
+        if not rl.is_revoked(vid):
+            rl.entries[vid] = {
+                "vid": vid,
+                "revoked_by": old_did or my_did,
+                "ts": int(__import__("time").time()),
+                "signature": "",
+            }
+            revoked += 1
+    rl.save(_revocations_path())
+    click.echo(f"committed: +{added} re-issued vouch(es) to store, {revoked} old-key vouch(es) revoked")
+    click.echo("rotation complete — old key fully retired, trust carried under new DID")
 
 
 @cli.command()
