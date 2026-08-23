@@ -36,8 +36,12 @@ def _canonical(payload: dict) -> bytes:
 
 
 def create_vouch(issuer, subject_public_key, *, score: float, scope: str,
-                 claim: str | None = None) -> dict:
-    """Create a signed vouch from ``issuer`` (Identity) for ``subject_public_key``."""
+                 claim: str | None = None, ts: int | None = None) -> dict:
+    """Create a signed vouch from ``issuer`` (Identity) for ``subject_public_key``.
+
+    ``ts`` lets callers backdate the timestamp (used for tests and for
+    re-issuing a vouch with a fresh validity window during key rotation).
+    """
     payload = {
         "type": "vouch",
         "issuer": did_from_public(issuer.public_key),
@@ -45,7 +49,7 @@ def create_vouch(issuer, subject_public_key, *, score: float, scope: str,
         "score": float(score),
         "scope": scope,
         "claim": claim,
-        "ts": int(time.time()),
+        "ts": int(ts if ts is not None else time.time()),
     }
     body = _canonical(payload)
     sig = issuer.sign(body)

@@ -99,14 +99,18 @@ def vouch(from_name: str, for_did: str, score: float, scope: str, out: str):
 
 @cli.command()
 @click.argument("path")
-def verify(path: str):
-    """Verify a vouch blob file. Prints VALID, REVOKED, or INVALID.
+@click.option("--max-age", "max_age", default=None, type=int,
+              help="reject vouches older than N seconds (freshness/TTL). "
+                   "Default: trust never expires unless revoked.")
+def verify(path: str, max_age):
+    """Verify a vouch blob file. Prints VALID, REVOKED, EXPIRED, or INVALID.
 
-    A vouch is VALID only if its signature checks out AND it is not on the local
-    revocation list. This is the safe default: a leaked/malicious key can be
-    neutralized via `atar revoke`, and `verify` will then report REVOKED even
-    though the original signature is still cryptographically valid.
+    A vouch is VALID only if its signature checks out, it is not on the local
+    revocation list (Phase 16/17/22), AND — when --max-age is given — it is not
+    older than that many seconds (Phase 24 freshness). Revocation kills trust
+    actively; freshness lets stale trust decay so the graph stays alive.
     """
+    from .freshness import is_fresh, VOUCH_TTL_DEFAULT
     with open(path, "r", encoding="utf-8") as f:
         blob = json.load(f)
     if not verify_vouch(blob):
@@ -121,6 +125,10 @@ def verify(path: str):
             sys.exit(2)
     except Exception:
         pass
+    # freshness (Phase 24): if a max-age is set, reject stale vouches
+    if max_age is not None and not is_fresh(blob, ttl=max_age):
+        click.echo("EXPIRED")
+        sys.exit(3)
     click.echo("VALID")
 
 
