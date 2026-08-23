@@ -89,7 +89,7 @@ def verify_rotation(stmt: RotationStatement) -> bool:
         }
         pub.verify(bytes.fromhex(stmt.signature), _canonical(payload))
         return True
-    except (InvalidSignature, ValueError, KeyError):
+    except (InvalidSignature, ValueError, KeyError, AttributeError):
         return False
 
 

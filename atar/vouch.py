@@ -68,6 +68,8 @@ def vouch_from_self(agent, *, claim: str, scope: str) -> dict:
 def verify_vouch(vouch: dict) -> bool:
     """Return True iff the vouch signature is valid for its issuer DID."""
     try:
+        if not isinstance(vouch, dict):
+            return False
         payload = vouch["payload"]
         sig_hex = vouch["signature"]
         # Recover the issuer public key from its did:agent: (raw ed25519 bytes).
@@ -80,6 +82,7 @@ def verify_vouch(vouch: dict) -> bool:
         pub = Ed25519PublicKey.from_public_bytes(raw)
         pub.verify(bytes.fromhex(sig_hex), _canonical(payload))
         return True
-    except (InvalidSignature, KeyError, ValueError):
-        # InvalidSignature: bad signature. KeyError/ValueError: malformed vouch.
+    except (InvalidSignature, KeyError, ValueError, TypeError, AttributeError):
+        # InvalidSignature: bad signature. KeyError/ValueError/TypeError/
+        # AttributeError: malformed vouch (wrong field types).
         return False
