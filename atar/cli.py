@@ -81,6 +81,10 @@ def vouch(from_name: str, for_did: str, score: float, scope: str, out: str):
     """Create a signed vouch from one identity for a subject DID."""
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from base58 import b58decode
+    for_did = for_did.strip()  # tolerate CRLF / trailing whitespace from pipes
+    if not for_did.startswith("did:agent:"):
+        click.echo(f"invalid subject DID (expected did:agent:...): {for_did!r}")
+        sys.exit(2)
     keys = _load_keys()
     if from_name not in keys:
         click.echo(f"no identity '{from_name}'"); sys.exit(1)
@@ -202,6 +206,10 @@ def issue(from_name: str, for_did: str, scope: str, score: float, claim: str, ou
     """
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
     from base58 import b58decode
+    for_did = for_did.strip()  # tolerate CRLF / trailing whitespace from pipes
+    if not for_did.startswith("did:agent:"):
+        click.echo(f"invalid subject DID (expected did:agent:...): {for_did!r}")
+        sys.exit(2)
     keys = _load_keys()
     if from_name not in keys:
         click.echo(f"no identity '{from_name}'"); sys.exit(1)
