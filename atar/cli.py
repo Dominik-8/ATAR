@@ -477,6 +477,75 @@ def scopes():
 
 
 @cli.command()
+@click.option("--name", required=True, help="identity name to rotate")
+@click.option("--out", default="rotation.json", help="rotation statement output file")
+def rotate(name: str, out: str):
+    """Rotate an agent's key: generate a NEW key, bind it to the old one, and
+    emit a signed rotation statement (old key signs 'I am now <newdid>').
+
+    After rotation: re-issue out-going vouches with `atar reissue`, then revoke
+    the old key. Trust carries forward under the new DID — no total loss.
+    """
+    from .rotation import rotate_identity, verify_rotation
+    keys = _load_keys()
+    if name not in keys:
+        click.echo(f"no identity '{name}'"); sys.exit(1)
+    old = _identity_from_name(name)  # Ed25519PrivateKey
+    new = generate_identity()
+    stmt = rotate_identity(old, new)
+    # persist the new key under the same name (replaces old)
+    keys[name] = {
+        "did": did_from_public(new.public_key),
+        "public": new.public_key.public_bytes_raw().hex(),
+        "private": new.private_key.private_bytes_raw().hex(),
+        "rotated_from": did_from_public(old.public_key()),
+    }
+    _save_keys(keys)
+    out_path = os.path.join(_home(), out)
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(stmt.to_dict(), f, indent=2)
+    assert verify_rotation(stmt)
+    click.echo(f"rotated '{name}': old {stmt.old_did[:20]}... -> new {stmt.new_did[:20]}...")
+    click.echo(f"rotation statement written to {out_path}")
+    click.echo("next: atar reissue --name " + name + "  then  atar revoke (old vouches)")
+
+
+@cli.command()
+@click.option("--name", required=True, help="identity name whose vouches to re-issue")
+@click.option("--scope", default=None, help="re-issue only this scope (default: all)")
+@click.option("--out", default="reissued.json", help="output file (JSON list)")
+def reissue(name: str, scope: str | None, out: str):
+    """Re-sign this agent's out-going vouches under its CURRENT (post-rotation)
+    key with fresh timestamps (Phase 24). Preserves score/scope/subject.
+
+    Use after `atar rotate` to carry trust forward under the new DID.
+    """
+    from .rotation import reissue_vouch
+    from .store import VouchStore
+    new_id = _identity_from_name(name)  # Ed25519PrivateKey (post-rotation)
+    store = VouchStore(_store_path())
+    my_did = did_from_public(new_id.public_key())
+    # The vouches in the store were issued under the OLD did (pre-rotation).
+    # We find them by the OLD issuer (recorded as rotated_from) and re-sign
+    # them under the NEW key.
+    keys = _load_keys()
+    old_did = keys.get(name, {}).get("rotated_from")
+    reissued = []
+    for v in store.all():
+        issuer = v["payload"]["issuer"]
+        # match either the old issuer (pre-rotation vouches) or already-new
+        if old_did and issuer != old_did and issuer != my_did:
+            continue
+        if scope and v["payload"].get("scope") != scope:
+            continue
+        r = reissue_vouch(new_id, new_id, v)  # re-sign under the new key
+        reissued.append(r)
+    with open(os.path.join(_home(), out), "w", encoding="utf-8") as f:
+        json.dump(reissued, f, indent=2)
+    click.echo(f"re-issued {len(reissued)} vouch(es) under {my_did[:20]}... -> {os.path.join(_home(), out)}")
+
+
+@cli.command()
 @click.option("--port", default=8765, help="port to serve on (localhost only)")
 def serve(port: int):
     """Serve the live Know-Your-Agent dashboard at http://localhost:PORT.
