@@ -22,8 +22,15 @@ from .vouch import verify_vouch
 
 
 def canonical_vouch_id(vouch: dict) -> str:
-    """Content-addressed ID: sha256 of the canonical vouch bytes (hex)."""
-    payload = vouch["payload"]
+    """Content-addressed ID: sha256 of the canonical vouch bytes (hex).
+
+    Excludes ``ts`` and ``signature`` — a vouch is identified by its *claim*
+    (issuer -> subject, scope, score, claim), not by when it was made or how
+    it was signed. This makes dedup work across re-issues / re-bootstrap:
+    two vouches with the same claim but different timestamps collapse to one.
+    """
+    payload = dict(vouch["payload"])
+    payload.pop("ts", None)
     body = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return "vouch:" + hashlib.sha256(body).hexdigest()
 
