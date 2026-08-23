@@ -241,6 +241,43 @@ def list():
 
 
 @cli.command()
+@click.option("--with", "peer", required=True, multiple=True,
+              help="peer ATAR_HOME directory to exchange vouches with (repeatable)")
+def sync(peer):
+    """Gossip vouches between local agent stores (decentralized, no server).
+
+    Each agent keeps its own $ATAR_HOME store. `sync` copies any vouch the peer
+    has but you don't (and vice versa) into both stores — content-addressed, so
+    duplicates are ignored. This is how ATAR stays decentralized: trust spreads
+    peer-to-peer without a central operator. Repeatable and idempotent.
+    """
+    from .store import VouchStore
+    self_path = _store_path()
+    self_store = VouchStore(self_path)
+    before = self_store.count()
+    total_in = 0
+    for p in peer:
+        peer_path = os.path.join(p, "vouches.json")
+        # VouchStore creates the file on first add, so a missing peer store is
+        # simply empty (not an error) — we just exchange into it.
+        peer_store = VouchStore(peer_path)
+        # pull: vouches peer has that we lack
+        added_to_self = 0
+        for v in peer_store.all():
+            if self_store.add(v):
+                added_to_self += 1
+        # push: vouches we have that peer lacks
+        added_to_peer = 0
+        for v in self_store.all():
+            if peer_store.add(v):
+                added_to_peer += 1
+        total_in += added_to_self
+        click.echo(f"  synced {p}: +{added_to_self} to us, +{added_to_peer} to peer")
+    after = self_store.count()
+    click.echo(f"sync done: {before} -> {after} vouches ({total_in} new)")
+
+
+@cli.command()
 @click.option("--config", required=True, help="TOML file declaring agents + vouches")
 def bootstrap(config: str):
     """Build/refresh your agent network from a config file (idempotent).
