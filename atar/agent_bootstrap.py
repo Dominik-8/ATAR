@@ -1,0 +1,118 @@
+"""Agent bootstrap — seed real agents into the ATAR trust network.
+
+This is the glue that turns ATAR from a demo into *your* system. Each of your
+agents (ATAR, the daily-brief cron, a research agent, ...) gets a persistent
+``did:agent:`` and can vouch for others. Vouches land in the persistent store
+(Phase 7), so the Know-Your-Agent dashboard reflects a real, durable network.
+
+No server, no cost. Each agent's key lives under $ATAR_HOME/agents/<name>.json.
+The trust root (seed) is whichever agent you designate (typically you / ATAR).
+
+Usage:
+    reg = AgentRegistry()
+    reg.register("seed_agent")
+    seed_trust_root("seed_agent")
+    reg.register("research")
+    reg.vouch("seed_agent", "research", score=0.9, scope="intelligence")
+"""
+
+from __future__ import annotations
+
+import json
+import os
+
+from .identity import generate_identity, did_from_public, Identity
+from .vouch import create_vouch
+from .store import VouchStore
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+
+def _home() -> str:
+    return os.environ.get("ATAR_HOME", os.path.join(os.path.expanduser("~"), ".atar"))
+
+
+def _agents_dir() -> str:
+    d = os.path.join(_home(), "agents")
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+def _store_path() -> str:
+    return os.path.join(_home(), "vouches.json")
+
+
+def _identity_from_private_hex(hex_str: str) -> Identity:
+    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(hex_str))
+    return Identity(private_key=priv, public_key=priv.public_key())
+
+
+class AgentRegistry:
+    """Manage persistent agent identities + vouches for your local network."""
+
+    def __init__(self) -> None:
+        self._agents_file = os.path.join(_agents_dir(), "registry.json")
+        self._agents: dict[str, dict] = self._load()
+        self._store = VouchStore(_store_path())
+        self.seed_did = self._agents.get("_seed")
+
+    # --- identity management ------------------------------------------------
+    def _load(self) -> dict:
+        if os.path.exists(self._agents_file):
+            with open(self._agents_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        return {}
+
+    def _save(self) -> None:
+        with open(self._agents_file, "w", encoding="utf-8") as f:
+            json.dump(self._agents, f, indent=2)
+
+    def register(self, name: str) -> str:
+        """Create + persist an agent identity; return its DID (stable)."""
+        if name in self._agents and "did" in self._agents[name]:
+            return self._agents[name]["did"]
+        ident = generate_identity()
+        self._agents[name] = {
+            "did": did_from_public(ident.public_key),
+            "private": ident.private_key.private_bytes_raw().hex(),
+        }
+        self._save()
+        return self._agents[name]["did"]
+
+    def did_of(self, name: str) -> str | None:
+        return self._agents.get(name, {}).get("did")
+
+    def identity_of(self, name: str) -> Identity:
+        if name not in self._agents:
+            raise KeyError(f"agent '{name}' not registered")
+        return _identity_from_private_hex(self._agents[name]["private"])
+
+    # --- trust --------------------------------------------------------------
+    def vouch(self, issuer: str, subject: str, *, score: float, scope: str) -> bool:
+        """Issuer agent vouches for subject agent; stored persistently."""
+        iss = self.identity_of(issuer)
+        subj_did = self.did_of(subject)
+        if subj_did is None:
+            return False
+        subj_pub = _identity_from_private_hex(
+            self._agents[subject]["private"]
+        ).public_key
+        v = create_vouch(iss, subj_pub, score=score, scope=scope)
+        return self._store.add(v)
+
+    def build_network(self, *, scope: str) -> dict:
+        """Assemble a network dict usable by dashboard_data / graph."""
+        return {
+            "agents": {n: d["did"] for n, d in self._agents.items() if n != "_seed"},
+            "seed_did": self.seed_did or "",
+            "vouches": self._store.all(),
+        }
+
+
+def seed_trust_root(name: str) -> str:
+    """Designate an agent as the trusted seed (root of the web-of-trust)."""
+    reg = AgentRegistry()
+    did = reg.register(name)
+    reg._agents["_seed"] = did
+    reg._save()
+    reg.seed_did = did
+    return did

@@ -150,6 +150,12 @@ def verify_card(path: str):
         sys.exit(1)
 
 
+def _load_store_vouches() -> list[dict]:
+    """Load all vouches from the persistent store (Phase 7)."""
+    from .store import VouchStore
+    return VouchStore(_store_path()).all()
+
+
 @cli.command()
 @click.option("--seed", required=True, help="trusted seed DID to compute trust from")
 @click.option("--scope", required=True, help="capability scope to evaluate")
@@ -157,24 +163,16 @@ def verify_card(path: str):
 def graph(seed: str, scope: str, home: str | None):
     """Compute transitive trust from a seed DID over all locally stored vouches.
 
-    Loads every *.json vouch in $ATAR_HOME, builds a TrustGraph, and prints a
-    ranked report of every reachable agent and its trust score.
+    Reads the persistent vouch store ($ATAR_HOME/vouches.json), builds a
+    TrustGraph, and prints a ranked report of every reachable agent.
     """
     if home:
         os.environ["ATAR_HOME"] = home
     from .transparency import TrustGraph
     g = TrustGraph()
-    loaded = 0
-    for fn in os.listdir(_home()):
-        if not fn.endswith(".json") or fn == "keys.json":
-            continue
-        try:
-            with open(os.path.join(_home(), fn), "r", encoding="utf-8") as f:
-                blob = json.load(f)
-            if g.add(blob):
-                loaded += 1
-        except (json.JSONDecodeError, KeyError):
-            continue
+    for v in _load_store_vouches():
+        g.add(v)
+    loaded = len(g.all_vouches())
     trust = g.compute_trust(seed_did=seed, scope=scope)
     ranked = sorted(trust.items(), key=lambda kv: kv[1], reverse=True)
     click.echo(f"seed  : {seed}")
@@ -195,31 +193,17 @@ def graph(seed: str, scope: str, home: str | None):
 def dashboard(seed: str, scope: str, out: str, home: str | None):
     """Render the Know-Your-Agent dashboard (ATAR dark design) from local vouches.
 
-    Builds a TrustGraph from every *.json vouch in $ATAR_HOME, computes transitive
-    trust from SEED, and writes a standalone HTML page (no server needed).
+    Reads the persistent vouch store, computes transitive trust from SEED, and
+    writes a standalone HTML page (no server needed).
     """
     if home:
         os.environ["ATAR_HOME"] = home
-    from .transparency import TrustGraph
     from .dashboard import render_dashboard_html
-
-    g = TrustGraph()
-    loaded = 0
-    for fn in os.listdir(_home()):
-        if not fn.endswith(".json") or fn == "keys.json":
-            continue
-        try:
-            with open(os.path.join(_home(), fn), "r", encoding="utf-8") as f:
-                blob = json.load(f)
-            if g.add(blob):
-                loaded += 1
-        except (json.JSONDecodeError, KeyError):
-            continue
-    net = {"agents": {}, "seed_did": seed, "vouches": g.all_vouches()}
+    net = {"agents": {}, "seed_did": seed, "vouches": _load_store_vouches()}
     html = render_dashboard_html(net, scope=scope)
     with open(out, "w", encoding="utf-8") as f:
         f.write(html)
-    click.echo(f"dashboard written to {out} ({loaded} vouches, scope={scope})")
+    click.echo(f"dashboard written to {out} ({len(net['vouches'])} vouches, scope={scope})")
 
 
 def _store_path() -> str:

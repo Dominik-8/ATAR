@@ -22,17 +22,15 @@ def _seed_graph():
 def test_graph_cli_renders_trust_report(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     runner = CliRunner()
-    # create identities so DIDs are known locally
     root, g, agents = _seed_graph()
     root_did = did_from_public(root.public_key)
-    # write vouches into ATAR_HOME so `graph` can load them
-    import json, shutil
-    from atar.transparency import canonical_vouch_id
+    # add vouches into the persistent store so `graph` can load them
+    import json
     for v in g.all_vouches():
-        safe_id = canonical_vouch_id(v).replace(":", "_")
-        fn = tmp_path / f"vouch-{safe_id}.json"
+        fn = tmp_path / "v.json"
         with open(fn, "w", encoding="utf-8") as f:
             json.dump(v, f)
+        runner.invoke(cli, ["add", str(fn)])
     r = runner.invoke(cli, ["graph", "--seed", root_did, "--scope", "intelligence"])
     assert r.exit_code == 0
     assert root_did in r.output
