@@ -372,5 +372,43 @@ def serve(port: int):
     run_server(port=port)
 
 
+@cli.command()
+@click.argument("vouch_file")
+def revoke(vouch_file: str):
+    """Revoke a vouch by its issuer (writes to the local revocation list).
+
+    VOUCH_FILE is a vouch blob (JSON) whose issuer key you control. The revocation
+    is signed by that issuer and appended to $ATAR_HOME/revocations.json. Any
+    verify that consults the revocation list will then reject the vouch — even
+    though its original signature is still valid. This is how a leaked/malicious
+    agent key is neutralized without changing the protocol.
+    """
+    from .revocation import RevocationList, revoke_vouch, revoke_payload_id
+    with open(vouch_file, "r", encoding="utf-8") as f:
+        v = json.load(f)
+    issuer_did = v["payload"]["issuer"]
+    keys = _load_keys()
+    # find the agent name owning this DID so we can sign with its key
+    name = next((n for n, d in keys.items() if d.get("did") == issuer_did), None)
+    if name is None:
+        click.echo(f"revoke failed: no local key for issuer {issuer_did}", err=True)
+        sys.exit(1)
+    priv = _identity_from_name(name)
+    # rebuild an Identity from the private key
+    from .identity import Identity
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    ident = Identity(private_key=priv, public_key=priv.public_key())
+    rlist = RevocationList.load(_revocations_path())
+    if revoke_vouch(rlist, ident, revoke_payload_id(v)):
+        rlist.save(_revocations_path())
+        click.echo(f"revoked vouch {revoke_payload_id(v)} (by {issuer_did})")
+    else:
+        click.echo("revocation already present (or invalid)")
+
+
+def _revocations_path() -> str:
+    return os.path.join(_home(), "revocations.json")
+
+
 if __name__ == "__main__":
     cli()
