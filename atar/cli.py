@@ -19,6 +19,7 @@ import click
 
 from .identity import generate_identity, did_from_public
 from .vouch import create_vouch, verify_vouch
+from .atc import make_agent_card, verify_agent_card, vouch_to_token
 
 
 def _home() -> str:
@@ -106,6 +107,46 @@ def verify(path: str):
         click.echo("VALID")
     else:
         click.echo("INVALID")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--name", required=True, help="identity name to build the card for")
+@click.option("--out", default="agent-card.json", help="output file")
+def card(name: str, out: str):
+    """Build an agent card (DID + name + all stored vouches for this DID)."""
+    keys = _load_keys()
+    if name not in keys:
+        click.echo(f"no identity '{name}'"); sys.exit(1)
+    did = keys[name]["did"]
+    # collect vouches stored locally where subject == this DID
+    vouches = []
+    for fn in os.listdir(_home()):
+        if fn.endswith(".json") and fn != "keys.json":
+            try:
+                with open(os.path.join(_home(), fn), "r", encoding="utf-8") as f:
+                    blob = json.load(f)
+                if blob.get("payload", {}).get("subject") == did:
+                    vouches.append(blob)
+            except (json.JSONDecodeError, KeyError):
+                continue
+    card_doc = make_agent_card(did=did, name=name, vouches=vouches)
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(card_doc, f, indent=2)
+    click.echo(f"agent card written to {out} ({len(vouches)} vouch(es))")
+
+
+@cli.command()
+@click.argument("path")
+def verify_card(path: str):
+    """Verify every vouch inside an agent card. Prints a report."""
+    with open(path, "r", encoding="utf-8") as f:
+        card_doc = json.load(f)
+    report = verify_agent_card(card_doc)
+    click.echo(f"agent : {report['name']} ({report['did']})")
+    click.echo(f"valid vouches   : {len(report['valid_vouches'])}")
+    click.echo(f"invalid vouches : {len(report['invalid_vouches'])}")
+    if report["invalid_vouches"]:
         sys.exit(1)
 
 
