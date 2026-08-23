@@ -191,18 +191,34 @@ def _load_store_vouches() -> list[dict]:
     return VouchStore(_store_path()).all()
 
 
+def _default_seed():
+    """Return the DID of the seeded agent in the registry, or None."""
+    try:
+        from .agent_bootstrap import AgentRegistry
+        reg = AgentRegistry()
+        if reg.seed_did:
+            return reg.seed_did
+    except Exception:
+        pass
+    return None
+
+
 @cli.command()
-@click.option("--seed", required=True, help="trusted seed DID to compute trust from")
-@click.option("--scope", required=True, help="capability scope to evaluate")
+@click.option("--seed", default=None, help="trusted seed DID (default: the seeded agent from the registry)")
+@click.option("--scope", default="intelligence", help="capability scope to evaluate")
 @click.option("--home", "home", default=None, help="override ATAR_HOME (vouch store)")
-def graph(seed: str, scope: str, home: str | None):
+def graph(seed: str | None, scope: str, home: str | None):
     """Compute transitive trust from a seed DID over all locally stored vouches.
 
     Reads the persistent vouch store ($ATAR_HOME/vouches.json), builds a
-    TrustGraph, and prints a ranked report of every reachable agent.
+    TrustGraph, and prints a ranked report of every reachable agent. If --seed
+    is omitted, the seeded agent from the registry is used.
     """
     if home:
         os.environ["ATAR_HOME"] = home
+    seed = seed or _default_seed()
+    if not seed:
+        raise SystemExit("no --seed given and no seeded agent in registry")
     from .transparency import TrustGraph
     g = TrustGraph()
     for v in _load_store_vouches():
@@ -221,18 +237,22 @@ def graph(seed: str, scope: str, home: str | None):
 
 
 @cli.command()
-@click.option("--seed", required=True, help="trusted seed DID to compute trust from")
-@click.option("--scope", required=True, help="capability scope to evaluate")
+@click.option("--seed", default=None, help="trusted seed DID (default: the seeded agent from the registry)")
+@click.option("--scope", default="intelligence", help="capability scope to render")
 @click.option("--out", default="atar-dashboard.html", help="output HTML file")
 @click.option("--home", "home", default=None, help="override ATAR_HOME (vouch store)")
-def dashboard(seed: str, scope: str, out: str, home: str | None):
+def dashboard(seed: str | None, scope: str, out: str, home: str | None):
     """Render the Know-Your-Agent dashboard (ATAR dark design) from local vouches.
 
     Reads the persistent vouch store, computes transitive trust from SEED, and
-    writes a standalone HTML page (no server needed).
+    writes a standalone HTML page (no server needed). If --seed is omitted, the
+    seeded agent from the registry is used.
     """
     if home:
         os.environ["ATAR_HOME"] = home
+    seed = seed or _default_seed()
+    if not seed:
+        raise SystemExit("no --seed given and no seeded agent in registry")
     from .dashboard import render_dashboard_html
     net = {"agents": {}, "seed_did": seed, "vouches": _load_store_vouches()}
     html = render_dashboard_html(net, scope=scope)
