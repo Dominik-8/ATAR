@@ -4,3 +4,12 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+venv/
+.venv/
+.env
+# generated artifacts (keep out of the repo)
+dashboard_demo.html
+atar-dashboard.html
+vouch*.json
+*.vouch.json
+agent-card.json
