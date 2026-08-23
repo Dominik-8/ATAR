@@ -1,0 +1,113 @@
+"""Command-line interface for the ATAR protocol.
+
+Usage:
+    atar keygen [--name NAME]          # create an agent identity, print its DID
+    atar vouch --from NAME --for DID   # issuer vouches for subject DID
+            --score F --scope STR
+    atar verify PATH                    # verify a vouch blob file
+
+Keys are stored locally under $ATAR_HOME (default ~/.atar) as keys.json.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+
+import click
+
+from .identity import generate_identity, did_from_public
+from .vouch import create_vouch, verify_vouch
+
+
+def _home() -> str:
+    return os.environ.get("ATAR_HOME", os.path.join(os.path.expanduser("~"), ".atar"))
+
+
+def _keys_path() -> str:
+    return os.path.join(_home(), "keys.json")
+
+
+def _load_keys() -> dict:
+    p = _keys_path()
+    if not os.path.exists(p):
+        return {}
+    with open(p, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_keys(keys: dict) -> None:
+    os.makedirs(_home(), exist_ok=True)
+    with open(_keys_path(), "w", encoding="utf-8") as f:
+        json.dump(keys, f, indent=2)
+
+
+def _identity_from_name(name: str):
+    keys = _load_keys()
+    if name not in keys:
+        click.echo(f"no identity named '{name}'. Create one with: atar keygen --name {name}")
+        sys.exit(1)
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[name]["private"]))
+    return priv
+
+
+@click.group()
+def cli():
+    """ATAR — Agent Trust & Attribution Root (decentralized agent ID)."""
+
+
+@cli.command()
+@click.option("--name", default="default", help="label for this identity")
+def keygen(name: str):
+    """Generate a new agent identity and print its DID."""
+    ident = generate_identity()
+    priv_hex = ident.private_key.private_bytes_raw().hex()
+    keys = _load_keys()
+    keys[name] = {"private": priv_hex, "did": did_from_public(ident.public_key)}
+    _save_keys(keys)
+    click.echo(did_from_public(ident.public_key))
+
+
+@cli.command()
+@click.option("--from", "from_name", required=True, help="issuer identity name")
+@click.option("--for", "for_did", required=True, help="subject agent DID")
+@click.option("--score", type=float, required=True, help="trust score 0..1")
+@click.option("--scope", required=True, help="capability scope, e.g. coding")
+@click.option("--out", default="vouch.json", help="output file")
+def vouch(from_name: str, for_did: str, score: float, scope: str, out: str):
+    """Create a signed vouch from one identity for a subject DID."""
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from base58 import b58decode
+    keys = _load_keys()
+    if from_name not in keys:
+        click.echo(f"no identity '{from_name}'"); sys.exit(1)
+    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[from_name]["private"]))
+    from .identity import Identity, did_from_public
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    issuer = Identity(private_key=priv, public_key=priv.public_key())
+    # reconstruct subject public key from DID
+    raw = b58decode(for_did[len("did:agent:"):])
+    subject_pub = Ed25519PublicKey.from_public_bytes(raw)
+    blob = create_vouch(issuer, subject_pub, score=score, scope=scope)
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(blob, f, indent=2)
+    click.echo(f"vouch written to {out}")
+
+
+@cli.command()
+@click.argument("path")
+def verify(path: str):
+    """Verify a vouch blob file. Prints VALID or INVALID."""
+    with open(path, "r", encoding="utf-8") as f:
+        blob = json.load(f)
+    if verify_vouch(blob):
+        click.echo("VALID")
+    else:
+        click.echo("INVALID")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    cli()

@@ -1,0 +1,12 @@
+{
+  "payload": {
+    "type": "vouch",
+    "issuer": "did:agent:5AN4AdyJaH5bFGKiNXY8KSXpQtFstt8Nxr6iJ53tpyA",
+    "subject": "did:agent:7UpMhFWmtZJuQJ2WdLKzsQsExTwAApzCZEbKjoSeKNMa",
+    "score": 0.8,
+    "scope": "coding",
+    "claim": null,
+    "ts": 1787483954
+  },
+  "signature": "b8f3792e5bfe501e974fe648d99d0aae8131ee6a6a8b848c4571d8b6f6e0b78f4a40c9ab2f8c828d3a468c084924c7f0e0d36d3f97c56824fb4cc673fa21e70d"
+}
