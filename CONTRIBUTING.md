@@ -1,0 +1,51 @@
+# Contributing to ATAR
+
+Thanks for your interest in ATAR. This document explains how to contribute.
+
+## Development setup
+
+```bash
+git clone <your-fork>
+cd atar
+python -m venv .venv && source .venv/bin/activate   # or: uv venv
+pip install -e ".[dev]"
+pytest
+```
+
+## Running tests
+
+```bash
+pytest            # full suite
+pytest tests/test_identity.py::test_x   # single test
+```
+
+All code must be covered by tests. We follow TDD: write the failing test
+first, watch it fail, then implement.
+
+## Branch & PR workflow
+
+1. Fork and create a feature branch (`feat/...`, `fix/...`).
+2. Keep commits focused and message them in imperative mood
+   (`feat: add transitive trust depth cap`, `fix: reject malformed vouch`).
+3. Ensure `pytest` is green before opening a PR.
+4. Open a PR against `master` with a clear description of the change and its
+   motivation.
+
+## Code style
+
+- Format with `ruff format` (or `black`).
+- Type hints required on public functions.
+- No new dependencies without discussion — ATAR deliberately stays minimal
+  (cryptography, base58, click).
+
+## Design principles
+
+ATAR is the *trust layer* for agents. Keep it:
+- **Serverless** — no central operator, no ledger.
+- **Free** — no blockchain, no gas, no accounts.
+- **Verifiable offline** — every claim must check without a network round-trip.
+
+## Reporting security issues
+
+See [SECURITY.md](SECURITY.md). Do **not** open public issues for
+vulnerabilities.

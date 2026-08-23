@@ -187,5 +187,40 @@ def graph(seed: str, scope: str, home: str | None):
         click.echo(f"  {did}  trust={score:.3f}{marker}")
 
 
+@cli.command()
+@click.option("--seed", required=True, help="trusted seed DID to compute trust from")
+@click.option("--scope", required=True, help="capability scope to evaluate")
+@click.option("--out", default="atar-dashboard.html", help="output HTML file")
+@click.option("--home", "home", default=None, help="override ATAR_HOME (vouch store)")
+def dashboard(seed: str, scope: str, out: str, home: str | None):
+    """Render the Know-Your-Agent dashboard (ATAR dark design) from local vouches.
+
+    Builds a TrustGraph from every *.json vouch in $ATAR_HOME, computes transitive
+    trust from SEED, and writes a standalone HTML page (no server needed).
+    """
+    if home:
+        os.environ["ATAR_HOME"] = home
+    from .transparency import TrustGraph
+    from .dashboard import render_dashboard_html
+
+    g = TrustGraph()
+    loaded = 0
+    for fn in os.listdir(_home()):
+        if not fn.endswith(".json") or fn == "keys.json":
+            continue
+        try:
+            with open(os.path.join(_home(), fn), "r", encoding="utf-8") as f:
+                blob = json.load(f)
+            if g.add(blob):
+                loaded += 1
+        except (json.JSONDecodeError, KeyError):
+            continue
+    net = {"agents": {}, "seed_did": seed, "vouches": g.all_vouches()}
+    html = render_dashboard_html(net, scope=scope)
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(html)
+    click.echo(f"dashboard written to {out} ({loaded} vouches, scope={scope})")
+
+
 if __name__ == "__main__":
     cli()
