@@ -35,6 +35,9 @@ border-bottom:1px solid #222;}
 .card-head h2{margin:0;font-size:18px;font-weight:700;}
 .badge{font-size:11px;color:var(--accent);border:1px solid var(--accent-dim);
 border-radius:999px;padding:2px 10px;text-transform:uppercase;letter-spacing:1px;}
+.badge.revoked{color:#ff4d4d;border-color:#5c1a1a;background:#1a0808;}
+.card.revoked{border-color:#5c1a1a;box-shadow:0 0 14px rgba(255,77,77,0.15);}
+.card.revoked .a-name{color:#ff6b6b;text-decoration:line-through;}
 .agent{padding:14px 18px;border-bottom:1px solid #1c1c1f;}
 .agent:last-child{border-bottom:none;}
 .a-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
@@ -53,10 +56,23 @@ border-color:var(--accent-dim);box-shadow:0 0 14px rgba(57,255,20,0.18);}
 
 
 def dashboard_data(net: dict, *, scope: str) -> dict:
-    """Compute the ranked agent list + paths for the dashboard."""
+    """Compute the ranked agent list + paths + revocation state for the dashboard."""
     g = graph_from_vouches(net["vouches"])
     trust = g.compute_trust(seed_did=net["seed_did"], scope=scope)
     name_by_did = {v: k for k, v in net["agents"].items()}
+
+    # revocation awareness (Phase 16/17): load the local revocation list
+    revoked_ids = set()
+    revoked_by = {}
+    try:
+        from atar.revocation import RevocationList, revoke_payload_id
+        rl = RevocationList.load(_revocations_path_for(net))
+        for e in rl.all():
+            revoked_ids.add(e["vid"])
+        for e in rl.all():
+            revoked_by[e["vid"]] = e["revoked_by"]
+    except Exception:
+        pass
 
     # build incoming-edge map: subject -> list of (issuer_name, score)
     edges = {}
@@ -71,14 +87,38 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
     agents = []
     for did, score in sorted(trust.items(), key=lambda kv: kv[1], reverse=True):
         paths = edges.get(did, [])
+        # an agent is "revoked" if any incoming vouch to it is on the list
+        agent_revoked = False
+        revoker = None
+        for v in net["vouches"]:
+            p = v["payload"]
+            if p.get("subject") != did:
+                continue
+            from atar.revocation import revoke_payload_id as _rid
+            if _rid(v) in revoked_ids:
+                agent_revoked = True
+                revoker = name_by_did.get(revoked_by.get(_rid(v), ""), "?")
+                break
         agents.append({
             "name": name_by_did.get(did, "?"),
             "did": did,
-            "trust": round(score, 3),
+            "trust": 0.0 if agent_revoked else round(score, 3),
             "is_seed": did == net["seed_did"],
             "paths": [{"via": n, "score": s} for n, s in paths],
+            "revoked": agent_revoked,
+            "revoked_by": revoker,
         })
     return {"seed_did": net["seed_did"], "scope": scope, "agents": agents}
+
+
+def _revocations_path_for(net: dict) -> str:
+    """Resolve the revocations.json path (net may carry an override)."""
+    import os
+    if net.get("_revocations_path"):
+        return net["_revocations_path"]
+    home = os.environ.get("ATAR_HOME",
+                          os.path.join(os.path.expanduser("~"), ".atar"))
+    return os.path.join(home, "revocations.json")
 
 
 def render_dashboard_html(net: dict, *, scope: str) -> str:
@@ -88,15 +128,25 @@ def render_dashboard_html(net: dict, *, scope: str) -> str:
     cards = []
     for a in data["agents"]:
         cls = "card seed" if a["is_seed"] else "card"
+        if a["revoked"]:
+            cls += " revoked"
+        badge = "seed" if a["is_seed"] else "agent"
+        if a["revoked"]:
+            badge = "REVOKED"
         path_txt = ""
         if a["paths"]:
             parts = [f"via {p['via']} ({p['score']:.2f})" for p in a["paths"]]
             path_txt = f'<div class="paths">trust path: {", ".join(parts)}</div>'
+        rev_txt = ""
+        if a["revoked"]:
+            rev_txt = (f'<div class="paths" style="color:#ff6b6b;">'
+                       f'revoked by {a["revoked_by"]}</div>')
+        trust_label = "REVOKED" if a["revoked"] else f"trust={a['trust']:.3f}"
         cards.append(f'''
   <div class="{cls}">
     <div class="card-head">
       <h2>{a["name"]}</h2>
-      <span class="badge">{"seed" if a["is_seed"] else "agent"}</span>
+      <span class="badge {"revoked" if a["revoked"] else ""}">{badge}</span>
     </div>
     <div class="agent">
       <div class="a-top">
@@ -104,9 +154,10 @@ def render_dashboard_html(net: dict, *, scope: str) -> str:
           <div class="a-name">{a["name"]}</div>
           <div class="a-did">{a["did"]}</div>
         </div>
-        <span class="score">trust={a["trust"]:.3f}</span>
+        <span class="score">{trust_label}</span>
       </div>
       {path_txt}
+      {rev_txt}
     </div>
   </div>''')
 
