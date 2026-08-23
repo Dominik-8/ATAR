@@ -52,6 +52,9 @@ border-color:var(--accent-dim);box-shadow:0 0 14px rgba(57,255,20,0.18);}
 .seed .score{box-shadow:0 0 8px var(--accent);}
 .paths{font-size:11px;color:var(--muted);margin-top:4px;font-style:italic;}
 .empty{padding:24px 18px;color:var(--muted);font-style:italic;text-align:center;}
+.scope-sec{margin:28px 0;border-top:1px solid #222;padding-top:18px;}
+.scope-title{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:10px;}
+.tab{display:inline-block;border:1px solid var(--accent-dim);border-radius:999px;padding:2px 10px;font-size:11px;color:var(--accent);margin-right:6px;}
 """
 
 
@@ -177,6 +180,44 @@ def render_dashboard_html(net: dict, *, scope: str) -> str:
       <div class="sub">trust network &middot; scope: {data['scope']}</div>
     </div>
     {''.join(cards) if cards else '<div class="empty">No agents in this scope yet.</div>'}
+  </div>
+</body>
+</html>"""
+
+
+def render_multi_scope_html(net: dict, *, scopes: list[str]) -> str:
+    """Render the dashboard with one section per scope (tabs in the hero)."""
+    import html as _html
+    sections = []
+    for scope in scopes:
+        data = dashboard_data(net, scope=scope)
+        # reuse the single-scope renderer but swap the title/sub for section mode
+        body = render_dashboard_html(net, scope=scope)
+        # strip the outer html wrapper, keep inner cards
+        inner = body.split("<body>")[-1].split("</body>")[0]
+        # replace the hero so we don't repeat it
+        inner = inner.split("</div>\n  </div>")[-1] if "</div>\n  </div>" in inner else inner
+        sections.append(f'<section class="scope-sec">\n'
+                        f'<div class="scope-title">scope: {_html.escape(scope)}'
+                        f' &middot; {len(data["agents"])} agents</div>\n'
+                        f'{inner}\n</section>')
+    tabs = " &middot; ".join(f'<span class="tab">{_html.escape(s)}</span>' for s in scopes)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATAR — Know Your Agent (multi-scope)</title>
+<style>{_CSS}</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="brand">ATAR</div>
+      <h1>Know Your Agent</h1>
+      <div class="sub">trust network &middot; scopes: {tabs}</div>
+    </div>
+    {''.join(sections)}
   </div>
 </body>
 </html>"""
