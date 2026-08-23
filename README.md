@@ -80,8 +80,11 @@ atar dashboard --seed "did:agent:..." --scope coding --out dash.html
 4. **Transparency graph** — vouches are content-addressed (sha256 of their
    bytes), so they can be gossiped with no operator. Each agent computes
    *transitive trust* locally from a seed of trusted roots.
+5. **Revocation + Freshness + Rotation** — trust can be actively killed
+   (revoke), passively expired (TTL), or recovered via key rotation. See
+   [`SPEC.md`](SPEC.md) §6–§10.
 
-See [`SPEC.md`](SPEC.md) for the full wire format.
+See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 
 ## CLI reference
 
@@ -89,11 +92,19 @@ See [`SPEC.md`](SPEC.md) for the full wire format.
 |---|---|
 | `atar keygen --name N` | create an agent identity, print its `did:agent:` |
 | `atar vouch --from A --for DID --score S --scope C` | create a signed vouch |
-| `atar verify PATH` | verify a vouch blob file → `VALID`/`INVALID` |
+| `atar verify PATH [--max-age N]` | `VALID` / `REVOKED` / `EXPIRED` / `INVALID` |
+| `atar revoke PATH` | add a vouch to the local revocation list |
+| `atar add PATH` | add a vouch to the store (rejects revoked/expired) |
+| `atar list` / `atar scopes` | inspect store / list scopes + counts |
 | `atar card --name N` | build an agent card (DID + vouches) |
 | `atar verify-card PATH` | verify every vouch in an agent card |
-| `atar graph --seed DID --scope C` | print transitive-trust ranking (CLI) |
+| `atar graph --seed DID --scope C` | print transitive-trust ranking |
 | `atar dashboard --seed DID --scope C` | render Know-Your-Agent HTML dashboard |
+| `atar sync --with <peer>` / `atar auto-sync` | gossip vouches + revocations between peers |
+| `atar rotate --name N` | generate a new key + signed rotation statement |
+| `atar reissue --name N [--commit]` | re-sign vouches under the new key (commit = +add old-revoked) |
+| `atar bootstrap --config agents.toml` | reproducible agent network |
+| `atar serve [--port P]` | live multi-scope dashboard (http://localhost:P) |
 
 ## Visual identity (ATAR-style)
 
@@ -115,18 +126,31 @@ any ATAR UI, web page, or digest so the design stays consistent.
 
 ## Project status
 
-| Phase | Status |
-|---|---|
-| 1 — Ed25519 identity + sign/verify | ✅ |
-| 2 — ATC carrier (tokens + agent cards) | ✅ |
-| 3 — Transparency log + transitive trust graph | ✅ |
-| 4 — Bootstrap (ATAR adopts ATAR) | ✅ |
-| 4b — `atar graph` CLI | ✅ |
-| 4c — Demo trust network | ✅ |
-| 6 — Know-Your-Agent dashboard | ✅ |
-| 8 — `atar dashboard` CLI | ✅ |
+| Phase | Area | Status |
+|---|---|---|
+| 1 | Ed25519 identity + sign/verify | ✅ |
+| 2 | ATC carrier (tokens + agent cards) | ✅ |
+| 3 | Transparency log + transitive trust graph | ✅ |
+| 4 / 4b / 4c / 9 | ATAR adopts ATAR, `graph` CLI, demo network, ATC in brief | ✅ |
+| 6 / 8 / 11 | Know-Your-Agent dashboard (module, CLI, live server) | ✅ |
+| 7 | Persistent vouch store (file-backed, dedup) | ✅ |
+| 4d / 12 | Real-agent bootstrap (CLI + `agents.toml`) | ✅ |
+| 10 / 15 | Gossip (`sync`) + auto-sync hook in ATAR | ✅ |
+| 16 / 17 | Revocation (local + gossip) | ✅ |
+| 18 | Revocation in dashboard | ✅ |
+| 13 / 25 | Multi-scope dashboard (module + live server) | ✅ |
+| 14 | Real agents seeded (ATAR + daily-brief cron) | ✅ |
+| 20 | `atar scopes` CLI | ✅ |
+| 22 | Revocation in `verify` | ✅ |
+| 23 | Revocation in `add` + `sync` (defense-in-depth) | ✅ |
+| 24 | Freshness / TTL (`--max-age`) | ✅ |
+| 27 / 27b | Key rotation + `reissue --commit` | ✅ |
 
-Next: real-agent seeding (Phase 4d), vouch persistence/gossip (Phase 7).
+All phases implemented and tested (78 tests, CI green). See
+[`SPEC.md`](SPEC.md) for the authoritative protocol specification.
+
+**Next:** wider real-agent adoption; formal RFC publication (this spec is the
+draft for it).
 
 ## Honest constraints
 
