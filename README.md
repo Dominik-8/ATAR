@@ -108,7 +108,9 @@ See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 | `atar audit [--max-age N]` | health-check: counts valid/revoked/expired/invalid per scope |
 | `atar export [--include-keys] FILE` | bundle trust graph (or full identity) to `.atpkg` |
 | `atar import FILE` | restore a network bundle into the local store |
-| `atar watch [--interval S] [--once]` | monitor network; ALERT on unhealthy (cron-ready) |
+| `atar watch [--interval S] [--once]` | monitor health; alert on unhealthy transition |
+| `atar issue --from N --for DID --scope S --score X [--claim C]` | issue a signed capability claim (standalone file) |
+| `atar verify-claim FILE` | verify a signed capability claim (independent of store) |
 
 ## Visual identity (ATAR-style)
 
@@ -152,8 +154,9 @@ any ATAR UI, web page, or digest so the design stays consistent.
 | 29 | `atar audit` CLI (trust health-check) | ✅ |
 | 30 | `atar export` / `atar import` (portable `.atpkg` bundle) | ✅ |
 | 31 | `atar watch` (cron-ready monitoring + ALERT) | ✅ |
+| 26 | Real-agent claim issuance (`issue` / `verify-claim`) | ✅ |
 
-All phases implemented and tested (89 tests, CI green). See
+All phases implemented and tested (92 tests, CI green). See
 [`SPEC.md`](SPEC.md) for the authoritative protocol specification.
 
 **Next:** wider real-agent adoption; formal RFC publication (this spec is the

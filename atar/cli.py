@@ -185,6 +185,58 @@ def verify_card(path: str):
         sys.exit(1)
 
 
+@cli.command()
+@click.option("--from", "from_name", required=True, help="issuer identity name")
+@click.option("--for", "for_did", required=True, help="subject agent DID")
+@click.option("--scope", required=True, help="capability scope, e.g. coding")
+@click.option("--score", type=float, required=True, help="trust score 0..1")
+@click.option("--claim", default="", help="free-text capability claim about the subject")
+@click.option("--out", default="claim.json", help="output file")
+def issue(from_name: str, for_did: str, scope: str, score: float, claim: str, out: str):
+    """Phase 26 — issue a signed capability claim about a subject DID.
+
+    Like `vouch` but carries a free-text claim and is written to a standalone
+    file (not the store) so any agent can issue/verify it peer-to-peer.
+    """
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+    from base58 import b58decode
+    keys = _load_keys()
+    if from_name not in keys:
+        click.echo(f"no identity '{from_name}'"); sys.exit(1)
+    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[from_name]["private"]))
+    from .identity import Identity
+    issuer = Identity(private_key=priv, public_key=priv.public_key())
+    # reconstruct subject public key from DID
+    raw = b58decode(for_did[len("did:agent:"):])
+    subject_pub = Ed25519PublicKey.from_public_bytes(raw)
+    blob = create_vouch(issuer, subject_pub, score=score, scope=scope, claim=claim)
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(blob, f, indent=2)
+    click.echo(f"claim issued -> {out}")
+    click.echo(f"  issuer  : {blob['payload']['issuer']}")
+    click.echo(f"  subject : {for_did}")
+    click.echo(f"  scope   : {scope}  score={score}")
+
+
+@cli.command()
+@click.argument("path")
+def verify_claim(path: str):
+    """Phase 26 — verify a signed capability claim (independent of the store)."""
+    with open(path, "r", encoding="utf-8") as f:
+        blob = json.load(f)
+    if verify_vouch(blob):
+        payload = blob.get("payload", {})
+        click.echo("VALID")
+        click.echo(f"  issuer  : {payload.get('issuer')}")
+        click.echo(f"  subject : {payload.get('subject')}")
+        click.echo(f"  scope   : {payload.get('scope')}  score={payload.get('score')}")
+        if payload.get("claim"):
+            click.echo(f"  claim   : {payload.get('claim')}")
+    else:
+        click.echo("INVALID")
+        sys.exit(1)
+
+
 def _load_store_vouches() -> list[dict]:
     """Load all vouches from the persistent store (Phase 7)."""
     from .store import VouchStore

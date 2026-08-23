@@ -11,6 +11,7 @@ EXPECTED_COMMANDS = {
     "keygen", "vouch", "verify", "revoke", "add", "list", "scopes",
     "card", "verify-card", "graph", "dashboard", "sync", "auto-sync",
     "rotate", "reissue", "bootstrap", "serve", "audit", "export", "import", "watch",
+    "issue", "verify-claim",
 }
 
 
