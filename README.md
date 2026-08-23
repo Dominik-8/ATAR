@@ -14,7 +14,7 @@ solved, but *trust & attribution* is not. ATAR is the open protocol for it.
 
 ## Visual identity (ATAR-style)
 
-ATAR shares ATAR's dark, ATAR-corporate look so the two projects read as one
+ATAR shares ATAR's dark, corporate look so the two projects read as one
 family:
 
 | Token | Value | Use |
@@ -28,7 +28,7 @@ family:
 | Font | Segoe UI / -apple-system | system UI stack |
 
 The canonical tokens live in [`atar/theme.css`](atar/theme.css) — reuse them for
-any ATAR UI, web page, or ATAR digest so the design stays consistent.
+any ATAR UI, web page, so the design stays consistent.
 
 ## Quickstart
 
