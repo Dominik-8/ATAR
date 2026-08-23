@@ -7,16 +7,20 @@ belong in demo.toml.
 """
 
 import os
+import tomllib
 
-import toml  # or fall back to stdlib if toml missing
 
 _CONFIG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                        "agents.toml")
 
 
+def _load():
+    with open(_CONFIG, "rb") as f:
+        return tomllib.load(f)
+
+
 def test_agents_toml_has_no_demo_agents():
-    with open(_CONFIG, "r", encoding="utf-8") as f:
-        data = toml.load(f)
+    data = _load()
     for agent in data.get("agents", []):
         name = agent.get("name", "")
         note = str(agent.get("note", ""))
@@ -25,8 +29,7 @@ def test_agents_toml_has_no_demo_agents():
 
 
 def test_agents_toml_contains_real_agents():
-    with open(_CONFIG, "r", encoding="utf-8") as f:
-        data = toml.load(f)
+    data = _load()
     names = {a.get("name") for a in data.get("agents", [])}
     assert "seed_agent" in names, "seed_agent (real seed) must be present"
     assert "daily_brief" in names, "daily_brief (real cron) must be present"
