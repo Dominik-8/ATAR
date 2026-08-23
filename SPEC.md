@@ -79,7 +79,52 @@ This guarantees byte-identical input for signer and verifier.
   (who vouches for whom), not from the protocol layer. We make no Sybil-proof
   guarantee.
 
-## 6. Roadmap (non-normative)
+## 6. ATC — Agent Trust Carrier (Phase 2)
+
+ATC lets an agent present its identity + vouches **inline** on first contact,
+over any existing transport. ATAR does not replace MCP/A2A/HTTP — it rides on
+top as a carrier.
+
+### 6.1 Vouch token
+
+A vouch blob (§2) is encoded as a header-safe token:
+
+```
+token = base64url( canonical_json(vouch_blob) )   # no padding
+```
+
+The receiver decodes, then runs the §4 verification. Tampered tokens fail
+verification (base64 or signature error).
+
+### 6.2 Agent card
+
+An agent sends a self-describing "business card":
+
+```json
+{
+  "schema": "atar-agent-card/1.0",
+  "did": "did:agent:...",
+  "name": "bob",
+  "atar": {
+    "vouches": [ "<token>", "<token>", ... ]
+  }
+}
+```
+
+- `did` — the presenting agent's own DID.
+- `vouches` — list of ATC tokens (§6.1) the agent wants to present.
+- The receiver verifies each token offline (§4) and builds a trust report
+  (valid vs invalid vouches). No server, no round-trip to a registry.
+
+### 6.3 Transport bindings (non-normative)
+
+- **HTTP:** `X-ATAR-Card: <base64url(json card)>` request/response header, or
+  `X-ATAR-Vouch: <token>` for a single vouch.
+- **A2A:** `agentCard.atar` extension field.
+- **MCP:** metadata field `atar_card` on tool/resource descriptors.
+
+## 7. Roadmap (non-normative)
+
 
 - **Phase 2 — ATC (Agent Trust Carrier):** a wire format (HTTP header
   `X-ATAR-Vouch`, A2A extension, MCP metadata) letting agents present a vouch
