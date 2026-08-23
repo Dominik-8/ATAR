@@ -100,14 +100,28 @@ def vouch(from_name: str, for_did: str, score: float, scope: str, out: str):
 @cli.command()
 @click.argument("path")
 def verify(path: str):
-    """Verify a vouch blob file. Prints VALID or INVALID."""
+    """Verify a vouch blob file. Prints VALID, REVOKED, or INVALID.
+
+    A vouch is VALID only if its signature checks out AND it is not on the local
+    revocation list. This is the safe default: a leaked/malicious key can be
+    neutralized via `atar revoke`, and `verify` will then report REVOKED even
+    though the original signature is still cryptographically valid.
+    """
     with open(path, "r", encoding="utf-8") as f:
         blob = json.load(f)
-    if verify_vouch(blob):
-        click.echo("VALID")
-    else:
+    if not verify_vouch(blob):
         click.echo("INVALID")
         sys.exit(1)
+    # revocation awareness (Phase 16/17/22)
+    try:
+        from .revocation import RevocationList, revoke_payload_id
+        rl = RevocationList.load(_revocations_path())
+        if rl.is_revoked(revoke_payload_id(blob)):
+            click.echo("REVOKED")
+            sys.exit(2)
+    except Exception:
+        pass
+    click.echo("VALID")
 
 
 @cli.command()
@@ -139,13 +153,26 @@ def card(name: str, out: str):
 @cli.command()
 @click.argument("path")
 def verify_card(path: str):
-    """Verify every vouch inside an agent card. Prints a report."""
+    """Verify every vouch inside an agent card. Prints a report (flags revoked)."""
     with open(path, "r", encoding="utf-8") as f:
         card_doc = json.load(f)
     report = verify_agent_card(card_doc)
     click.echo(f"agent : {report['name']} ({report['did']})")
     click.echo(f"valid vouches   : {len(report['valid_vouches'])}")
     click.echo(f"invalid vouches : {len(report['invalid_vouches'])}")
+    # revocation awareness (Phase 22): flag any vouch on the local revocation list
+    try:
+        from .revocation import RevocationList, revoke_payload_id
+        rl = RevocationList.load(_revocations_path())
+        revoked = [v for v in report["valid_vouches"]
+                   if rl.is_revoked(revoke_payload_id(v))]
+    except Exception:
+        revoked = []
+    if revoked:
+        click.echo(f"REVOKED vouches  : {len(revoked)}")
+        for v in revoked:
+            click.echo(f"   - {v['payload']['issuer']} -> {v['payload']['subject']}")
+        sys.exit(2)
     if report["invalid_vouches"]:
         sys.exit(1)
 
