@@ -123,7 +123,44 @@ An agent sends a self-describing "business card":
 - **A2A:** `agentCard.atar` extension field.
 - **MCP:** metadata field `atar_card` on tool/resource descriptors.
 
-## 7. Roadmap (non-normative)
+## 7. Transparency Log & Transitive Trust (Phase 3)
+
+ATAR needs no central registry. Vouches are **content-addressed**: each vouch
+has a deterministic ID
+
+```
+vouch_id = "vouch:" + sha256( canonical_json(payload) )   # hex
+```
+
+This lets agents share vouches over any gossip/mirror layer (no operator) and
+deduplicate by ID. Each agent keeps a local `TrustGraph` and computes
+**transitive trust** from a seed of trusted roots.
+
+### 7.1 Trust computation
+
+Given a seed DID (e.g. your own identity, or a personhood root) and a scope:
+
+- The seed starts at trust `1.0`.
+- For each valid vouch `issuer → subject (score s, scope)`, the subject's
+  trust is increased by `issuer_trust × s × decay^depth`.
+- Propagation is bounded (depth ≤ 8, or until contribution < 1e-9).
+- Only **cryptographically valid** vouches are admitted to the graph, so a
+  forged vouch (wrong signature) cannot inject fake trust.
+
+This is the Web-of-Trust model: trust flows along signed edges, and an agent
+you have never met can still be trusted transitively if enough trusted agents
+vouch for it.
+
+### 7.2 Honest constraint (Sybil)
+
+Free, serverless identity means anyone can mint unlimited agents and
+self-vouch. Because self-vouches contribute nothing (the issuer must already
+be trusted to pass trust along), a Sybil only gains trust if *real* agents
+vouch for it. ATAR provides the mechanism; reputation emerges from the graph,
+not from the protocol. We make no Sybil-proof guarantee.
+
+## 8. Roadmap (non-normative)
+
 
 
 - **Phase 2 — ATC (Agent Trust Carrier):** a wire format (HTTP header
