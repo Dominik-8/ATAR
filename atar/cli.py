@@ -133,7 +133,7 @@ def verify(path: str, max_age):
     # freshness (Phase 24): if a max-age is set, reject stale vouches
     if max_age is not None and not is_fresh(blob, ttl=max_age):
         click.echo("EXPIRED")
-        sys.exit(3)
+        sys.exit(1)
     click.echo("VALID")
 
 
