@@ -108,6 +108,7 @@ See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 | `atar audit [--max-age N]` | health-check: counts valid/revoked/expired/invalid per scope |
 | `atar export [--include-keys] FILE` | bundle trust graph (or full identity) to `.atpkg` |
 | `atar import FILE` | restore a network bundle into the local store |
+| `atar watch [--interval S] [--once]` | monitor network; ALERT on unhealthy (cron-ready) |
 
 ## Visual identity (ATAR-style)
 
@@ -150,6 +151,7 @@ any ATAR UI, web page, or digest so the design stays consistent.
 | 27 / 27b | Key rotation + `reissue --commit` | ✅ |
 | 29 | `atar audit` CLI (trust health-check) | ✅ |
 | 30 | `atar export` / `atar import` (portable `.atpkg` bundle) | ✅ |
+| 31 | `atar watch` (cron-ready monitoring + ALERT) | ✅ |
 
 All phases implemented and tested (78 tests, CI green). See
 [`SPEC.md`](SPEC.md) for the authoritative protocol specification.

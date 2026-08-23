@@ -289,6 +289,7 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar audit [--max-age N]` | health-check: counts valid/revoked/expired/invalid per scope |
 | `atar export [--include-keys] FILE` | bundle trust graph (or full identity) to `.atpkg` |
 | `atar import FILE` | restore a network bundle into the local store |
+| `atar watch [--interval S] [--once]` | monitor network; ALERT on unhealthy (cron-ready) |
 
 ---
 

@@ -654,17 +654,8 @@ def import_cmd(bundle: str, force: bool):
                + (f", {keys_restored} key(s)" if keys_restored else ""))
 
 
-@cli.command()
-@click.option("--max-age", "max_age", default=None, type=int,
-              help="treat vouches older than N seconds as EXPIRED (default: off)")
-def audit(max_age):
-    """Health-check your local trust network.
-
-    Scans every vouch in the store and reports counts by state:
-    valid / revoked / expired / invalid — plus a per-scope breakdown. This is
-    the operator's "trust graph status" command: one glance shows whether your
-    network is healthy (all valid) or has stale/revoked edges to clean up.
-    """
+def _audit_state(max_age):
+    """Compute the trust-network health state dict (shared by audit + watch)."""
     from .store import VouchStore
     from .revocation import RevocationList, revoke_payload_id
     from .freshness import is_fresh
@@ -691,21 +682,84 @@ def audit(max_age):
             continue
         valid += 1
         by_scope[scope]["valid"] += 1
+    return {
+        "total": len(vouches), "valid": valid, "revoked": revoked,
+        "expired": expired, "invalid": invalid, "by_scope": by_scope,
+        "healthy": not (revoked or expired or invalid),
+    }
 
-    total = len(vouches)
-    click.echo(f"ATAR trust audit — {total} vouch(es) in store")
-    click.echo(f"  valid   : {valid}")
-    click.echo(f"  revoked : {revoked}")
-    click.echo(f"  expired : {expired}" + (f" (max-age={max_age}s)" if max_age else " (max-age off)"))
-    click.echo(f"  invalid : {invalid}")
-    if by_scope:
+
+@cli.command()
+@click.option("--max-age", "max_age", default=None, type=int,
+              help="treat vouches older than N seconds as EXPIRED (default: off)")
+def audit(max_age):
+    """Health-check your local trust network.
+
+    Scans every vouch in the store and reports counts by state:
+    valid / revoked / expired / invalid — plus a per-scope breakdown. This is
+    the operator's "trust graph status" command: one glance shows whether your
+    network is healthy (all valid) or has stale/revoked edges to clean up.
+    """
+    st = _audit_state(max_age)
+    click.echo(f"ATAR trust audit — {st['total']} vouch(es) in store")
+    click.echo(f"  valid   : {st['valid']}")
+    click.echo(f"  revoked : {st['revoked']}")
+    click.echo(f"  expired : {st['expired']}" + (f" (max-age={max_age}s)" if max_age else " (max-age off)"))
+    click.echo(f"  invalid : {st['invalid']}")
+    if st["by_scope"]:
         click.echo("  by scope:")
-        for scope, c in sorted(by_scope.items()):
+        for scope, c in sorted(st["by_scope"].items()):
             click.echo(f"    {scope:14s} valid={c['valid']} revoked={c['revoked']} "
                        f"expired={c['expired']} invalid={c['invalid']}")
     # non-zero revoked/expired/invalid => unhealthy (exit 2), else 0
-    if revoked or expired or invalid:
+    if not st["healthy"]:
         sys.exit(2)
+
+
+@cli.command()
+@click.option("--interval", default=3600, type=int,
+              help="seconds between checks (default: 3600 = 1h)")
+@click.option("--max-age", "max_age", default=None, type=int,
+              help="treat vouches older than N seconds as EXPIRED")
+@click.option("--once", is_flag=True, help="run a single check and exit (for cron)")
+def watch(interval: int, max_age: int | None, once: bool):
+    """Continuously monitor your trust network and ALERT on unhealthy transitions.
+
+    Runs `audit` every --interval seconds. When the network goes from healthy to
+    unhealthy (a vouch expires, is revoked, or becomes invalid), it prints an
+    ALERT line — ideal for piping into a log or alerting cron job. With --once it
+    performs a single check and exits (exit 2 if unhealthy) — use that in a
+    crontab: `atar watch --once || notify-send "ATAR network unhealthy"`.
+    """
+    import time as _time
+
+    def check() -> bool:
+        st = _audit_state(max_age)
+        if st["healthy"]:
+            click.echo(f"[{_time.strftime('%H:%M:%S')}] healthy — "
+                       f"{st['valid']} valid, {st['total']} total")
+            return True
+        click.echo(f"[{_time.strftime('%H:%M:%S')}] ALERT: network UNHEALTHY — "
+                   f"valid={st['valid']} revoked={st['revoked']} "
+                   f"expired={st['expired']} invalid={st['invalid']}", err=True)
+        return False
+
+    if once:
+        healthy = check()
+        sys.exit(0 if healthy else 2)
+
+    click.echo(f"atar watch: monitoring every {interval}s (Ctrl+C to stop)")
+    prev = None
+    try:
+        while True:
+            healthy = check()
+            # alert on transition healthy -> unhealthy only (avoid spam)
+            if prev is not None and prev and not healthy:
+                click.echo("ALERT: trust network became UNHEALTHY", err=True)
+            prev = healthy
+            _time.sleep(interval)
+    except KeyboardInterrupt:
+        click.echo("atar watch stopped")
 
 
 @cli.command()
