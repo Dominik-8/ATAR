@@ -574,6 +574,60 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
 
 
 @cli.command()
+@click.option("--max-age", "max_age", default=None, type=int,
+              help="treat vouches older than N seconds as EXPIRED (default: off)")
+def audit(max_age):
+    """Health-check your local trust network.
+
+    Scans every vouch in the store and reports counts by state:
+    valid / revoked / expired / invalid — plus a per-scope breakdown. This is
+    the operator's "trust graph status" command: one glance shows whether your
+    network is healthy (all valid) or has stale/revoked edges to clean up.
+    """
+    from .store import VouchStore
+    from .revocation import RevocationList, revoke_payload_id
+    from .freshness import is_fresh
+    store = VouchStore(_store_path())
+    vouches = store.all()
+    rl = RevocationList.load(_revocations_path())
+
+    valid = revoked = expired = invalid = 0
+    by_scope = {}
+    for v in vouches:
+        scope = v["payload"].get("scope", "?")
+        by_scope.setdefault(scope, {"valid": 0, "revoked": 0, "expired": 0, "invalid": 0})
+        if not verify_vouch(v):
+            invalid += 1
+            by_scope[scope]["invalid"] += 1
+            continue
+        if rl.is_revoked(revoke_payload_id(v)):
+            revoked += 1
+            by_scope[scope]["revoked"] += 1
+            continue
+        if max_age is not None and not is_fresh(v, ttl=max_age):
+            expired += 1
+            by_scope[scope]["expired"] += 1
+            continue
+        valid += 1
+        by_scope[scope]["valid"] += 1
+
+    total = len(vouches)
+    click.echo(f"ATAR trust audit — {total} vouch(es) in store")
+    click.echo(f"  valid   : {valid}")
+    click.echo(f"  revoked : {revoked}")
+    click.echo(f"  expired : {expired}" + (f" (max-age={max_age}s)" if max_age else " (max-age off)"))
+    click.echo(f"  invalid : {invalid}")
+    if by_scope:
+        click.echo("  by scope:")
+        for scope, c in sorted(by_scope.items()):
+            click.echo(f"    {scope:14s} valid={c['valid']} revoked={c['revoked']} "
+                       f"expired={c['expired']} invalid={c['invalid']}")
+    # non-zero revoked/expired/invalid => unhealthy (exit 2), else 0
+    if revoked or expired or invalid:
+        sys.exit(2)
+
+
+@cli.command()
 @click.option("--port", default=8765, help="port to serve on (localhost only)")
 def serve(port: int):
     """Serve the live Know-Your-Agent dashboard at http://localhost:PORT.

@@ -10,7 +10,7 @@ from atar.cli import cli
 EXPECTED_COMMANDS = {
     "keygen", "vouch", "verify", "revoke", "add", "list", "scopes",
     "card", "verify-card", "graph", "dashboard", "sync", "auto-sync",
-    "rotate", "reissue", "bootstrap", "serve",
+    "rotate", "reissue", "bootstrap", "serve", "audit",
 }
 
 

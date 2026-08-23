@@ -286,6 +286,7 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar reissue --name X [--commit]` | re-sign under new key (commit = +add +revoke old) |
 | `atar bootstrap --config agents.toml` | reproducible network |
 | `atar serve [--port P]` | live multi-scope dashboard |
+| `atar audit [--max-age N]` | health-check: counts valid/revoked/expired/invalid per scope |
 
 ---
 
