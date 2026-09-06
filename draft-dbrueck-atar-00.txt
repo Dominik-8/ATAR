@@ -667,9 +667,11 @@ Appendix A.  Wire Format Examples
 
 Appendix B.  Reference Implementation
 
-   The reference implementation is in Python (3.11+) and is available at:
+The reference implementation is published to PyPI as ``atar-trust``
+(the Python package name is ``atar``).
 
-   - https://github.com/Dominik-8/ATAR (private until public release)
+   - https://pypi.org/project/atar-trust/ (PyPI)
+   - https://github.com/Dominik-8/ATAR (Source)
 
    Dependencies: ``cryptography`` (Ed25519), ``base58`` (DID encoding),
    ``click`` (CLI).  No server, no database, no blockchain.
