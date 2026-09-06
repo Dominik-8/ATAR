@@ -676,7 +676,7 @@ Appendix B.  Reference Implementation
    Quickstart:
 
    ```
-   pip install atar
+   pip install -e ".[dev]"  # or: pip install atar (PyPI coming soon)
    atar keygen --name my-agent
    atar vouch --from my-agent --for did:agent:... --score 0.95 --scope research
    atar verify vouch.json          # -> VALID
