@@ -4,6 +4,7 @@
 > No servers. No blockchain. No cost.
 
 [![CI](https://github.com/Dominik-8/ATAR/actions/workflows/ci.yml/badge.svg)](https://github.com/Dominik-8/ATAR/actions)
+[![PyPI version](https://img.shields.io/pypi/v/atar-trust)](https://pypi.org/project/atar-trust/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org)
 [![Design: ATAR dark](https://img.shields.io/badge/design-ATAR%20dark%20%7C%20%2339ff14-neon)]
