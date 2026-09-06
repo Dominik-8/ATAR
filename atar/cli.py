@@ -384,8 +384,8 @@ def auto_sync():
     Reads $ATAR_HOME/atar_peers.json ({"peers": ["/path/to/peer/home", ...]}) and
     runs `sync` against each. Intended to be called automatically after an agent
     produces output (e.g. a reporting agent or cron), so trust propagates
-    hands-free. Missing peers are flagged — if an agent you depend on stops Missing
-    peer dirs are skipped; an empty/missing peer list is a no-op, not an error.
+    hands-free. Missing peer dirs are skipped; an empty/missing peer list is a
+    no-op, not an error.
     """
     from .store import VouchStore
     from .revocation import RevocationList
@@ -650,11 +650,17 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
     for v in old_vouches:
         vid = revoke_payload_id(v)
         if not rl.is_revoked(vid):
+            # sign the revocation with the NEW key so it's cryptographically verifiable
+            # (the new key now controls this identity; the old key is retired)
+            from base64 import b64encode
+            ts = int(time.time())
+            msg = f"{vid}|{old_did or my_did}|{ts}".encode("utf-8")
+            sig = b64encode(new_id.sign(msg)).decode("ascii")
             rl.entries[vid] = {
                 "vid": vid,
                 "revoked_by": old_did or my_did,
-                "ts": int(__import__("time").time()),
-                "signature": "",
+                "ts": ts,
+                "signature": sig,
             }
             revoked += 1
     rl.save(_revocations_path())
