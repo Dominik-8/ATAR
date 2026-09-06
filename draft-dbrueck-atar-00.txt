@@ -449,7 +449,7 @@ Table of Contents
    Every vouch has a deterministic ID:
 
    ```
-   vouch_id = sha256(canonical_json(payload))      # hex, no "vouch:" prefix
+   vouch_id = sha256(canonical_json(payload))      # hex, "vouch:" prefix
    ```
 
    This enables:
@@ -597,6 +597,19 @@ Table of Contents
 
 15.  References
 
+   Normative References
+
+   [RFC2119] Bradner, S., "Key words for use in RFCs to Indicate
+             Requirement Levels", BCP 14, RFC 2119.
+
+   [RFC8032] Josefsson, S. and I. Liusvaara, "Edwards-Curve Digital
+             Signature Algorithm (EdDSA)", RFC 8032.
+
+   [RFC8174] Leiba, B., "Ambiguity of Uppercase vs Lowercase in
+             RFC 2119 Key Words", BCP 14, RFC 8174.
+
+   Informative References
+
    [MCP]    Model Context Protocol.  https://modelcontextprotocol.io
 
    [A2A]    Agent-to-Agent Protocol (Linux Foundation).
@@ -605,18 +618,9 @@ Table of Contents
    [ERC8004] ERC-8004: Agent Identity and Reputation Standard.
              https://eips.ethereum.org/EIPS/eip-8004
 
-   [RFC2119] Bradner, S., "Key words for use in RFCs to Indicate
-             Requirement Levels", BCP 14, RFC 2119.
-
    [RFC5280] Cooper, D., et al., "Internet X.509 Public Key
              Infrastructure Certificate and Certificate Revocation
              List (CRL) Profile", RFC 5280.
-
-   [RFC8032] Josefsson, S. and I. Liusvaara, "Edwards-Curve Digital
-             Signature Algorithm (EdDSA)", RFC 8032.
-
-   [RFC8174] Leiba, B., "Ambiguity of Uppercase vs Lowercase in
-             RFC 2119 Key Words", BCP 14, RFC 8174.
 
 
 Appendix A.  Wire Format Examples
