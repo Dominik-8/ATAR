@@ -32,4 +32,4 @@ def test_agents_toml_contains_real_agents():
     data = _load()
     names = {a.get("name") for a in data.get("agents", [])}
     assert "seed_agent" in names, "seed_agent (real seed) must be present"
-    assert "daily_brief" in names, "daily_brief (real cron) must be present"
+    assert "reporting_agent" in names, "reporting_agent (real cron) must be present"

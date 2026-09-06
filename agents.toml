@@ -7,14 +7,14 @@
 
 [[agents]]
 name = "seed_agent"
-seed = true            # root of trust — this is your real ATAR agent
+seed = true            # root of trust — your primary agent
 
 [[agents]]
-name = "daily_brief"   # REAL: the ATAR nightly brief cron job
+name = "reporting_agent"   # e.g. a nightly brief cron job
 
-# Trust edge: ATAR vouches for the daily_brief (both real processes).
+# Trust edge: seed vouches for the reporting agent.
 [[vouches]]
 issuer = "seed_agent"
-subject = "daily_brief"
+subject = "reporting_agent"
 score = 0.95
 scope = "intelligence"

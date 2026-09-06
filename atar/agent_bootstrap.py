@@ -1,19 +1,20 @@
 """Agent bootstrap — seed real agents into the ATAR trust network.
 
-This is the glue that turns ATAR from a demo into *your* system. Each of your
-agents (ATAR, the daily-brief cron, a research agent, ...) gets a persistent
-``did:agent:`` and can vouch for others. Vouches land in the persistent store
-(Phase 7), so the Know-Your-Agent dashboard reflects a real, durable network.
+This is the glue that turns ATAR from a demo into *your* system. Each of
+your agents (a primary agent, a reporting cron, a research agent, ...) gets
+a persistent ``did:agent:`` and can vouch for others. Vouches land in the
+persistent store (Phase 7), so the Know-Your-Agent dashboard reflects a real,
+durable network.
 
 No server, no cost. Each agent's key lives under $ATAR_HOME/agents/<name>.json.
-The trust root (seed) is whichever agent you designate (typically you / ATAR).
+The trust root (seed) is whichever agent you designate (typically your primary).
 
 Usage:
     reg = AgentRegistry()
     reg.register("seed_agent")
     seed_trust_root("seed_agent")
-    reg.register("research")
-    reg.vouch("seed_agent", "research", score=0.9, scope="intelligence")
+    reg.register("reporting_agent")
+    reg.vouch("seed_agent", "reporting_agent", score=0.95, scope="intelligence")
 """
 
 from __future__ import annotations

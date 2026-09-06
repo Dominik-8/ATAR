@@ -14,7 +14,7 @@ trust-graph manipulation), **do not open a public issue**.
 
 Instead, report it privately:
 
-- **Email:** security@ (see profile) — or open a
+- **Email:** [***REMOVED***](mailto:***REMOVED***) — or open a
   [GitHub Security Advisory](https://github.com/Dominik-8/ATAR/security/advisories/new)
   (private, maintained by the maintainer).
 

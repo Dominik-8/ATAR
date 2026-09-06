@@ -1,0 +1,700 @@
+draft-dbrueck-atar-00.txt
+
+Network Working Group                                   D. Brueck
+Internet-Draft                                         Independent
+Intended status: Experimental                          August 2026
+Expires: February 27, 2027
+
+
+                A Trust and Attribution Root for Autonomous Agents
+                            draft-dbrueck-atar-00
+
+Abstract
+
+   Autonomous AI agents increasingly delegate tasks to one another across
+   organizational boundaries.  Today there is no free, decentralized,
+   serverless protocol that lets an agent prove "who I am" and "who
+   vouches for me" without reintroducing a trusted third party or a
+   blockchain.
+
+   ATAR (Agent Trust & Attribution Root) fills this gap.  Every agent
+   gets a self-sovereign Ed25519 identity (``did:agent:``).  Agents vouch
+   for one another with signed, tamper-evident attestations scoped to a
+   capability.  Anyone can verify trust **offline, for $0, with no
+   server**.  Trust propagates transitively (web-of-trust), can be
+   revoked, expired, or rotated — so the graph stays alive.
+
+   This document specifies the ATAR protocol: identity derivation, vouch
+   blobs, canonical serialization, verification, revocation, freshness,
+   key rotation, the ATC carrier format, and decentralized sync.  The
+   specification is implemented and tested (122 tests, CI green) and
+   deployed in a real agent pipeline.
+
+Status of This Memo
+
+   This is an Internet-Draft.  It is a work in progress and subject to
+   revision.  It does not specify an Internet standard of any kind.
+   Distribution is unlimited.
+
+Copyright Notice
+
+   Copyright (c) 2026 D. Brueck and others.  Permission is hereby granted
+   to use, copy, modify, and/or distribute this work for any purpose
+   with or without fee, provided that the above copyright notice and
+   this permission notice appear in all copies.
+
+Table of Contents
+
+   1.  Introduction . . . . . . . . . . . . . . . . . . . . . . . .  3
+     1.1.  Motivation . . . . . . . . . . . . . . . . . . . . . . .  3
+     1.2.  Problem Statement . . . . . . . . . . . . . . . . . . . .  3
+     1.3.  Design Goals  . . . . . . . . . . . . . . . . . . . . . .  4
+   2.  Terminology . . . . . . . . . . . . . . . . . . . . . . . . .  5
+   3.  Protocol Overview  . . . . . . . . . . . . . . . . . . . . .  6
+   4.  Identity . . . . . . . . . . . . . . . . . . . . . . . . . .  7
+     4.1.  DID Generation  . . . . . . . . . . . . . . . . . . . . .  7
+     4.2.  DID Resolution . . . . . . . . . . . . . . . . . . . . .  7
+   5.  Vouching . . . . . . . . . . . . . . . . . . . . . . . . . .  8
+     5.1.  Vouch Blob . . . . . . . . . . . . . . . . . . . . . . .  8
+     5.2.  Canonical Serialization . . . . . . . . . . . . . . . . .  8
+     5.3.  Signature  . . . . . . . . . . . . . . . . . . . . . . .  9
+     5.4.  Verification  . . . . . . . . . . . . . . . . . . . . . .  9
+   6.  Trust Scopes . . . . . . . . . . . . . . . . . . . . . . . . 10
+   7.  Revocation . . . . . . . . . . . . . . . . . . . . . . . . . 11
+   8.  Freshness / TTL  . . . . . . . . . . . . . . . . . . . . . . 12
+   9.  Key Rotation . . . . . . . . . . . . . . . . . . . . . . . . 13
+     9.1.  Rotation Statement  . . . . . . . . . . . . . . . . . . . 13
+     9.2.  Re-issue and Commit  . . . . . . . . . . . . . . . . . . . 13
+   10. Transparency and Transitive Trust . . . . . . . . . . . . . . 14
+     10.1. Content Addressing  . . . . . . . . . . . . . . . . . . . 14
+     10.2. Trust Computation . . . . . . . . . . . . . . . . . . . . 14
+   11. Agent Trust Carrier  . . . . . . . . . . . . . . . . . . . . 15
+     11.1. Vouch Token . . . . . . . . . . . . . . . . . . . . . . . 15
+     11.2. Agent Card  . . . . . . . . . . . . . . . . . . . . . . . 15
+   12. Decentralized Sync  . . . . . . . . . . . . . . . . . . . . . 16
+   13. Security Considerations  . . . . . . . . . . . . . . . . . . . 17
+     13.1. Threat Model  . . . . . . . . . . . . . . . . . . . . . . 17
+     13.2. Sybil Resistance . . . . . . . . . . . . . . . . . . . . . 17
+     13.3. Key Compromise  . . . . . . . . . . . . . . . . . . . . . 18
+   14. IANA Considerations  . . . . . . . . . . . . . . . . . . . . 19
+   15. References . . . . . . . . . . . . . . . . . . . . . . . . . 20
+   Appendix A. Wire Format Examples  . . . . . . . . . . . . . . . . 21
+   Appendix B. Reference Implementation . . . . . . . . . . . . . . . 23
+
+
+1.  Introduction
+
+1.1.  Motivation
+
+   Autonomous AI agents are no longer tools — they are actors.  They make
+   decisions, sign outputs, delegate tasks, and negotiate with one
+   another.  Multi-agent systems (CrewAI, AutoGen, LangGraph, custom
+   orchestrations) are proliferating across organizations.
+
+   But a fundamental question remains unanswered: *Who is this agent, and
+   why should I trust it?*
+
+   Transport is solved: MCP (Model Context Protocol) [MCP] and A2A (Agent-
+   to-Agent) [A2A] under the Linux Foundation provide the wires.  Trust is
+   not.  Without it, every cross-organizational agent interaction requires
+   either a shared server (re-centralization) or a blockchain (cost,
+   latency, and empirical Sybil-vulnerability [ERC8004]).
+
+   ATAR fills this gap: a free, decentralized, serverless trust protocol
+   for agents — the "SSL/CA of the agent era" that nobody has built yet.
+
+
+1.2.  Problem Statement
+
+   Consider two agents operated by different organizations:
+
+   - Agent A wants to delegate a research task to Agent B.
+   - Agent B claims competence in "research".
+   - Agent A has never interacted with Agent B before.
+
+   Without a trust protocol, Agent A has three options:
+
+   1.  Trust blindly — unacceptable for consequential tasks.
+   2.  Query a central registry — re-introduces a trusted third party,
+       a single point of failure, and a target for regulation.
+   3.  Verify a signed vouch from a mutually-trusted third agent —
+       requires a protocol that does not exist today.
+
+   ATAR enables option 3.
+
+   Formally: given a set of agents, each with a private key, and a set of
+   signed vouches between them, ATAR lets any observer compute
+   *transitive trust* in a specific capability scope, without contacting
+   any server, and without trusting the agents being evaluated.
+
+
+1.3.  Design Goals
+
+   ATAR is designed around six principles (each with a hard consequence):
+
+   | Principle            | Consequence                                  |
+   |----------------------|----------------------------------------------|
+   | **No server**        | Identity = Ed25519 keypair.  DID derived     |
+   |                      | from public key.  Nothing to host.           |
+   | **Offline-verifiable** | Any vouch verifies with the issuer's       |
+   |                      | public key alone.  No round-trip.            |
+   | **Content-addressed** | Every vouch/revocation has a deterministic |
+   |                      | ID.  Gossip and dedup without an operator.   |
+   | **Trust is scoped**  | An agent is trusted *for a capability*,     |
+   |                      | not universally.                             |
+   | **Trust is alive**   | Revocation (active kill) + Freshness/TTL     |
+   |                      | (passive decay) + Rotation (recovery).       |
+   | **Decentralized**    | Peers exchange state over local file sync;  |
+   |                      | no central coordinator.                      |
+
+   These goals are in tension (e.g., "no server" vs. "Sybil-resistant"),
+   and ATAR resolves them honestly: it provides the mechanism; reputation
+   emerges from the graph, not from the protocol.
+
+
+2.  Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP
+   14 [RFC2119][RFC8174] when they appear in all capitals.
+
+   DID (Decentralized Identifier):
+      A ``did:agent:<base58(pubkey)>`` string derived solely from an
+      Ed25519 public key.  Self-resolving.  No registry.
+
+   Identity:
+      An Ed25519 keypair (private key + public key).  The sole root of
+      an agent's trust.
+
+   Vouch:
+      A signed statement by an *issuer* agent endorsing a *subject* agent
+      for a capability *scope* with a *score*.
+
+   Scope:
+      A free-form string naming a capability area (``coding``,
+      ``research``, ``finance``, ``intelligence``, ...).  Trust is
+      scoped, not universal.
+
+   Score:
+      A float in [0.0, 1.0] expressing the issuer's confidence in the
+      subject's capability within the scope.
+
+   ATC (Agent Trust Carrier):
+      The wire format that carries a vouch (or an agent card containing
+      multiple vouches) inline over an existing transport (HTTP, MCP,
+      A2A).
+
+   Seed:
+      The trusted root DID from which transitive trust is computed.
+      Trust starts at 1.0 at the seed and decays with distance.
+
+   Revocation:
+      A signed statement by a vouch's issuer that the vouch is no longer
+      valid.  Overrides a still-cryptographically-valid signature.
+
+   Freshness (TTL):
+      A policy that vouches older than a given age are **EXPIRED** and
+      rejected.  Default: 180 days.
+
+   Rotation:
+      The process of moving an agent's identity from one keypair to
+   another without losing accumulated trust.
+
+
+3.  Protocol Overview
+
+   ATAR operates in four layers:
+
+   Layer 1 — Identity:  Every agent generates an Ed25519 keypair and
+   derives a ``did:agent:`` from the public key.  No registration, no
+   server, no cost.
+
+   Layer 2 — Vouching:  Agents sign vouch blobs endorsing other agents
+   for a scoped capability.  Vouches are verified offline with the
+   issuer's public key alone.
+
+   Layer 3 — Trust Graph:  Vouches are content-addressed (sha256 of
+   canonical bytes), enabling gossip-based dedup and transitive trust
+   computation from a seed root.
+
+   Layer 4 — Carrier + Transport:  Vouches are encoded as ATC tokens and
+   embedded in an agent card.  ATAR rides *on top* of MCP/A2A/HTTP —
+   it replaces nothing.
+
+   State is persisted locally as a JSON file (vouches.json).  Peers
+   exchange state via ``sync`` (one-shot file copy) or ``auto-sync``
+   (cron-driven).  No database, no server, no blockchain.
+
+
+4.  Identity
+
+4.1.  DID Generation
+
+   An agent identity is an Ed25519 keypair [RFC8032].  The DID is derived
+   from the public key:
+
+   ```
+   did:agent:<base58(public_key_raw_bytes)>
+   ```
+
+   - ``public_key_raw_bytes`` = 32-byte Ed25519 public key.
+   - Encoding: base58 (Bitcoin alphabet), no padding.
+   - The private key is stored locally, never transmitted.
+
+   Implementations:
+
+   ```
+   def generate_identity() -> Identity:
+       private_key = Ed25519PrivateKey.generate()
+       public_key = private_key.public_key()
+       return Identity(private_key=private_key, public_key=public_key)
+
+   def did_from_public(public_key: Ed25519PublicKey) -> str:
+       raw = public_key.public_bytes_raw()
+       return "did:agent:" + base58.b58encode(raw).decode()
+   ```
+
+
+4.2.  DID Resolution
+
+   A DID resolves to a public key by base58-decoding the suffix:
+
+   ```
+   def did_to_pubkey(did: str) -> Ed25519PublicKey:
+       assert did.startswith("did:agent:")
+       raw = base58.b58decode(did[10:])
+       return Ed25519PublicKey.from_public_bytes(raw)
+   ```
+
+   This is self-resolving: no server, no registry, no round-trip.
+
+
+5.  Vouching
+
+5.1.  Vouch Blob
+
+   A **vouch** is a JSON object with two keys: ``payload`` and
+   ``signature``.
+
+   ```json
+   {
+     "payload": {
+       "type": "vouch",
+       "issuer": "did:agent:...",
+       "subject": "did:agent:...",
+       "score": 0.95,
+       "scope": "research",
+       "claim": null,
+       "ts": 1700000000
+     },
+     "signature": "<hex(ed25519(canonical_payload_bytes))>"
+   }
+   ```
+
+   Rules (MUST):
+
+   - ``type`` MUST be ``"vouch"``.
+   - ``issuer`` MUST be a valid ``did:agent:`` string.
+   - ``subject`` MUST be a valid ``did:agent:`` string.
+   - ``score`` MUST be a float in [0.0, 1.0].
+   - ``scope`` SHOULD be a short, descriptive string.
+   - ``claim`` is optional free-text; it is used only for *self-vouches*
+     (``issuer == subject``).
+   - ``ts`` MUST be a Unix epoch timestamp (seconds).
+   - ``issuer`` MUST be the DID whose private key produced ``signature``.
+
+
+5.2.  Canonical Serialization
+
+   For signing and verifying, ``payload`` is serialized deterministically:
+
+   ```python
+   json.dumps(payload, sort_keys=True, separators=(",", ":"))
+   ```
+
+   This guarantees byte-identical input for signer and verifier across
+   implementations and languages.
+
+
+5.3.  Signature
+
+   The ``signature`` field is the hex-encoded Ed25519 signature over the
+   canonical bytes of ``payload`` (Section 5.2), produced with the
+   issuer's private key.
+
+   ```
+   sig = issuer.private_key.sign(canonical_bytes)
+   signature = sig.hex()
+   ```
+
+
+5.4.  Verification
+
+   A verifier checks a vouch in six steps:
+
+   1. Parse ``payload`` and ``signature``.
+   2. Assert ``issuer`` starts with ``did:agent:``.
+   3. Reconstruct the issuer public key from the DID (Section 4.2).
+   4. Compute canonical bytes of ``payload`` (Section 5.2).
+   5. ``public_key.verify(bytes.fromhex(signature), canonical_bytes)``.
+   6. If any step raises — **INVALID**.  Otherwise — signature valid.
+
+   A vouch is **trust-valid** only if *additionally*:
+
+   - it is **not** on the local revocation list (Section 7), AND
+   - it is **not** expired under the active TTL (Section 8).
+
+   Implementations MUST reject invalid, revoked, or expired vouches for
+   any trust-sensitive operation.
+
+
+6.  Trust Scopes
+
+   An agent is trusted *for a capability*, not universally.  A vouch
+   for ``scope: "research"`` says nothing about the subject's coding
+   ability.
+
+   Scopes are free-form strings.  Verifiers select a scope and compute
+   transitive trust only over vouches within that scope.  This lets an
+   operator ask: "Who do I trust for research?" and "Who do I trust for
+   coding?" separately — and get different answers.
+
+   Recommended scopes: ``coding``, ``research``, ``finance``,
+   ``intelligence``, ``writing``, ``operations``.  But any string is
+   valid; the protocol does not police vocabulary.
+
+
+7.  Revocation
+
+   A vouch may be **revoked** by its issuer.  Revocation is modeled on
+   CRL/OCSP [RFC5280] but local and peer-propagated — no CA.
+
+   One revocation entry:
+
+   ```json
+   {
+     "vid": "<canonical vouch id>",
+     "revoked_by": "did:agent:...",
+     "ts": 1700000000,
+     "signature": "<base64(ed25519 over \"vid|revoked_by|ts\")>"
+   }
+   ```
+
+   Rules:
+
+   - ``vid`` = canonical vouch ID (Section 10.1).
+   - ``revoked_by`` MUST equal the revoked vouch's ``issuer`` DID.
+   - ``signature`` is verified against ``revoked_by``'s public key.
+   - A revoked vouch is treated as **REVOKED** even when its original
+     signature is still cryptographically valid.
+   - Revocation lists are content-addressed and gossip-synced like
+     vouches (Section 12), so a revocation made by one peer reaches all.
+
+
+8.  Freshness / TTL
+
+   Revocation kills trust *actively*.  Freshness lets stale trust
+   *decay*: a vouch older than the active max-age is **EXPIRED** and
+   rejected.  This forces periodic re-vouching, so the graph stays alive
+   instead of accumulating zombie trust.
+
+   ```
+   is_fresh(vouch, ttl) := (now - vouch.payload.ts) <= ttl
+   ```
+
+   Default recommendation: ``ttl = 180 days``.  A verifier MAY set a
+   stricter ``--max-age``.  Absence of a max-age means trust never
+   expires *except* by revocation.
+
+
+9.  Key Rotation
+
+   When a key leaks, an agent rotates instead of starting from zero.
+
+9.1.  Rotation Statement
+
+   ```json
+   {
+     "type": "rotation",
+     "old_did": "did:agent:...",
+     "new_did": "did:agent:...",
+     "ts": 1700000000,
+     "signature": "<hex(ed25519 over canonical rotation payload,
+                     signed by OLD key)>"
+   }
+   ```
+
+   The **old** key signs "I am now ``<new_did>``".  Verifiers confirm
+   continuity: ``verify_rotation`` checks the statement is genuinely
+   signed by ``old_did``.
+
+9.2.  Re-issue and Commit
+
+   After rotation, the agent re-signs its out-going vouches under the
+   **new** key (preserving ``score``/``scope``/``subject``, stamping a
+   fresh ``ts``).  With ``reissue --commit``:
+
+   - the re-issued vouches are written to the store, AND
+   - the old-key vouches are revoked — the old key is fully retired,
+     trust carried forward.
+
+   The trust graph survives a key compromise.
+
+
+10.  Transparency and Transitive Trust
+
+10.1.  Content Addressing
+
+   Every vouch has a deterministic ID:
+
+   ```
+   vouch_id = sha256(canonical_json(payload))      # hex, no "vouch:" prefix
+   ```
+
+   This enables:
+
+   - Deduplication: the same vouch (same claim) has the same ID.
+   - Gossip: peers exchange vouches and dedup by ID without an operator.
+
+10.2.  Trust Computation
+
+   Given a seed DID and a scope:
+
+   - The seed starts at trust ``1.0``.
+   - For each valid, unrevoked, unexpired vouch ``issuer → subject
+     (score s)``, the subject's trust is increased by
+     ``issuer_trust × s × decay^depth``.
+   - Propagation is bounded (depth ≤ 8, or until contribution < 1e-9).
+   - Only cryptographically valid vouches are admitted; forgery cannot
+     inject fake trust.
+
+   The decay factor (default 0.5) ensures distant agents contribute
+   less than direct vouches.  The result is a ranked list of agents
+   trusted for the scope, from the verifier's perspective.
+
+
+11.  Agent Trust Carrier
+
+   ATC lets an agent present its identity + vouches **inline** on first
+   contact, over any existing transport.  ATAR rides on top of MCP/A2A/
+   HTTP as a carrier — it replaces nothing.
+
+11.1.  Vouch Token
+
+   A vouch is encoded as a header-safe token:
+
+   ```
+   token = base64url(canonical_json(vouch_blob))   # no padding
+   ```
+
+   The receiver decodes, then runs Section 5 verification offline.
+
+11.2.  Agent Card
+
+   An agent card is a self-describing JSON "business card":
+
+   ```json
+   {
+     "schema": "atar-agent-card/1.0",
+     "did": "did:agent:...",
+     "name": "alice",
+     "atar": {
+       "vouches": ["<token>", "<token>", "..."]
+     }
+   }
+   ```
+
+   A verifier runs ``verify_agent_card``, which decodes each token and
+   runs Section 5 verification.  Cards can be embedded in MCP tool
+   responses, A2A messages, HTTP headers, or email footers.
+
+
+12.  Decentralized Sync
+
+   Peers exchange vouches **and** revocations between their local stores.
+   No server, no coordinator:
+
+   ```
+   atar sync --with <peer_home>      # one-shot exchange
+   atar auto-sync                    # reads atar_peers.json, for cron/agent hooks
+   ```
+
+   Semantics:
+
+   - Vouches are added if valid + new (dedup by ``vouch_id``).
+   - Revocations are merged (dedup by ``vid``).
+   - **Defense-in-depth:** revoked or expired vouches are never admitted
+     to the store, even via sync (Section 7/8 enforced at insertion).
+   - Revocation lists are merged so a revocation made by one peer reaches
+   all.
+
+   This makes "decentralized" real, not marketing: two agents on
+   different machines with no shared infrastructure can build a shared
+   trust graph over a shared folder, a git repo, or a one-shot file copy.
+
+
+13.  Security Considerations
+
+13.1.  Threat Model
+
+   | Threat        | Mitigation                                  |
+   |---------------|---------------------------------------------|
+   | **Forgery**   | Impossible without the issuer's private key |
+   |               | (Ed25519).                                  |
+   | **Tampering** | Any payload change invalidates the          |
+   |               | signature.                                  |
+   | **Stale      | Mitigated by Freshness/TTL (Section 8) —    |
+   | trust**       | trust must be renewed.                      |
+   | **Key leak**  | Mitigated by Revocation (Section 7) +       |
+   |               | Rotation (Section 9) — recover without      |
+   |               | total loss.                                 |
+   | **Zombie     | Mitigated by Revocation + Freshness         |
+   | trust**       | combined.                                   |
+
+13.2.  Sybil Resistance
+
+   Free, serverless identity means anyone can mint unlimited agents.
+   **This is out of scope.**  ATAR provides the *mechanism* (signed
+   vouches); meaningful reputation emerges from the web-of-trust, not
+   from the protocol.
+
+   A self-vouch (``issuer == subject``) contributes nothing: the issuer
+   must already be trusted for the vouch to matter.  Therefore, a Sybil
+   army of self-vouched agents injects zero trust.
+
+   Real trust requires real agents vouching for real agents.  Sybil-
+   resistance is a property of the graph's topology, not of identity
+   issuance.  We do not promise Sybil-proofing — that is mathematically
+   incompatible with "free + decentralized + zero-server".
+
+13.3.  Key Compromise
+
+   If an agent's private key is leaked, an attacker can forge vouches in
+   that agent's name.  ATAR mitigates this through:
+
+   - **Revocation:** the legitimate agent can revoke the compromised
+     vouches (requires the legitimate agent still has a way to
+     authenticate the revocation — e.g., an out-of-band key).
+   - **Rotation:** the agent can rotate to a new key (Section 9) and
+     re-issue its vouches under the new key, preserving the trust graph.
+
+   We recommend agents store private keys in OS keyrings or HSMs and
+   rotate keys proactively (e.g., every 90 days).
+
+
+14.  IANA Considerations
+
+   This document makes no request of IANA.  The following URI scheme and
+   JSON schema identifiers are defined by this specification for use in
+   protocol messages; they are not registered with IANA at this time:
+
+   - URI scheme: ``did:agent``
+   - JSON schema: ``atar-agent-card/1.0``
+
+   A future version of this document may request registration.
+
+
+15.  References
+
+   [MCP]    Model Context Protocol.  https://modelcontextprotocol.io
+
+   [A2A]    Agent-to-Agent Protocol (Linux Foundation).
+            https://a2aprotocol.ai
+
+   [ERC8004] ERC-8004: Agent Identity and Reputation Standard.
+             https://eips.ethereum.org/EIPS/eip-8004
+
+   [RFC2119] Bradner, S., "Key words for use in RFCs to Indicate
+             Requirement Levels", BCP 14, RFC 2119.
+
+   [RFC5280] Cooper, D., et al., "Internet X.509 Public Key
+             Infrastructure Certificate and Certificate Revocation
+             List (CRL) Profile", RFC 5280.
+
+   [RFC8032] Josefsson, S. and I. Liusvaara, "Edwards-Curve Digital
+             Signature Algorithm (EdDSA)", RFC 8032.
+
+   [RFC8174] Leiba, B., "Ambiguity of Uppercase vs Lowercase in
+             RFC 2119 Key Words", BCP 14, RFC 8174.
+
+
+Appendix A.  Wire Format Examples
+
+   A vouch blob (signed by ``did:agent:issuer...`` for
+   ``did:agent:subject...``):
+
+   ```json
+   {
+     "payload": {
+       "type": "vouch",
+       "issuer": "did:agent:6St4ZueD39iouPRSUd4f3nxk1toCMi8zM8wuRYeUAxD7",
+       "subject": "did:agent:8RANvBv5WFUA4uwGdAQsc1ykNpB5wXeJkqrFJdJ6EBEq",
+       "score": 0.95,
+       "scope": "research",
+       "claim": null,
+       "ts": 1700000000
+     },
+     "signature": "a1b2c3d4e5f6..."
+   }
+   ```
+
+   An ATC vouch token (header-safe base64url of the blob above):
+
+   ```
+   eyJwYXlsb2FkIjp7InR5cGUiOiJ2b3VjaCIsImlzc3VlciI6ImRpZDphZ2VudDo2U3Q0enV...
+   ```
+
+   An agent card carrying the token:
+
+   ```json
+   {
+     "schema": "atar-agent-card/1.0",
+     "did": "did:agent:8RANvBv5WFUA4uwGdAQsc1ykNpB5wXeJkqrFJdJ6EBEq",
+     "name": "research-agent",
+     "atar": {
+       "vouches": [
+         "eyJwYXlsb2FkIjp7InR5cGUiOiJ2b3VjaCIsImlzc3VlciI6ImRpZDphZ2VudDo2U3Q0enV..."
+       ]
+     }
+   }
+   ```
+
+
+Appendix B.  Reference Implementation
+
+   The reference implementation is in Python (3.11+) and is available at:
+
+   - https://github.com/Dominik-8/ATAR (private until public release)
+
+   Dependencies: ``cryptography`` (Ed25519), ``base58`` (DID encoding),
+   ``click`` (CLI).  No server, no database, no blockchain.
+
+   The implementation ships a CLI (24 commands) and a Python library.
+   Tests: 122, all green, CI on Python 3.11 and 3.12.
+
+   Quickstart:
+
+   ```
+   pip install atar
+   atar keygen --name my-agent
+   atar vouch --from my-agent --for did:agent:... --score 0.95 --scope research
+   atar verify vouch.json          # -> VALID
+   atar card --name my-agent --out card.json
+   atar dashboard --seed did:agent:... --scope research --out dash.html
+   atar serve                      # live dashboard at http://localhost:8765
+   ```
+
+   Reproducible network bootstrap:
+
+   ```
+   atar bootstrap --config agents.toml   # from declarative TOML
+   atar sync --with /path/to/peer/home   # gossip with a peer
+   atar watch --interval 300             # monitor trust health
+   ```
+
+
+Authors' Address:
+
+   Dominik Brueck
+   Email: ***REMOVED***

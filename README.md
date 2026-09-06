@@ -6,7 +6,7 @@
 [![CI](https://github.com/Dominik-8/ATAR/actions/workflows/ci.yml/badge.svg)](https://github.com/Dominik-8/ATAR/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org)
-[![Design: ATAR dark](https://img.shields.io/badge/design-ATAR%20dark%20%7C%20%2339ff14-neon)](https://github.com/Dominik-8/ATAR)
+[![Design: ATAR dark](https://img.shields.io/badge/design-ATAR%20dark%20%7C%20%2339ff14-neon)]
 
 ATAR gives every AI agent a self-sovereign cryptographic identity (`did:agent:`)
 and lets agents vouch for one another with signed, tamper-evident attestations.
@@ -23,7 +23,7 @@ solved, but *trust & attribution* is not. ATAR is the open protocol for it.
 - [Quickstart](#quickstart)
 - [How it works](#how-it-works)
 - [CLI reference](#cli-reference)
-- [Visual identity](#visual-identity-seed_agent-style)
+- [Visual identity](#visual-identity-atar-style)
 - [Project status](#project-status)
 - [Honest constraints](#honest-constraints)
 - [Contributing](#contributing)
@@ -69,7 +69,7 @@ atar dashboard --seed "did:agent:..." --scope coding --out dash.html
 ```
 
 **Real vs demo network.** `agents.toml` holds only *real running agents*
-(`seed_agent` seed + `daily_brief` cron). The larger graph in `demo.toml` is an
+(`seed_agent` seed + `reporting_agent` cron). The larger graph in `demo.toml` is an
 *illustration* — those agents are not real processes and are never in the
 default bootstrap. ATAR's value is a trust layer over real agents; demo nodes
 exist only to show the shape of a bigger graph.
@@ -125,8 +125,7 @@ See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 
 ## Visual identity (ATAR-style)
 
-ATAR shares ATAR's dark, ATAR-corporate look so the two projects read as one
-family:
+ATAR has its own dark, corporate look - consistent and standalone.
 
 | Token | Value | Use |
 |---|---|---|
@@ -148,15 +147,15 @@ any ATAR UI, web page, or digest so the design stays consistent.
 | 1 | Ed25519 identity + sign/verify | ✅ |
 | 2 | ATC carrier (tokens + agent cards) | ✅ |
 | 3 | Transparency log + transitive trust graph | ✅ |
-| 4 / 4b / 4c / 9 | ATAR adopts ATAR, `graph` CLI, demo network, ATC in brief | ✅ |
+| 4 / 4b / 4c / 9 | ATAR is used by agents, `graph` CLI, demo network, ATC in brief | ✅ |
 | 6 / 8 / 11 | Know-Your-Agent dashboard (module, CLI, live server) | ✅ |
 | 7 | Persistent vouch store (file-backed, dedup) | ✅ |
 | 4d / 12 | Real-agent bootstrap (CLI + `agents.toml`) | ✅ |
-| 10 / 15 | Gossip (`sync`) + auto-sync hook in ATAR | ✅ |
+| 10 / 15 | Gossip (`sync`) + auto-sync hook in any agent | ✅ |
 | 16 / 17 | Revocation (local + gossip) | ✅ |
 | 18 | Revocation in dashboard | ✅ |
 | 13 / 25 | Multi-scope dashboard (module + live server) | ✅ |
-| 14 | Real agents seeded (ATAR + daily-brief cron) | ✅ |
+| 14 | Real agents seeded (seed_agent + reporting_agent) | ✅ |
 | 20 | `atar scopes` CLI | ✅ |
 | 22 | Revocation in `verify` | ✅ |
 | 23 | Revocation in `add` + `sync` (defense-in-depth) | ✅ |
@@ -167,7 +166,7 @@ any ATAR UI, web page, or digest so the design stays consistent.
 | 31 | `atar watch` (cron-ready monitoring + ALERT) | ✅ |
 | 26 | Real-agent claim issuance (`issue` / `verify-claim`) | ✅ |
 
-All phases implemented and tested (92 tests, CI green). See
+All phases implemented and tested (122 tests, CI green). See
 [`SPEC.md`](SPEC.md) for the authoritative protocol specification.
 
 **Next:** wider real-agent adoption; formal RFC publication (this spec is the
@@ -181,7 +180,7 @@ draft for it).
   We do not promise Sybil-proofing — that is mathematically incompatible with
   "free + decentralized + zero-server".
 - **Bootstrap needs a seed.** Adoption is the real risk. We seed ATAR by
-  forcing our own agents (e.g. ATAR) to use it, riding MCP/A2A as carriers
+  forcing our own agents (your primary agent) to use it, riding MCP/A2A as carriers
   rather than competing with them.
 
 ## Contributing

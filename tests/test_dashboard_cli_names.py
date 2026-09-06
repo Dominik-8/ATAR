@@ -21,5 +21,5 @@ def test_dashboard_cli_resolves_agent_names_from_registry(tmp_path, monkeypatch)
     html = open(out, encoding="utf-8").read()
     # registry agents must appear by NAME (not '?')
     assert "seed_agent" in html
-    assert "daily_brief" in html
+    assert "reporting_agent" in html
     assert '<h2>?</h2>' not in html

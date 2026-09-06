@@ -1,6 +1,6 @@
-/* ATAR design tokens — SAME language as ATAR (ATAR corporate dark look).
+/* ATAR design tokens — dark theme with gift-green + GitHub-blue.
    Near-black bg, neon/gift-green accent. Reuse everywhere: README renders,
-   future web UI, ATAR digest, agent cards. One source of truth. */
+   future web UI, agent cards. One source of truth. */
 
 :root {
   --bg: #0a0a0b;

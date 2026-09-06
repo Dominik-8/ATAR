@@ -16,13 +16,13 @@ def test_issue_claim_into_store_and_audit(tmp_path, monkeypatch):
     and confirm it appears in audit as a valid vouch."""
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     runner = CliRunner()
-    runner.invoke(cli, ["keygen", "--name", "daily_digest"])
+    runner.invoke(cli, ["keygen", "--name", "reporting_agent"])
     runner.invoke(cli, ["keygen", "--name", "seed_agent"])
     seed_agent_did = _did(str(tmp_path), "seed_agent")
 
     # issue a capability claim
     r = runner.invoke(cli, [
-        "issue", "--from", "daily_digest", "--for", seed_agent_did,
+        "issue", "--from", "reporting_agent", "--for", seed_agent_did,
         "--scope", "intelligence", "--score", "0.9",
         "--claim", "produces the morning brief",
         "--out", str(tmp_path / "c.json"),

@@ -16,12 +16,12 @@ def test_issue_and_verify_claim(tmp_path, monkeypatch):
     the claim verifies cryptographically (independent of the store)."""
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     runner = CliRunner()
-    runner.invoke(cli, ["keygen", "--name", "daily_digest"])
+    runner.invoke(cli, ["keygen", "--name", "reporting_agent"])
     runner.invoke(cli, ["keygen", "--name", "seed_agent"])
 
-    # daily_digest issues a signed claim about seed_agent's capability
+    # reporting_agent issues a signed claim about seed_agent's capability
     r = runner.invoke(cli, [
-        "issue", "--from", "daily_digest", "--for",
+        "issue", "--from", "reporting_agent", "--for",
         _id(str(tmp_path), "seed_agent"),
         "--scope", "intelligence", "--score", "0.85",
         "--claim", "operates the morning brief",

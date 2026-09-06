@@ -33,7 +33,7 @@ def test_web_builds_html_response(tmp_path, monkeypatch):
     seed = _seed_real_net(home, monkeypatch)
     body = build_dashboard_response(scope="intelligence")
     assert isinstance(body, str)
-    assert "#0a0a0b" in body           # ATAR dark design
+    assert "#0a0a0b" in body           # seed_agent dark design
     assert "Know Your Agent" in body
     assert seed in body                # seed DID rendered
 

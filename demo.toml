@@ -3,14 +3,14 @@
 # multi-agent trust graph looks like once you bring real agents online.
 # Run:  atar bootstrap --config demo.toml
 #
-# For the REAL network use agents.toml (seed_agent + daily_brief only).
+# For the REAL network use agents.toml (seed_agent + reporting_agent only).
 
 [[agents]]
 name = "seed_agent"
 seed = true
 
 [[agents]]
-name = "daily_brief"
+name = "reporting_agent"
 
 [[agents]]
 name = "research"      # (demo) deep-research / web agent
@@ -23,7 +23,7 @@ name = "founder_intel" # (demo) founder/strategy signal agent
 
 [[vouches]]
 issuer = "seed_agent"
-subject = "daily_brief"
+subject = "reporting_agent"
 score = 0.95
 scope = "intelligence"
 
@@ -52,7 +52,7 @@ score = 0.60
 scope = "intelligence"
 
 [[vouches]]
-issuer = "daily_brief"
+issuer = "reporting_agent"
 subject = "research"
 score = 0.75
 scope = "intelligence"

@@ -304,7 +304,7 @@ def graph(seed: str | None, scope: str, home: str | None):
 @click.option("--out", default="atar-dashboard.html", help="output HTML file")
 @click.option("--home", "home", default=None, help="override ATAR_HOME (vouch store)")
 def dashboard(seed: str | None, scope: str, out: str, home: str | None):
-    """Render the Know-Your-Agent dashboard (ATAR dark design) from local vouches.
+    """Render the Know-Your-Agent dashboard from local vouches.
 
     Reads the persistent vouch store, computes transitive trust from SEED, and
     writes a standalone HTML page (no server needed). If --seed is omitted, the
@@ -383,7 +383,8 @@ def auto_sync():
 
     Reads $ATAR_HOME/atar_peers.json ({"peers": ["/path/to/peer/home", ...]}) and
     runs `sync` against each. Intended to be called automatically after an agent
-    produces output (e.g. a ATAR brief), so trust propagates hands-free. Missing
+    produces output (e.g. a reporting agent or cron), so trust propagates
+    hands-free. Missing peers are flagged — if an agent you depend on stops Missing
     peer dirs are skipped; an empty/missing peer list is a no-op, not an error.
     """
     from .store import VouchStore
@@ -504,10 +505,10 @@ def bootstrap(config: str):
         name = "seed_agent"
         seed = true
         [[agents]]
-        name = "research"
+        name = "reporting_agent"
         [[vouches]]
         issuer = "seed_agent"
-        subject = "research"
+        subject = "reporting_agent"
         score = 0.9
         scope = "intelligence"
     """

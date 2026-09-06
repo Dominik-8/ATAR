@@ -1,7 +1,7 @@
 """Know-Your-Agent dashboard — the value layer *above* the ATAR protocol.
 
-Renders your private trust network as a dark, ATAR-corporate HTML page (same
-design language as ATAR: near-black bg, gift-green accents, GitHub-blue DIDs).
+Renders your private trust network as a dark, corporate HTML page (same
+design language as seed_agent: near-black bg, gift-green accents, GitHub-blue DIDs).
 This is the application that captures value while the ATAR protocol itself
 stays free — the Google/FB model: own the surface, give away the pipes.
 
@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from atar.transparency import graph_from_vouches
 
-# ATAR design tokens (1:1 with ATAR's analyze.py CSS) so the two projects
+# seed_agent design tokens (1:1 with seed_agent's analyze.py CSS) so the two projects
 # read as one family.
 _CSS = """
 :root{--bg:#0a0a0b;--card:#141416;--accent:#39ff14;--accent-dim:#1f7a12;

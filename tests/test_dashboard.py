@@ -6,7 +6,7 @@ def test_dashboard_data_ranks_agents():
     net = build_demo_network()
     data = dashboard_data(net, scope="intelligence")
     assert "seed_did" in data
-    assert len(data["agents"]) == 4
+    assert len(data["agents"]) == 5
     # agents sorted by trust descending
     trusts = [a["trust"] for a in data["agents"]]
     assert trusts == sorted(trusts, reverse=True)
@@ -18,7 +18,7 @@ def test_dashboard_data_ranks_agents():
 def test_dashboard_html_uses_seed_agent_design():
     net = build_demo_network()
     html = render_dashboard_html(net, scope="intelligence")
-    # ATAR design tokens must appear
+    # seed_agent design tokens must appear
     assert "#0a0a0b" in html          # near-black bg
     assert "#39ff14" in html          # gift-green accent
     assert "Segoe UI" in html         # system font stack

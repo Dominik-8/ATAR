@@ -7,13 +7,13 @@ from atar.examples.network import build_demo_network, demo_trust_report
 def test_demo_network_transitive_trust():
     net = build_demo_network()
     # net has 4 agents + cross vouches
-    assert len(net["agents"]) == 4
+    assert len(net["agents"]) == 5
     # graph should compute transitive trust from the seed (seed_agent root)
     g = graph_from_vouches(net["vouches"])
     seed = net["seed_did"]
     trust = g.compute_trust(seed_did=seed, scope="intelligence")
-    # all 4 agents reachable through the web of trust
-    assert len(trust) == 4
+    # all 5 agents reachable through the web of trust
+    assert len(trust) == 5
     # every non-seed agent has positive trust
     for did in net["agents"].values():
         assert trust.get(did, 0.0) > 0.0

@@ -8,7 +8,7 @@
 > with no server**. Trust propagates transitively (web-of-trust) and can be
 > revoked, expired, or rotated — so the graph stays alive instead of rotting.
 
-Status: **implemented and tested** (78 tests, CI green). This document is the
+Status: **implemented and tested** (122 tests, CI green). This document is the
 authoritative wire + algorithm spec.
 
 ---
@@ -241,7 +241,7 @@ The receiver decodes, then runs §5 verification offline.
 }
 ```
 
-ATAR attaches a verifiable agent card (with revocation-aware verification) to
+An agent attaches a verifiable agent card (with revocation-aware verification) to
 every brief it sends.
 
 ---
@@ -297,11 +297,13 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 
 ## 15. Status & roadmap
 
-**Implemented (phases 1–27b):** identity, vouch, ATC, transparency/transitive
+**Implemented (phases 1–31):** identity, vouch, ATC, transparency/transitive
 trust, revocation (local + gossip + dashboard + verify + add/sync), freshness/
 TTL, key rotation (rotate + reissue + commit), gossip sync + auto-sync,
-multi-scope dashboard + live server, real-agent bootstrap (ATAR + daily-brief
-cron), professional repo (LICENSE/CI/templates).
+multi-scope dashboard + live server, real-agent bootstrap (seed_agent + reporting_agent
+cron), issue/verify-claim (Phase 26), audit/export/import/watch tooling,
+professional repo (LICENSE/CI/templates). Full CLI surface in §14.
 
-**Not yet implemented:** wider real-agent adoption (§14 `bootstrap` is the
-path), formal RFC publication (this spec is the draft for it).
+**Not yet implemented:** wider real-agent adoption across distinct owners
+(§14 `bootstrap` is the path), formal RFC publication (this spec is the draft
+for it).

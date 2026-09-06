@@ -23,7 +23,7 @@ def test_dashboard_cli_writes_html(tmp_path, monkeypatch):
     assert r.exit_code == 0
     assert out.exists()
     html = out.read_text(encoding="utf-8")
-    assert "#0a0a0b" in html       # ATAR dark design
+    assert "#0a0a0b" in html       # seed_agent dark design
     assert "#39ff14" in html       # gift-green accent
     assert "Know Your Agent" in html
     # every agent DID present

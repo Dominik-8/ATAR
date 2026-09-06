@@ -26,7 +26,7 @@ def test_demo_toml_bootstraps_multi_agent_graph(tmp_path, monkeypatch):
     from atar.agent_bootstrap import AgentRegistry
     reg = AgentRegistry()
     names = set(reg._agents.keys()) - {"_seed"}
-    assert {"seed_agent", "daily_brief", "research", "market", "founder_intel"} <= names, \
+    assert {"seed_agent", "reporting_agent", "research", "market", "founder_intel"} <= names, \
         f"missing agents: {names}"
 
     from atar.store import VouchStore
@@ -42,5 +42,5 @@ def test_demo_toml_bootstraps_multi_agent_graph(tmp_path, monkeypatch):
     rd = runner.invoke(cli, ["dashboard", "--out", str(tmp_path / "d.html")])
     assert rd.exit_code == 0, rd.output
     html = open(tmp_path / "d.html", encoding="utf-8").read()
-    for n in ("seed_agent", "research", "market", "founder_intel", "daily_brief"):
+    for n in ("seed_agent", "research", "market", "founder_intel", "reporting_agent"):
         assert n in html, f"agent {n} missing from dashboard"
