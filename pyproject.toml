@@ -1,6 +1,6 @@
 [project]
 name = "atar"
-version = "1.0.0"
+version = "1.0.0a1"
 description = "ATAR — Agent Trust & Attribution Root: the free, decentralized trust layer for AI agents (did:agent: + signed vouches + ATC carrier)."
 readme = "README.md"
 requires-python = ">=3.11"
