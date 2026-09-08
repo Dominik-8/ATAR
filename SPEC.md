@@ -3,7 +3,8 @@
 **Protocol Specification — Version 2.0 (Stable)**
 
 > ATAR is the trust layer for autonomous agents. It gives every agent a
-> self-sovereign `did:agent:` identity, lets agents vouch for each other's
+> self-sovereign `did:key` identity (legacy `did:agent:` DIDs stay valid, §2.1),
+> lets agents vouch for each other's
 > capabilities, and lets any observer verify vouch signatures **offline, for
 > $0, with no server**. (Revocation and expiry state is data, not signatures:
 > it propagates peer-to-peer via gossip, §9.) Trust propagates transitively
@@ -28,19 +29,50 @@ authoritative wire + algorithm spec.
 
 ---
 
-## 2. Identity — `did:agent:`
+## 2. Identity — `did:key`
 
 An agent identity is an Ed25519 keypair (RFC 8032). The DID is derived **solely**
 from the public key — no registration, no server:
 
 ```
+did:key:z<base58btc( 0xED 0x01 || public_key_raw_bytes )>
+```
+
+- `did:key` is the W3C DID method for pure cryptographic keys: self-describing,
+  no registry, no resolution step — the DID *is* the key.
+- Multicodec prefix `ed25519-pub` = `0xED 0x01` (unsigned varint); multibase
+  prefix `z` = base58btc (Bitcoin alphabet, no padding).
+- `public_key_raw_bytes` = 32-byte Ed25519 public key.
+- Verification: reconstruct the public key from the DID and use Ed25519
+  `verify()`. If the DID does not match the signature, the object is invalid.
+
+### 2.1 Legacy `did:agent:` identifiers (migration)
+
+Identifiers minted before the 2026-09 standards realignment used ATAR's own
+spelling:
+
+```
 did:agent:<base58(public_key_raw_bytes)>
 ```
 
-- `public_key_raw_bytes` = 32-byte Ed25519 public key.
-- Encoding: base58 (Bitcoin alphabet), no padding.
-- Verification: reconstruct the public key from the DID and use Ed25519
-  `verify()`. If the DID does not match the signature, the object is invalid.
+Both encodings embed the **same 32 raw key bytes** — a `did:agent:` DID is
+simply the unframed form of the same identity. Migration therefore needs no
+re-issuance and loses nothing:
+
+1. **Decoding.** Every component that reconstructs a public key from a DID
+   accepts BOTH spellings. Old vouches, revocations, rotation statements, and
+   agent cards verify unchanged — signatures stay valid because the signed
+   bytes are untouched.
+2. **Aliasing.** A `did:agent:` DID and the `did:key` DID of the same key are
+   one identity. Every comparison that decides trust — revocation
+   issuer-matching (§6), transitive-trust graph nodes (§8.1), agent-card
+   subject collection (§11.2) — compares canonical aliases: the `did:key` form.
+3. **Canonicalization on write.** Everything ATAR newly produces (`keygen`,
+   vouches, claims, rotations, cards) records the `did:key` form, even when the
+   input was a legacy DID.
+4. **Import.** Stores and keyfiles holding `did:agent:` identities import
+   unchanged; the `did:key` alias is computed on read. There is no cut-over
+   date and no flag day.
 
 ---
 
@@ -53,8 +85,8 @@ agent for a capability *scope* with a *score*.
 {
   "payload": {
     "type": "vouch",
-    "issuer": "did:agent:...",
-    "subject": "did:agent:...",
+    "issuer": "did:key:...",
+    "subject": "did:key:...",
     "score": 0.95,
     "scope": "coding",
     "claim": null,
@@ -92,7 +124,7 @@ This guarantees byte-identical input for signer and verifier.
 ## 5. Verification algorithm
 
 1. Parse `payload` and `signature`.
-2. Assert `issuer` starts with `did:agent:`.
+2. Assert `issuer` is a decodable `did:key` (or legacy `did:agent:`, §2.1) DID.
 3. Reconstruct the issuer public key from the DID (base58-decode, 32 raw bytes,
    `Ed25519PublicKey.from_public_bytes`).
 4. Compute canonical bytes of `payload` (§4).
@@ -115,7 +147,7 @@ One revocation entry:
 ```json
 {
   "vid": "<canonical vouch id>",
-  "revoked_by": "did:agent:...",
+  "revoked_by": "did:key:...",
   "ts": 1690000000,
   "signature": "<base64(ed25519 over \"vid|revoked_by|ts\")>"
 }
@@ -127,8 +159,8 @@ One revocation entry:
 - `signature` is verified against `revoked_by`'s public key — and this check
   is **enforced at every intake path** (sync, import, load), not only at
   definition time: an entry whose signature does not verify is dropped,
-  exactly like a forged vouch (§9 defense-in-depth). A `did:agent:` embeds
-  the raw Ed25519 key, so any peer can verify any entry standalone.
+  exactly like a forged vouch (§9 defense-in-depth). Both DID spellings embed
+  the raw Ed25519 key (§2), so any peer can verify any entry standalone.
 - A revocation only *applies* to a vouch when `revoked_by` equals the vouch's
   `issuer`. A well-formed entry signed by anyone else is inert: it may sit in
   a list, but it revokes nothing.
@@ -216,8 +248,8 @@ When a key leaks, an agent rotates instead of starting from zero.
 ```json
 {
   "type": "rotation",
-  "old_did": "did:agent:...",
-  "new_did": "did:agent:...",
+  "old_did": "did:key:...",
+  "new_did": "did:key:...",
   "ts": 1690000000,
   "signature": "<hex(ed25519 over canonical rotation payload, signed by OLD key)>"
 }
@@ -259,7 +291,7 @@ The receiver decodes, then runs §5 verification offline.
 ```json
 {
   "schema": "atar-agent-card/1.0",
-  "did": "did:agent:...",
+  "did": "did:key:...",
   "name": "bob",
   "atar": { "vouches": ["<token>", "<token>", "..."] }
 }

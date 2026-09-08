@@ -76,7 +76,7 @@ def test_copied_card_without_pop_fails_verification():
 
 def _keygen(runner, name):
     r = runner.invoke(cli, ["keygen", "--name", name])
-    return [l for l in r.output.splitlines() if l.startswith("did:agent:")][0]
+    return [l for l in r.output.splitlines() if l.startswith("did:key:")][0]
 
 
 def test_cli_card_challenge_and_verify(tmp_path, monkeypatch):

@@ -16,7 +16,7 @@ def _seed_alice_with_vouch(home, monkeypatch):
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "alice"])
     r2 = runner.invoke(cli, ["keygen", "--name", "bob"])
-    bob_did = [l for l in r2.output.splitlines() if l.startswith("did:agent:")][0]
+    bob_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
     out = os.path.join(home, "v.json")
     runner.invoke(cli, ["vouch", "--from", "alice", "--for", bob_did,
                         "--score", "0.9", "--scope", "intelligence", "--out", out])

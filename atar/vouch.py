@@ -66,20 +66,20 @@ def vouch_from_self(agent, *, claim: str, scope: str) -> dict:
 
 
 def verify_vouch(vouch: dict) -> bool:
-    """Return True iff the vouch signature is valid for its issuer DID."""
+    """Return True iff the vouch signature is valid for its issuer DID.
+
+    Accepts issuers identified by ``did:key`` or legacy ``did:agent:`` — both
+    embed the raw Ed25519 key, so pre-realignment vouches stay verifiable
+    unchanged (SPEC §2).
+    """
     try:
         if not isinstance(vouch, dict):
             return False
         payload = vouch["payload"]
         sig_hex = vouch["signature"]
-        # Recover the issuer public key from its did:agent: (raw ed25519 bytes).
-        from base58 import b58decode
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-        did = payload["issuer"]
-        if not did.startswith("did:agent:"):
-            return False
-        raw = b58decode(did[len("did:agent:"):])
-        pub = Ed25519PublicKey.from_public_bytes(raw)
+        # Recover the issuer public key from its DID (did:key or did:agent:).
+        from .identity import public_key_from_did
+        pub = public_key_from_did(payload["issuer"])
         pub.verify(bytes.fromhex(sig_hex), _canonical(payload))
         return True
     except (InvalidSignature, KeyError, ValueError, TypeError, AttributeError):

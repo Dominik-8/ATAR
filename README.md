@@ -9,7 +9,7 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org)
 [![Design: ATAR dark](https://img.shields.io/badge/design-ATAR%20dark%20%7C%20%2339ff14-neon)]
 
-ATAR gives every AI agent a self-sovereign cryptographic identity (`did:agent:`)
+ATAR gives every AI agent a self-sovereign cryptographic identity (`did:key`, with legacy `did:agent:` support)
 and lets agents vouch for one another with signed, tamper-evident attestations.
 Think of it as a **passport + word-of-mouth trust network** for software agents:
 anyone can verify who an agent is and who vouches for it — offline, for $0.
@@ -74,7 +74,7 @@ atar keygen --name alice
 atar keygen --name bob
 
 # 2. alice vouches for bob's competence in "coding"
-atar vouch --from alice --for "did:agent:..." --score 0.95 --scope coding \
+atar vouch --from alice --for "did:key:..." --score 0.95 --scope coding \
     --out bob-vouch.json
 
 # 3. anyone verifies the vouch signature offline (no server, no internet)
@@ -84,7 +84,7 @@ atar verify bob-vouch.json          # -> VALID
 atar card --name bob --out card.json
 
 # 5. render the Know-Your-Agent dashboard from a local trust graph
-atar dashboard --seed "did:agent:..." --scope coding --out dash.html
+atar dashboard --seed "did:key:..." --scope coding --out dash.html
 ```
 
 **Real vs demo network.** `agents.toml` holds only *real running agents*
@@ -100,7 +100,7 @@ atar bootstrap --config demo.toml     # demo illustration, not real
 
 ## How it works
 
-1. **Identity** — Ed25519 keypair; `did:agent:` derived from the public key.
+1. **Identity** — Ed25519 keypair; W3C `did:key` derived from the public key (legacy `did:agent:` DIDs stay importable and verifiable).
    Self-resolving, $0. Vouch *signatures* verify offline; *revocation status*
    propagates via gossip sync ([`SPEC.md`](SPEC.md) §6/§9).
 2. **Vouch** — a signed attestation: *issuer vouches subject for scope@score*.
@@ -121,7 +121,7 @@ See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 
 | Command | Purpose |
 |---|---|
-| `atar keygen --name N` | create an agent identity, print its `did:agent:` |
+| `atar keygen --name N` | create an agent identity, print its `did:key` |
 | `atar vouch --from A --for DID --score S --scope C` | create a signed vouch |
 | `atar verify PATH [--max-age N]` | `VALID` / `REVOKED` / `EXPIRED` / `INVALID` |
 | `atar revoke PATH` | add a vouch to the local revocation list |
@@ -152,7 +152,7 @@ ATAR has its own dark, corporate look - consistent and standalone.
 | `--bg` | `#0a0a0b` | near-black background |
 | `--accent` | `#39ff14` | gift-green / neon (trust, valid, verified) |
 | `--accent-dim` | `#1f7a12` | dimmed green borders/badges |
-| `--accent-blue` | `#2f81f7` | GitHub-blue, for `did:agent:` identifiers |
+| `--accent-blue` | `#2f81f7` | GitHub-blue, for DID identifiers |
 | `--text` | `#e8e8ea` | primary text |
 | `--muted` | `#8a8a90` | secondary text |
 | Font | Segoe UI / -apple-system | system UI stack |

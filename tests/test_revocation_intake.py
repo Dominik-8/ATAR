@@ -110,7 +110,7 @@ def test_sync_does_not_import_forged_revocation(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", alice_home)
     runner.invoke(cli, ["keygen", "--name", "alice"])
     r = runner.invoke(cli, ["keygen", "--name", "bob"])
-    bob_did = [l for l in r.output.splitlines() if l.startswith("did:agent:")][0]
+    bob_did = [l for l in r.output.splitlines() if l.startswith("did:key:")][0]
     vf = os.path.join(alice_home, "v.json")
     runner.invoke(cli, ["vouch", "--from", "alice", "--for", bob_did,
                         "--score", "0.9", "--scope", "coding", "--out", vf])
@@ -142,7 +142,7 @@ def test_reissue_commit_revocation_verifiable_and_old_key_retired(tmp_path, monk
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "a"])
     r = runner.invoke(cli, ["keygen", "--name", "b"])
-    b_did = [l for l in r.output.splitlines() if l.startswith("did:agent:")][0]
+    b_did = [l for l in r.output.splitlines() if l.startswith("did:key:")][0]
     vf = os.path.join(home, "v.json")
     runner.invoke(cli, ["vouch", "--from", "a", "--for", b_did,
                         "--score", "0.9", "--scope", "coding", "--out", vf])
