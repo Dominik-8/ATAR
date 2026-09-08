@@ -59,9 +59,11 @@ that speaks the standard formats.*
   identity automatically, earn an operator-signed vouch after each successful
   task, and present a signed A2A-compatible card. Docs:
   `docs/crewai-plugin.md`; example: `atar.examples.crewai_integration`.
-- **C3 — Score semantics and negative signals.** Define what `score 0.95`
-  means (units, evidence references) so scores compare across operators; add
-  signed disputes next to positive vouches and revocations.
+- **C3 — Score semantics and negative signals.** ✅ Shipped 2026-09-08:
+  score semantics with calibration anchors + signed evidence references
+  (SPEC §3.2) and signed disputes against foreign vouches (SPEC §8.2),
+  gossiped over both transports and honored in trust computation (trusted
+  disputers only).
 - **C4 — Standardization path.** Join the W3C agent-identity community work
   and bring ATAR's lifecycle ideas (revocation, TTL, rotation) there;
   optionally an IETF Internet-Draft via the datatracker. Influence through

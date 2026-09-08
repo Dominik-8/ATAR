@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (realignment C3)
+- Score semantics (SPEC §3.2): score defined as dimensionless issuer
+  confidence with calibration anchors, plus optional signed `evidence`
+  references on vouches (`create_vouch(..., evidence=[...])`) so scores carry
+  an inspectable basis and compare across operators.
+- Signed disputes (SPEC §8.2): any agent can file a signed warning against a
+  foreign vouch (`atar dispute` / `atar disputes`). Disputes are
+  content-addressed, verified at every intake path, gossip over both sync
+  transports (filesystem + HTTP `/disputes`), are surfaced by `atar verify`
+  as an advisory note, and discount vouches in trust computation only when
+  the disputer is itself trusted (≥ 0.5), so Sybil smears move nothing.
+
 ### Added (realignment C2)
 - CrewAI plugin (`atar.integrations.crewai`): framework agents get a
   persistent did:key identity automatically, earn a signed operator vouch

@@ -133,6 +133,7 @@ See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 | `atar dashboard --seed DID --scope C` | render Know-Your-Agent HTML dashboard |
 | `atar sync --with <peer>` / `atar auto-sync` | gossip vouches + revocations between peers (directory or `http(s)://` URL) |
 | `atar peer --port 8790` | serve the local store as an HTTP gossip peer (SPEC §9.1) |
+| `atar dispute <vouch> --from N --reason R` / `atar disputes` | record/list signed disputes against foreign vouches (SPEC §8.2) |
 | `atar rotate --name N` | generate a new key + signed rotation statement |
 | `atar reissue --name N [--commit]` | re-sign vouches under the new key (commit = +add old-revoked) |
 | `atar bootstrap --config agents.toml` | reproducible agent network |
@@ -188,14 +189,14 @@ any ATAR UI, web page, or digest so the design stays consistent.
 | 31 | `atar watch` (cron-ready monitoring + ALERT) | ✅ |
 | 26 | Real-agent claim issuance (`issue` / `verify-claim`) | ✅ |
 
-All phases implemented and tested (197 tests, CI green). See
+All phases implemented and tested (211 tests, CI green). See
 [`SPEC.md`](SPEC.md) for the authoritative protocol specification.
 
 **Realignment Stage C shipped (2026-09-08):** HTTP gossip transport
-(`atar peer`, SPEC §9.1) and the CrewAI framework plugin
-([docs/crewai-plugin.md](docs/crewai-plugin.md)). Next: score semantics +
-negative signals (C3), the standardization path (C4), and wider real-agent
-adoption.
+(`atar peer`, SPEC §9.1), the CrewAI framework plugin
+([docs/crewai-plugin.md](docs/crewai-plugin.md)), and score semantics +
+signed disputes (SPEC §3.2/§8.2). Next: the standardization path (C4) and
+wider real-agent adoption.
 
 ## Honest constraints
 

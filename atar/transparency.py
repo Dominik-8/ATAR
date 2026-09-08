@@ -65,19 +65,45 @@ class TrustGraph:
         except ValueError:
             return did
 
-    def compute_trust(self, *, seed_did: str, scope: str, decay: float = 1.0) -> dict[str, float]:
+    def compute_trust(self, *, seed_did: str, scope: str, decay: float = 1.0,
+                      disputes=None) -> dict[str, float]:
         """Compute transitive trust scores from a trusted seed DID.
 
         Score of a node = sum over incoming valid vouches of
         (issuer_trust * vouch_score), only counting edges within ``scope``.
         Seed node starts at 1.0. Decay < 1.0 weakens longer paths.
+
+        Disputes (SPEC §8.2): when ``disputes`` (a DisputeList) is given, the
+        computation runs in two passes. Pass 1 ignores disputes and
+        establishes who is trusted. Pass 2 excludes vouches that carry a
+        valid dispute from a disputer whose pass-1 trust is at or above
+        DISPUTE_TRUST_THRESHOLD (0.5) — a warning counts only when it comes
+        from inside the trusted graph, so Sybil disputers cannot zero out
+        honest vouches. A dispute never removes the vouch from the store; it
+        only discounts its contribution here.
         """
+        discounted: set[str] = set()
+        if disputes is not None:
+            from .dispute import DISPUTE_TRUST_THRESHOLD
+            baseline = self.compute_trust(seed_did=seed_did, scope=scope,
+                                          decay=decay)
+            for v in self._vouches.values():
+                if v["payload"].get("scope") != scope:
+                    continue
+                for e in disputes.disputes_for(v):
+                    disputer = self._alias(e["disputed_by"])
+                    if baseline.get(disputer, 0.0) >= DISPUTE_TRUST_THRESHOLD:
+                        discounted.add(canonical_vouch_id(v))
+                        break
+
         # build adjacency: issuer_did -> list of (subject_did, score)
         # (outgoing edges: who does this issuer vouch for)
         edges: dict[str, list[tuple[str, float]]] = {}
         for v in self._vouches.values():
             p = v["payload"]
             if p.get("scope") != scope:
+                continue
+            if canonical_vouch_id(v) in discounted:
                 continue
             issuer = self._alias(p["issuer"])
             edges.setdefault(issuer, []).append((self._alias(p["subject"]), float(p["score"])))
