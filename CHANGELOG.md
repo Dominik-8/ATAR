@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   because a node is propagated with its trust at first-visit time and never
   re-queued when its trust later improves.
 
+- Extended the vectors to the remaining wire formats: ATC vouch token
+  (§11.1), the A2A-compatible signed agent card (§11.2), and the signed
+  key-rotation statement (§7).
 - Public interoperability test vectors under `tests/vectors/` (documented in
   `docs/test-vectors.md`): golden, byte-exact vectors for `did:key`/`did:agent:`
   derivation, JCS canonicalization, the native vouch format + content address,

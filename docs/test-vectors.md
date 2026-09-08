@@ -11,6 +11,9 @@ this codebase first — the same role test vectors play for RFCs.
 | `native-vouch.json` | Native vouch wire format, deterministic Ed25519 signature, canonical vouch ID (`vouch:` + sha256, `ts`/`signature` excluded) | SPEC §3 |
 | `revocation.json` | Signed revocation entry (`vid\|revoked_by\|ts`, base64 Ed25519) | SPEC §6 |
 | `vc-export.json` | Vouch → W3C Verifiable Credential mapping and the `eddsa-jcs-2022` Data Integrity proof | SPEC §3.3 |
+| `atc-token.json` | ATC vouch token (base64url of canonical JSON) for header transport | SPEC §11.1 |
+| `agent-card.json` | A2A-compatible signed agent card with the ATAR trust extension | SPEC §11.2 |
+| `rotation.json` | Signed key-rotation statement (old key binds the new DID) | SPEC §7 |
 
 Rules for working with them:
 

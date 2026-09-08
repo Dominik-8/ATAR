@@ -32,6 +32,16 @@ from atar.vc import (
     verify_credential,
     vouch_to_credential,
 )
+from atar.atc import (
+    make_agent_card,
+    sign_agent_card,
+    verify_agent_card,
+    verify_card_signature,
+    vouch_from_token,
+    vouch_to_token,
+    verify_token,
+)
+from atar.rotation import RotationStatement, verify_rotation
 from atar.vouch import create_vouch, verify_vouch
 
 VECTORS = Path(__file__).parent / "vectors"
@@ -90,6 +100,45 @@ def test_revocation_vector_verifies():
     vouch = _load("native-vouch.json")["vouch"]
     assert data["entry"]["vid"] == canonical_vouch_id(vouch)
     assert data["entry"]["revoked_by"] == vouch["payload"]["issuer"]
+
+
+def test_atc_token_vector_roundtrips_and_verifies():
+    data = _load("atc-token.json")
+    vouch = data["vouch"]
+    assert vouch_to_token(vouch) == data["token"]  # deterministic encoding
+    assert vouch_from_token(data["token"]) == vouch
+    assert verify_token(data["token"])
+
+
+def test_agent_card_vector_matches_and_verifies():
+    data = _load("agent-card.json")
+    vouch = _load("native-vouch.json")["vouch"]
+    subject_vec = {v["name"]: v for v in _load("identity.json")["vectors"]}["subject"]
+    subject_priv = Ed25519PrivateKey.from_private_bytes(
+        bytes.fromhex(subject_vec["private_key_seed_hex"]))
+    subject = Identity(private_key=subject_priv,
+                       public_key=subject_priv.public_key())
+
+    card = data["unsigned_card"]
+    reproduced = make_agent_card(subject_vec["did_key"], "subject-agent", [vouch],
+                                 url="https://agent.example.org/a2a",
+                                 description="Test subject agent")
+    assert reproduced == card  # card construction is deterministic
+    signed = sign_agent_card(card, subject)
+    assert signed == data["signed_card"]  # Ed25519 is deterministic
+    assert verify_card_signature(data["signed_card"])
+    report = verify_agent_card(data["signed_card"])
+    assert report["signature_valid"] is True
+    assert report["did"] == subject_vec["did_key"]
+    assert len(report["valid_vouches"]) == 1 and not report["invalid_vouches"]
+
+
+def test_rotation_vector_verifies():
+    data = _load("rotation.json")
+    stmt = RotationStatement.from_dict(data["statement"])
+    assert verify_rotation(stmt)
+    identity_vec = {v["name"]: v for v in _load("identity.json")["vectors"]}
+    assert stmt.old_did == identity_vec["issuer"]["did_key"]
 
 
 def test_vc_export_vector_matches_and_verifies():
