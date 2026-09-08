@@ -64,17 +64,14 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
     name_by_did = {v: k for k, v in net["agents"].items()}
 
     # revocation awareness (Phase 16/17): load the local revocation list
-    revoked_ids = set()
     revoked_by = {}
     try:
-        from atar.revocation import RevocationList, revoke_payload_id
+        from atar.revocation import RevocationList
         rl = RevocationList.load(_revocations_path_for(net))
-        for e in rl.all():
-            revoked_ids.add(e["vid"])
         for e in rl.all():
             revoked_by[e["vid"]] = e["revoked_by"]
     except Exception:
-        pass
+        rl = None
 
     # build incoming-edge map: subject -> list of (issuer_name, score)
     edges = {}
@@ -97,7 +94,8 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
             if p.get("subject") != did:
                 continue
             from atar.revocation import revoke_payload_id as _rid
-            if _rid(v) in revoked_ids:
+            # issuer-bound (SPEC §6): only a revocation by the vouch's issuer applies
+            if rl is not None and rl.is_revoked_for(v):
                 agent_revoked = True
                 revoker = name_by_did.get(revoked_by.get(_rid(v), ""), "?")
                 break

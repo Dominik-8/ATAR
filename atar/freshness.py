@@ -38,7 +38,7 @@ def trust_valid(vouch: dict, *,
     """Full trust check: valid signature + not revoked + not expired."""
     if not verify_vouch(vouch):
         return False
-    if revocation_list is not None and revocation_list.is_revoked(revoke_payload_id(vouch)):
+    if revocation_list is not None and revocation_list.is_revoked_for(vouch):
         return False
     if not is_fresh(vouch, ttl=ttl, now=now):
         return False
