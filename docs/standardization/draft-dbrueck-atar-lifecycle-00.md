@@ -6,7 +6,7 @@
 > current landscape (ERC-8004, A2A, VC 2.0) leaves unspecified.
 > Format note: skeleton in Markdown for review; convert to xml2rfc/kramdown
 > before any datatracker submission. Supersedes the pre-realignment
-> `draft-dbrueck-atar-00.txt` (which still documents the legacy `did:agent:`
+> `legacy/draft-dbrueck-atar-00.txt` (which still documents the legacy `did:agent:`
 > spelling).
 
 ---

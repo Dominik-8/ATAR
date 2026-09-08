@@ -95,7 +95,8 @@ def reissue_vouch(old_issuer, new_issuer, vouch: dict, *, scope: str | None = No
                   score: float | None = None) -> dict:
     """Re-sign an out-going vouch under the NEW key, fresh ts (Phase 24).
 
-    Preserves subject/score/scope; only the issuer key + timestamp change.
+    Preserves subject/score/scope/claim/evidence; only the issuer key +
+    timestamp change.
     Accepts Ed25519PrivateKey objects (CLI) or Identity objects.
     Returns a new, validly-signed vouch blob attributable to the new DID.
     """
@@ -109,5 +110,7 @@ def reissue_vouch(old_issuer, new_issuer, vouch: dict, *, scope: str | None = No
         subj_pub,
         score=float(score if score is not None else p["score"]),
         scope=scope if scope is not None else p["scope"],
+        claim=p.get("claim"),
+        evidence=p.get("evidence"),
     )
     return out

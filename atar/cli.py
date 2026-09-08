@@ -43,6 +43,7 @@ def _save_keys(keys: dict) -> None:
     os.makedirs(_home(), exist_ok=True)
     with open(_keys_path(), "w", encoding="utf-8") as f:
         json.dump(keys, f, indent=2)
+    os.chmod(_keys_path(), 0o600)  # private keys: owner-read/write only
 
 
 def _identity_from_name(name: str):
@@ -85,6 +86,9 @@ def vouch(from_name: str, for_did: str, score: float, scope: str, out: str):
     from .identity import public_key_from_did, is_supported_did
     if not is_supported_did(for_did):
         click.echo(f"invalid subject DID (expected did:key:... or legacy did:agent:...): {for_did!r}")
+        sys.exit(2)
+    if not 0.0 <= score <= 1.0:
+        click.echo(f"score must be within [0, 1] (SPEC §3.2), got {score}")
         sys.exit(2)
     keys = _load_keys()
     if from_name not in keys:
@@ -257,6 +261,9 @@ def issue(from_name: str, for_did: str, scope: str, score: float, claim: str, ou
     from .identity import public_key_from_did, is_supported_did
     if not is_supported_did(for_did):
         click.echo(f"invalid subject DID (expected did:key:... or legacy did:agent:...): {for_did!r}")
+        sys.exit(2)
+    if not 0.0 <= score <= 1.0:
+        click.echo(f"score must be within [0, 1] (SPEC §3.2), got {score}")
         sys.exit(2)
     keys = _load_keys()
     if from_name not in keys:
