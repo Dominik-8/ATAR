@@ -136,8 +136,16 @@ class RevocationList:
         return list(self.entries.values())
 
     def save(self, path: str) -> None:
-        from .store import atomic_save_json
-        atomic_save_json({"revocations": self.all()}, path)
+        """Persist atomically under a cross-process lock, merging entries
+        written by other processes since this list was loaded (revocations
+        are an append-only, content-addressed set, so union is the correct
+        merge and no entry is ever lost)."""
+        from .store import atomic_save_json, file_lock
+        with file_lock(path):
+            merged = RevocationList.load(path)
+            merged.entries.update(self.entries)
+            self.entries = merged.entries
+            atomic_save_json({"revocations": self.all()}, path)
 
     @classmethod
     def load(cls, path: str) -> "RevocationList":

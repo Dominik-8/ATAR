@@ -130,8 +130,15 @@ class DisputeList:
         return list(self.entries.values())
 
     def save(self, path: str) -> None:
-        from .store import atomic_save_json
-        atomic_save_json({"disputes": self.all()}, path)
+        """Persist atomically under a cross-process lock, merging entries
+        written by other processes since this list was loaded (disputes are
+        an append-only, deduplicated set, so union is the correct merge)."""
+        from .store import atomic_save_json, file_lock
+        with file_lock(path):
+            merged = DisputeList.load(path)
+            merged.entries.update(self.entries)
+            self.entries = merged.entries
+            atomic_save_json({"disputes": self.all()}, path)
 
     @classmethod
     def load(cls, path: str) -> "DisputeList":

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (overnight hardening, 2026-09)
+- The file-backed stores (vouches, revocations, disputes) no longer lose
+  entries when two processes write concurrently: the load -> mutate -> save
+  cycle now runs under a cross-process advisory lock (`<file>.lock`) and
+  refreshes/merges from disk before writing. Previously a running
+  `atar peer` plus a CLI command (or two parallel syncs) could silently drop
+  each other's entries — atomic writes alone never covered that window.
+  Regression-tested both interleaved in-process and with 4 concurrent
+  writer processes.
+
 ### Fixed (senior-engineer pre-release audit, 2026-09)
 - Trust computation no longer counts self-vouches: a self-endorsement used to
   inflate the issuer's own transitive trust (0.9 became 1.8); SPEC §13 always
