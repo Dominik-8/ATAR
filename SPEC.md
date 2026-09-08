@@ -292,8 +292,13 @@ Vouches and revocations are content-addressed so they gossip and dedup without
 an operator:
 
 ```
-vouch_id = sha256( canonical_json(payload) )      # hex, no "vouch:" prefix
+vouch_id = "vouch:" + sha256( canonical_json(payload without ts) )
 ```
+
+The `ts` field is excluded from the hash: a vouch is identified by its
+*claim* (issuer, subject, scope, score, claim, evidence), not by when it was
+signed. Two vouches making the same claim at different times collapse to one
+ID, so re-issues and re-bootstraps dedup instead of duplicating the graph.
 
 Agents keep a local store and compute **transitive trust** from a seed root.
 
