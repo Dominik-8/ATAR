@@ -703,4 +703,3 @@ The reference implementation is published to PyPI as ``atar-trust``
 Authors' Address:
 
    Dominik Brueck
-   Email: ***REMOVED***

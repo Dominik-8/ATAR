@@ -14,9 +14,9 @@ trust-graph manipulation), **do not open a public issue**.
 
 Instead, report it privately:
 
-- **Email:** [***REMOVED***](mailto:***REMOVED***) — or open a
+- Open a
   [GitHub Security Advisory](https://github.com/Dominik-8/ATAR/security/advisories/new)
-  (private, maintained by the maintainer).
+  (private, only visible to the maintainer).
 
 We will acknowledge within 72 hours and aim to ship a fix within 14 days for
 any verified issue that breaks vouch authenticity or trust computation.
