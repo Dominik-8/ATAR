@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (overnight hardening, 2026-09)
+- Fixed CI red since 5aa3ad8: `.gitignore` generated-artifact patterns
+  (`agent-card.json`, `rotation.json`, `vouch*.json`, ...) were
+  repo-wide and swallowed same-named fixtures under `tests/vectors/` —
+  green locally, FileNotFoundError on CI. All artifact patterns are now
+  root-scoped, the two fixtures are tracked, and a regression test fails
+  at add-time if any vector ever matches an ignore rule again
+  (`git check-ignore --no-index`, so force-adding cannot mask it).
 - The HTTP gossip peer now serves with `ThreadingHTTPServer`: gossip
   requests no longer serialize behind one slow peer. Made safe by the new
   store locks; regression-tested with 4 concurrent HTTP clients posting

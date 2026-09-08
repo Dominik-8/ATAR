@@ -1,0 +1,65 @@
+{
+  "description": "A2A-compatible signed agent card (SPEC \u00a711.2): the subject from identity.json presenting the vouch from native-vouch.json inside the ATAR trust extension, card signed by the subject's key (EdDSA over the card minus 'signatures').",
+  "unsigned_card": {
+    "name": "subject-agent",
+    "description": "Test subject agent",
+    "url": "https://agent.example.org/a2a",
+    "version": "1.0.0",
+    "capabilities": {
+      "extensions": [
+        {
+          "uri": "https://github.com/Dominik-8/ATAR/ext/atar-trust/1.0",
+          "description": "ATAR trust data: presented identity, vouch tokens (SPEC \u00a711.1) and an optional proof-of-possession (\u00a711.3)",
+          "required": false,
+          "params": {
+            "identity": "did:key:z6MknGc3ocHs3zdPiJbnaaqDi58NGb4pk1Sp9WxWufuXSdxf",
+            "vouches": [
+              "eyJwYXlsb2FkIjp7ImNsYWltIjpudWxsLCJldmlkZW5jZSI6WyJodHRwczovL2V4YW1wbGUub3JnL29ic2VydmF0aW9ucy80MiJdLCJpc3N1ZXIiOiJkaWQ6a2V5Ono2TWtqY2hoZlVzRDZtbXZuaThtQ2RYSHcyMTZYcm05YlFlMm1CSDFQNVJEalZKRyIsInNjb3BlIjoiY29kaW5nIiwic2NvcmUiOjAuOSwic3ViamVjdCI6ImRpZDprZXk6ejZNa25HYzNvY0hzM3pkUGlKYm5hYXFEaTU4TkdiNHBrMVNwOVd4V3VmdVhTZHhmIiwidHMiOjE3MDAwMDAwMDAsInR5cGUiOiJ2b3VjaCJ9LCJzaWduYXR1cmUiOiIxOTdkNzNjMWU4NzczN2QyNDJjMmQ3NGZiYzEwNWJiOTkyZDIzNWU0MjUzNTgwNjk5N2Y2ZmQ2ZjBlMzliZGI4ZmVkY2FlNWUxY2I2ODU0NWFmYTI5MmI5ZTNhOGI5ZjYxNWRjYzlkY2I3NDI1N2JlMDYwN2UxOGJhYWQzOGUwZSJ9"
+            ]
+          }
+        }
+      ]
+    },
+    "defaultInputModes": [
+      "application/json"
+    ],
+    "defaultOutputModes": [
+      "application/json"
+    ],
+    "skills": []
+  },
+  "signed_card": {
+    "name": "subject-agent",
+    "description": "Test subject agent",
+    "url": "https://agent.example.org/a2a",
+    "version": "1.0.0",
+    "capabilities": {
+      "extensions": [
+        {
+          "uri": "https://github.com/Dominik-8/ATAR/ext/atar-trust/1.0",
+          "description": "ATAR trust data: presented identity, vouch tokens (SPEC \u00a711.1) and an optional proof-of-possession (\u00a711.3)",
+          "required": false,
+          "params": {
+            "identity": "did:key:z6MknGc3ocHs3zdPiJbnaaqDi58NGb4pk1Sp9WxWufuXSdxf",
+            "vouches": [
+              "eyJwYXlsb2FkIjp7ImNsYWltIjpudWxsLCJldmlkZW5jZSI6WyJodHRwczovL2V4YW1wbGUub3JnL29ic2VydmF0aW9ucy80MiJdLCJpc3N1ZXIiOiJkaWQ6a2V5Ono2TWtqY2hoZlVzRDZtbXZuaThtQ2RYSHcyMTZYcm05YlFlMm1CSDFQNVJEalZKRyIsInNjb3BlIjoiY29kaW5nIiwic2NvcmUiOjAuOSwic3ViamVjdCI6ImRpZDprZXk6ejZNa25HYzNvY0hzM3pkUGlKYm5hYXFEaTU4TkdiNHBrMVNwOVd4V3VmdVhTZHhmIiwidHMiOjE3MDAwMDAwMDAsInR5cGUiOiJ2b3VjaCJ9LCJzaWduYXR1cmUiOiIxOTdkNzNjMWU4NzczN2QyNDJjMmQ3NGZiYzEwNWJiOTkyZDIzNWU0MjUzNTgwNjk5N2Y2ZmQ2ZjBlMzliZGI4ZmVkY2FlNWUxY2I2ODU0NWFmYTI5MmI5ZTNhOGI5ZjYxNWRjYzlkY2I3NDI1N2JlMDYwN2UxOGJhYWQzOGUwZSJ9"
+            ]
+          }
+        }
+      ]
+    },
+    "defaultInputModes": [
+      "application/json"
+    ],
+    "defaultOutputModes": [
+      "application/json"
+    ],
+    "skills": [],
+    "signatures": [
+      {
+        "protected": "eyJhbGciOiJFZERTQSIsImtpZCI6ImRpZDprZXk6ejZNa25HYzNvY0hzM3pkUGlKYm5hYXFEaTU4TkdiNHBrMVNwOVd4V3VmdVhTZHhmI3o2TWtuR2Mzb2NIczN6ZFBpSmJuYWFxRGk1OE5HYjRwazFTcDlXeFd1ZnVYU2R4ZiIsInR5cCI6IkpXUyJ9",
+        "signature": "W8kmqvIJyfpGAXl-RJ_J96gxuKo8R-6nKk-AzC0WBUBLGaNNbLs1tPAHc2n1Zq23sZnxSxz6bSbj0qwdphfvCA"
+      }
+    ]
+  }
+}
