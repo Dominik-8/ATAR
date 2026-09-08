@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (overnight hardening, 2026-09)
+- Export/import round-trip now carries the whole trust graph: bundles
+  include disputes (previously dropped - silent loss of negative signals,
+  SPEC 8.2) and agent names from BOTH identity stores (registry AND
+  keys.json; previously registry only, and import never restored them).
+  Import restores names DID-only into `known-agents.json` (merged at the
+  lowest priority by `known_agent_names()`), never into keys.json - no
+  private material is implied - and never clobbers an existing local
+  identity name without `--force`. Dispute import uses the same verified
+  intake as gossip.
 - Peer endpoint hardening: unexpected intake errors now return a 500 JSON
   body instead of dropping the connection mid-thread (matters more now that
   the peer is multi-threaded), and a non-list batch payload

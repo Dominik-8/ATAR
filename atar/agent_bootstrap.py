@@ -58,6 +58,17 @@ def known_agent_names() -> dict[str, str]:
     to "?" instead of failing.
     """
     names: dict[str, str] = {}
+    # Lowest priority: names restored from an imported .atpkg bundle
+    # (DID-only, no private material) - local identities always win.
+    known_path = os.path.join(_home(), "known-agents.json")
+    try:
+        if os.path.exists(known_path):
+            with open(known_path, "r", encoding="utf-8") as f:
+                for n, did in json.load(f).items():
+                    if isinstance(n, str) and isinstance(did, str):
+                        names[n] = did
+    except (json.JSONDecodeError, OSError):
+        pass
     keys_path = os.path.join(_home(), "keys.json")
     try:
         if os.path.exists(keys_path):

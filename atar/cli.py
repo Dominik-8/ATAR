@@ -941,31 +941,36 @@ def export(out: str, include_keys: bool):
     """
     from .store import VouchStore
     from .revocation import RevocationList
-    from .agent_bootstrap import AgentRegistry
+    from .dispute import DisputeList
+    from .agent_bootstrap import AgentRegistry, known_agent_names
     store = VouchStore(_store_path())
     rl = RevocationList.load(_revocations_path())
+    dl = DisputeList.load(_disputes_path())
     bundle = {
         "format": "atar-network/1.0",
         "vouches": store.all(),
         "revocations": rl.all(),
+        # disputes are signed public statements and part of the trust graph
+        # (SPEC 8.2) - a bundle without them silently loses negative signals
+        "disputes": dl.all(),
     }
     if include_keys:
         try:
             bundle["keys"] = _load_keys()
         except Exception:
             pass
-    else:
-        # still record agent names so imports rebuild the registry
-        try:
-            reg = AgentRegistry()
-            bundle["agents"] = {n: d["did"] for n, d in reg._agents.items()
-                                 if n != "_seed"}
-        except Exception:
-            bundle["agents"] = {}
+    # always record agent names (DID-only, no secret material) from BOTH
+    # identity stores - bootstrap registry and plain keys.json - so the
+    # import side can rebuild human-readable names for dashboard/graph
+    try:
+        bundle["agents"] = known_agent_names()
+    except Exception:
+        bundle["agents"] = {}
     with open(out, "w", encoding="utf-8") as f:
         json.dump(bundle, f, indent=2)
     click.echo(f"exported {len(bundle['vouches'])} vouch(es), "
-               f"{len(bundle['revocations'])} revocation(s) -> {out}"
+               f"{len(bundle['revocations'])} revocation(s), "
+               f"{len(bundle['disputes'])} dispute(s) -> {out}"
                + (" (WITH PRIVATE KEYS — keep secret)" if include_keys else ""))
 
 
@@ -1003,6 +1008,16 @@ def import_cmd(bundle: str, force: bool):
                   vouch=store.get(e["vid"])):
             revoked += 1
     rl.save(_revocations_path())
+    # disputes: same verified intake as gossip (signature always; issuer
+    # dispute rejected when the disputed vouch is known) - old bundles
+    # simply have no "disputes" key
+    from .dispute import DisputeList
+    dl = DisputeList.load(_disputes_path())
+    disputed = 0
+    for e in data.get("disputes", []):
+        if dl.add(e, vouch=store.get(e.get("vid", ""))):
+            disputed += 1
+    dl.save(_disputes_path())
     # restore keys if present
     keys_restored = 0
     if "keys" in data:
@@ -1014,8 +1029,38 @@ def import_cmd(bundle: str, force: bool):
                     keys[name] = k
                     keys_restored += 1
             _save_keys(keys)
+    # restore agent names (DID-only) into known-agents.json - never into
+    # keys.json or the registry, since the bundle carries no private keys
+    # for them. Existing local names win unless --force.
+    names_restored = 0
+    if data.get("agents"):
+        from .store import atomic_save_json, file_lock
+        known_path = os.path.join(_home(), "known-agents.json")
+        with file_lock(known_path):
+            known = {}
+            if os.path.exists(known_path):
+                try:
+                    with open(known_path, "r", encoding="utf-8") as f:
+                        known = json.load(f)
+                except json.JSONDecodeError:
+                    known = {}
+            existing = set(known)
+            try:
+                from .agent_bootstrap import known_agent_names
+                existing |= set(known_agent_names())
+            except Exception:
+                pass
+            for name, did in data["agents"].items():
+                if not isinstance(name, str) or not isinstance(did, str):
+                    continue
+                if name not in existing or force:
+                    known[name] = did
+                    names_restored += 1
+            atomic_save_json(known, known_path)
     click.echo(f"imported {added} vouch(es), {revoked} revocation(s)"
-               + (f", {keys_restored} key(s)" if keys_restored else ""))
+               + (f", {disputed} dispute(s)" if disputed else "")
+               + (f", {keys_restored} key(s)" if keys_restored else "")
+               + (f", {names_restored} agent name(s)" if names_restored else ""))
 
 
 def _audit_state(max_age):

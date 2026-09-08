@@ -11,7 +11,7 @@
 > (web-of-trust) and can be revoked, expired, or rotated — so the graph stays
 > alive instead of rotting.
 
-Status: **implemented and tested** (272 tests, CI green). This document is the
+Status: **implemented and tested** (274 tests, CI green). This document is the
 authoritative wire + algorithm spec.
 
 ---
@@ -578,8 +578,8 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar bootstrap --config agents.toml` | reproducible network |
 | `atar serve [--port P]` | live multi-scope dashboard |
 | `atar audit [--max-age N]` | health-check: counts valid/revoked/expired/invalid per scope |
-| `atar export [--include-keys] FILE` | bundle trust graph (or full identity) to `.atpkg` |
-| `atar import FILE` | restore a network bundle into the local store |
+| `atar export [--include-keys] FILE` | bundle trust graph (vouches + revocations + disputes + agent names, or full identity) to `.atpkg` |
+| `atar import FILE` | restore a network bundle (verified intake; names restored DID-only) |
 | `atar watch [--interval S] [--once]` | monitor health; alert on unhealthy transition |
 | `atar issue --from N --for DID --scope S --score X [--claim C]` | issue a signed capability claim (standalone file) |
 | `atar verify-claim FILE` | verify a signed capability claim (independent of store) |
