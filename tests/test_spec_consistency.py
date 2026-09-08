@@ -12,6 +12,7 @@ EXPECTED_COMMANDS = {
     "card", "verify-card", "graph", "dashboard", "sync", "auto-sync",
     "rotate", "reissue", "bootstrap", "serve", "audit", "export", "import", "watch",
     "issue", "verify-claim",
+    "peer", "dispute", "disputes", "vc-export", "vc-verify",
 }
 
 

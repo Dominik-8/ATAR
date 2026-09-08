@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`draft-dbrueck-atar-lifecycle-00`) positioning ATAR's lifecycle
   (revocation, TTL, rotation, disputes) as the contribution. Both live in
   `docs/standardization/` and supersede the pre-realignment
-  `draft-dbrueck-atar-00.txt` (kept for history).
+  `docs/standardization/legacy/draft-dbrueck-atar-00.txt` (kept for history).
 
 ### Added (realignment C3)
 - Score semantics (SPEC §3.2): score defined as dimensionless issuer

@@ -9,6 +9,7 @@ Mapping (vouch payload -> VC):
     scope    -> ``credentialSubject["atar:scope"]``
     score    -> ``credentialSubject["atar:score"]``
     claim    -> ``credentialSubject["atar:claim"]`` (omitted when None)
+    evidence -> ``credentialSubject["atar:evidence"]`` (omitted when None)
     ts       -> ``validFrom`` (ISO 8601 UTC)
 
 Proof: W3C Data Integrity with the ``eddsa-jcs-2022`` cryptosuite —
@@ -62,6 +63,8 @@ def vouch_to_credential(vouch: dict) -> dict:
     }
     if payload.get("claim") is not None:
         subject["atar:claim"] = payload["claim"]
+    if payload.get("evidence") is not None:
+        subject["atar:evidence"] = payload["evidence"]
     return {
         "@context": [VC_CONTEXT_V2, ATAR_TERMS_CONTEXT],
         "type": ["VerifiableCredential", VC_TYPE_VOUCH],
