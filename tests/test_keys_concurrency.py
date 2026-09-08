@@ -40,3 +40,29 @@ def test_concurrent_keygens_lose_no_identities(tmp_path):
     for rec in keys.values():
         assert rec["did"].startswith("did:key:")
         assert len(rec["private"]) == 64
+
+
+def _register_worker(home: str, name: str) -> None:
+    import os
+    os.environ["ATAR_HOME"] = home
+    from atar.agent_bootstrap import AgentRegistry
+    AgentRegistry().register(name)
+
+
+def test_concurrent_registry_writes_lose_no_agents(tmp_path):
+    """agents/registry.json holds private keys too — concurrent
+    registrations must not drop each other."""
+    import json as _json
+    home = str(tmp_path)
+    names = [f"reg{k}" for k in range(6)]
+    procs = [multiprocessing.Process(target=_register_worker, args=(home, n))
+             for n in names]
+    for p in procs:
+        p.start()
+    for p in procs:
+        p.join()
+    assert all(p.exitcode == 0 for p in procs)
+
+    reg = _json.loads((tmp_path / "agents" / "registry.json").read_text())
+    for n in names:
+        assert n in reg and reg[n]["did"].startswith("did:key:")

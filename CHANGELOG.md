@@ -46,6 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   names resolved only from the bootstrap registry, never from keys.json.
   Both renderers now use `known_agent_names()` (registry + keygen
   identities). Visually verified.
+- agents/registry.json (bootstrap identities, also private-key-bearing) had
+  the same race; `register` and `seed_trust_root` now reload under the lock
+  before writing. Regression-tested with 6 concurrent registrations.
 - keys.json (which holds private keys) had the same cross-process
   lost-update window as the vouch store: two concurrent CLI commands
   (keygen/rotate/reissue --commit/import) could silently drop each other's

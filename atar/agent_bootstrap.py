@@ -100,16 +100,25 @@ class AgentRegistry:
         os.chmod(self._agents_file, 0o600)
 
     def register(self, name: str) -> str:
-        """Create + persist an agent identity; return its DID (stable)."""
-        if name in self._agents and "did" in self._agents[name]:
+        """Create + persist an agent identity; return its DID (stable).
+
+        Reloads under the store's cross-process lock before writing, so two
+        concurrent registrations (or a registration racing another registry
+        writer) never lose each other's private keys.
+        """
+        from .store import file_lock
+        with file_lock(self._agents_file):
+            self._agents = self._load()
+            self.seed_did = self._agents.get("_seed")
+            if name in self._agents and "did" in self._agents[name]:
+                return self._agents[name]["did"]
+            ident = generate_identity()
+            self._agents[name] = {
+                "did": did_from_public(ident.public_key),
+                "private": ident.private_key.private_bytes_raw().hex(),
+            }
+            self._save()
             return self._agents[name]["did"]
-        ident = generate_identity()
-        self._agents[name] = {
-            "did": did_from_public(ident.public_key),
-            "private": ident.private_key.private_bytes_raw().hex(),
-        }
-        self._save()
-        return self._agents[name]["did"]
 
     def did_of(self, name: str) -> str | None:
         return self._agents.get(name, {}).get("did")
@@ -143,9 +152,12 @@ class AgentRegistry:
 
 def seed_trust_root(name: str) -> str:
     """Designate an agent as the trusted seed (root of the web-of-trust)."""
+    from .store import file_lock
     reg = AgentRegistry()
     did = reg.register(name)
-    reg._agents["_seed"] = did
-    reg._save()
+    with file_lock(reg._agents_file):
+        reg._agents = reg._load()
+        reg._agents["_seed"] = did
+        reg._save()
     reg.seed_did = did
     return did
