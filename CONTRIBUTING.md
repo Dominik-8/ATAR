@@ -6,7 +6,7 @@ Thanks for your interest in ATAR. This document explains how to contribute.
 
 ```bash
 git clone https://github.com/Dominik-8/ATAR.git
-cd atar
+cd ATAR
 python -m venv .venv && source .venv/bin/activate   # or: uv venv
 pip install -e ".[dev]"
 pytest
