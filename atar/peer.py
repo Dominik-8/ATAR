@@ -14,6 +14,9 @@ Endpoint surface (JSON only, stdlib only):
     GET  /revocations  -> {"revocations": [entry, ...]}
     POST /revocations  <- one entry or {"revocations": [...]}
                           -> {"added": n, "duplicates": n, "rejected": n}
+    GET  /disputes     -> {"disputes": [entry, ...]}
+    POST /disputes     <- one entry or {"disputes": [...]}
+                          -> {"added": n, "duplicates": n, "rejected": n}
 
 Intake rules mirror filesystem sync exactly (SPEC §6/§9): vouch signatures are
 verified, issuer-revoked vouches are never admitted, revocation entries are
@@ -30,6 +33,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib import request as urlrequest
 from urllib.error import URLError
 
+from .dispute import DisputeList
 from .revocation import RevocationList, verify_revocation_entry
 from .store import VouchStore
 from .vouch import verify_vouch
@@ -53,12 +57,16 @@ class _PeerState:
         self.home = home
         self.store_path = os.path.join(home, "vouches.json")
         self.revocations_path = os.path.join(home, "revocations.json")
+        self.disputes_path = os.path.join(home, "disputes.json")
 
     def store(self) -> VouchStore:
         return VouchStore(self.store_path)
 
     def revocations(self) -> RevocationList:
         return RevocationList.load(self.revocations_path)
+
+    def disputes(self) -> DisputeList:
+        return DisputeList.load(self.disputes_path)
 
     def admit_vouch(self, vouch: dict) -> str:
         """'added' | 'duplicate' | 'rejected' — same rules as filesystem sync."""
@@ -85,6 +93,24 @@ class _PeerState:
         if not ok:
             return "rejected"
         rl.save(self.revocations_path)
+        return "added"
+
+    def admit_dispute(self, entry: dict) -> str:
+        """'added' | 'duplicates' | 'rejected' — signature always verified;
+        issuer-disputes rejected at intake when the vouch is known (§8.2)."""
+        from .dispute import _entry_id, verify_dispute_entry
+        try:
+            eid = _entry_id(entry)
+        except (KeyError, TypeError):
+            return "rejected"
+        dl = self.disputes()
+        if eid in dl.entries:
+            return "duplicates"
+        if not verify_dispute_entry(entry):
+            return "rejected"
+        if not dl.add(entry, vouch=self.store().get(entry.get("vid", ""))):
+            return "rejected"
+        dl.save(self.disputes_path)
         return "added"
 
 
@@ -116,11 +142,14 @@ def make_peer_handler(state: _PeerState):
                     "protocol": PROTOCOL,
                     "vouches": state.store().count(),
                     "revocations": len(state.revocations().all()),
+                    "disputes": len(state.disputes().all()),
                 })
             elif self.path == "/vouches":
                 self._send_json({"vouches": state.store().all()})
             elif self.path == "/revocations":
                 self._send_json({"revocations": state.revocations().all()})
+            elif self.path == "/disputes":
+                self._send_json({"disputes": state.disputes().all()})
             else:
                 self._send_json({"error": "not found"}, status=404)
 
@@ -140,6 +169,12 @@ def make_peer_handler(state: _PeerState):
                 counts = {"added": 0, "duplicates": 0, "rejected": 0}
                 for e in items if isinstance(items, list) else []:
                     counts[state.admit_revocation(e)] += 1
+                self._send_json(counts)
+            elif self.path == "/disputes":
+                items = body.get("disputes") if isinstance(body, dict) and "disputes" in body else [body]
+                counts = {"added": 0, "duplicates": 0, "rejected": 0}
+                for e in items if isinstance(items, list) else []:
+                    counts[state.admit_dispute(e)] += 1
                 self._send_json(counts)
             else:
                 self._send_json({"error": "not found"}, status=404)
@@ -184,8 +219,9 @@ def _post_json(url: str, obj: dict, timeout: float = 10.0) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 
-def sync_with_url(url: str, store: VouchStore, rlist: RevocationList) -> dict:
-    """Exchange vouches + revocations with a remote peer over HTTP.
+def sync_with_url(url: str, store: VouchStore, rlist: RevocationList,
+                  disputes_path: str | None = None) -> dict:
+    """Exchange vouches + revocations (+ disputes) with a remote peer over HTTP.
 
     Pull: take everything valid + new from the peer (skipping vouches revoked
     by their issuer, defense-in-depth). Push: POST our full sets; the peer
@@ -193,7 +229,8 @@ def sync_with_url(url: str, store: VouchStore, rlist: RevocationList) -> dict:
     """
     base = url.rstrip("/")
     counts = {"vouches_in": 0, "vouches_out": 0, "revocations_in": 0,
-              "revocations_out": 0, "rejected_by_peer": 0}
+              "revocations_out": 0, "disputes_in": 0, "disputes_out": 0,
+              "rejected_by_peer": 0}
 
     remote_vouches = _get_json(f"{base}/vouches").get("vouches", [])
     for v in remote_vouches:
@@ -216,6 +253,19 @@ def sync_with_url(url: str, store: VouchStore, rlist: RevocationList) -> dict:
     if rlist.all():
         resp = _post_json(f"{base}/revocations", {"revocations": rlist.all()})
         counts["revocations_out"] = int(resp.get("added", 0))
+        counts["rejected_by_peer"] += int(resp.get("rejected", 0))
+
+    # disputes (SPEC 8.2): warnings travel the network too
+    dlist = DisputeList.load(disputes_path) if disputes_path else DisputeList()
+    remote_disps = _get_json(f"{base}/disputes").get("disputes", [])
+    for e in remote_disps:
+        if dlist.add(e, vouch=store.get(e["vid"])):
+            counts["disputes_in"] += 1
+    if disputes_path:
+        dlist.save(disputes_path)
+    if dlist.all():
+        resp = _post_json(f"{base}/disputes", {"disputes": dlist.all()})
+        counts["disputes_out"] = int(resp.get("added", 0))
         counts["rejected_by_peer"] += int(resp.get("rejected", 0))
 
     return counts

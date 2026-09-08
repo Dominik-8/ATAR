@@ -133,6 +133,14 @@ def verify(path: str, max_age):
     if max_age is not None and not is_fresh(blob, ttl=max_age):
         click.echo("EXPIRED")
         sys.exit(1)
+    # disputes (SPEC 8.2): advisory only - never changes the verdict.
+    # DisputeList.load verifies every entry and drops corrupt files, so a
+    # broken disputes.json simply yields no warnings - nothing to catch here.
+    from .dispute import DisputeList
+    n = len(DisputeList.load(_disputes_path()).disputes_for(blob))
+    if n:
+        click.echo(f"note: {n} signed dispute(s) on record against this "
+                   f"vouch - see `atar disputes`", err=True)
     click.echo("VALID")
 
 
@@ -528,16 +536,18 @@ def auto_sync():
     for p in peers:
         if is_url(p):
             try:
-                counts = sync_with_url(p, self_store, self_rl)
+                counts = sync_with_url(p, self_store, self_rl, disputes_path=_disputes_path())
             except (URLError, OSError, json.JSONDecodeError) as exc:
                 click.echo(f"  (peer {p}: unreachable ({exc}), skipped)")
                 continue
             total_new += counts["vouches_in"]
             rev_new += counts["revocations_in"]
             click.echo(f"  synced {p}: +{counts['vouches_in']} vouches, "
-                       f"+{counts['revocations_in']} revocations "
+                       f"+{counts['revocations_in']} revocations, "
+                       f"+{counts['disputes_in']} disputes "
                        f"(to peer: +{counts['vouches_out']} vouches, "
-                       f"+{counts['revocations_out']} revocations)")
+                       f"+{counts['revocations_out']} revocations, "
+                       f"+{counts['disputes_out']} disputes)")
             continue
         if not os.path.isdir(p):
             click.echo(f"  (peer {p}: dir missing, skipped)")
@@ -560,6 +570,16 @@ def auto_sync():
                                             vouch=peer_store.get(e["vid"]) or self_store.get(e["vid"])))
         peer_rl.save(os.path.join(p, "revocations.json"))
         self_rl.save(_revocations_path())
+        # dispute gossip (SPEC 8.2)
+        from .dispute import DisputeList
+        self_dl = DisputeList.load(_disputes_path())
+        peer_dl = DisputeList.load(os.path.join(p, "disputes.json"))
+        for e in peer_dl.all():
+            self_dl.add(e, vouch=self_store.get(e["vid"]) or peer_store.get(e["vid"]))
+        for e in self_dl.all():
+            peer_dl.add(e, vouch=peer_store.get(e["vid"]) or self_store.get(e["vid"]))
+        peer_dl.save(os.path.join(p, "disputes.json"))
+        self_dl.save(_disputes_path())
         total_new += added_self
         rev_new += added_rev_self
         click.echo(f"  synced {p}: +{added_self} vouches, +{added_rev_self} revocations "
@@ -589,15 +609,19 @@ def sync(peer):
     before = self_store.count()
     total_in = 0
     rev_in = 0
+    disp_in_total = 0
     for p in peer:
         if is_url(p):
-            counts = sync_with_url(p, self_store, self_rl)
+            counts = sync_with_url(p, self_store, self_rl, disputes_path=_disputes_path())
             total_in += counts["vouches_in"]
             rev_in += counts["revocations_in"]
+            disp_in_total += counts["disputes_in"]
             click.echo(f"  synced {p}: +{counts['vouches_in']} vouches, "
-                       f"+{counts['revocations_in']} revocations "
+                       f"+{counts['revocations_in']} revocations, "
+                       f"+{counts['disputes_in']} disputes "
                        f"(to peer: +{counts['vouches_out']} vouches, "
-                       f"+{counts['revocations_out']} revocations)")
+                       f"+{counts['revocations_out']} revocations, "
+                       f"+{counts['disputes_out']} disputes)")
             continue
         peer_path = os.path.join(p, "vouches.json")
         # VouchStore creates the file on first add, so a missing peer store is
@@ -629,13 +653,28 @@ def sync(peer):
                 added_rev_peer += 1
         peer_rl.save(os.path.join(p, "revocations.json"))
         self_rl.save(_revocations_path())
+        # --- dispute gossip (SPEC 8.2): exchange signed disputes too ---
+        from .dispute import DisputeList
+        self_dl = DisputeList.load(_disputes_path())
+        peer_dl = DisputeList.load(os.path.join(p, "disputes.json"))
+        added_disp_self = sum(
+            1 for e in peer_dl.all()
+            if self_dl.add(e, vouch=self_store.get(e["vid"]) or peer_store.get(e["vid"])))
+        added_disp_peer = sum(
+            1 for e in self_dl.all()
+            if peer_dl.add(e, vouch=peer_store.get(e["vid"]) or self_store.get(e["vid"])))
+        peer_dl.save(os.path.join(p, "disputes.json"))
+        self_dl.save(_disputes_path())
         rev_in += added_rev_self
+        disp_in_total += added_disp_self
         total_in += added_to_self
-        click.echo(f"  synced {p}: +{added_to_self} vouches, +{added_rev_self} revocations "
-                   f"(to peer: +{added_peer} vouches, +{added_rev_peer} revocations)")
+        click.echo(f"  synced {p}: +{added_to_self} vouches, +{added_rev_self} revocations, "
+                   f"+{added_disp_self} disputes "
+                   f"(to peer: +{added_peer} vouches, +{added_rev_peer} revocations, "
+                   f"+{added_disp_peer} disputes)")
     after = self_store.count()
     click.echo(f"sync done: {before} -> {after} vouches ({total_in} new), "
-               f"{rev_in} new revocation(s)")
+               f"{rev_in} new revocation(s), {disp_in_total} new dispute(s)")
 
 
 @cli.command()
@@ -1064,5 +1103,60 @@ def _revocations_path() -> str:
     return os.path.join(_home(), "revocations.json")
 
 
+def _disputes_path() -> str:
+    return os.path.join(_home(), "disputes.json")
+
+
 if __name__ == "__main__":
     cli()
+
+
+@cli.command()
+@click.argument("vouch_file")
+@click.option("--from", "from_name", required=True, help="disputer identity name")
+@click.option("--reason", required=True, help="why this vouch is disputed")
+def dispute(vouch_file: str, from_name: str, reason: str):
+    """Dispute someone else's vouch (signed negative signal, SPEC 8.2).
+
+    A dispute never invalidates a vouch (only the issuer's revocation does,
+    SPEC 6) - it is a signed, gossip-propagated warning that verifiers surface
+    and that discounts the vouch in trust computation when the disputer is
+    itself trusted. Issuers are rejected here: they should `atar revoke`.
+    """
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from .dispute import DisputeList, create_dispute
+    from .identity import Identity
+    with open(vouch_file, "r", encoding="utf-8") as f:
+        blob = json.load(f)
+    keys = _load_keys()
+    if from_name not in keys:
+        click.echo(f"no identity named '{from_name}'. Create one with: atar keygen --name {from_name}")
+        sys.exit(1)
+    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[from_name]["private"]))
+    ident = Identity(private_key=priv, public_key=priv.public_key())
+    try:
+        entry = create_dispute(ident, blob, reason=reason)
+    except ValueError as exc:
+        click.echo(str(exc))
+        sys.exit(1)
+    dl = DisputeList.load(_disputes_path())
+    if not dl.add(entry):
+        click.echo("duplicate or invalid dispute - not stored")
+        sys.exit(1)
+    dl.save(_disputes_path())
+    click.echo(f"dispute recorded against {entry['vid'][:20]}... "
+               f"({len(dl.all())} dispute(s) on record)")
+
+
+@cli.command()
+def disputes():
+    """List all signed disputes on record (SPEC 8.2)."""
+    from .dispute import DisputeList
+    dl = DisputeList.load(_disputes_path())
+    if not dl.all():
+        click.echo("no disputes on record")
+        return
+    click.echo(f"{len(dl.all())} dispute(s):")
+    for e in dl.all():
+        click.echo(f"  {e['vid'][:20]}... disputed by {e['disputed_by']}: "
+                   f"{e['reason']}")
