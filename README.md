@@ -4,7 +4,6 @@
 > No servers. No blockchain. No cost.
 
 [![CI](https://github.com/Dominik-8/ATAR/actions/workflows/ci.yml/badge.svg)](https://github.com/Dominik-8/ATAR/actions)
-[![PyPI version](https://img.shields.io/pypi/v/atar-trust)](https://pypi.org/project/atar-trust/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org)
 [![Design: ATAR dark](https://img.shields.io/badge/design-ATAR%20dark%20%7C%20%2339ff14-neon)]
@@ -51,20 +50,20 @@ revocation, TTL and key rotation — on top of the emerging standards.
 
 ## Install
 
-```bash
-pip install atar-trust
-```
-
-The current release is `1.0.0a1` (alpha) - see [CHANGELOG.md](CHANGELOG.md)
-for what shipped. The package is `atar-trust`; the CLI command is `atar`.
-
-For development, install from source:
+Install from source (this is where current development lives):
 
 ```bash
 git clone https://github.com/Dominik-8/ATAR.git
 cd ATAR
 pip install -e ".[dev]"
 ```
+
+> **PyPI:** `pip install atar-trust` currently serves `1.0.0a1`, which
+> predates the did:key / W3C VC / A2A realignment. An updated package will
+> be published with the next release - until then, install from source.
+> The package is `atar-trust`; the CLI command is `atar`.
+
+See [CHANGELOG.md](CHANGELOG.md) for what shipped and what is in flight.
 
 ## Quickstart
 
