@@ -113,6 +113,8 @@ def vouch(from_name: str, for_did: str, score: float, scope: str, out: str):
     with open(out, "w", encoding="utf-8") as f:
         json.dump(blob, f, indent=2)
     click.echo(f"vouch written to {out}")
+    click.echo(f"note: {out} is a portable blob — it is NOT in your local store, so "
+               f"card/dashboard/graph cannot see it yet. Run `atar add {out}` to store it.")
 
 
 @cli.command()

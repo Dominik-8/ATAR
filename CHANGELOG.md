@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and format drift cannot sneak in silently.
 
 ### Fixed (overnight hardening, 2026-09)
+- The README quickstart actually works end-to-end now: it jumped from
+  `atar verify` straight to `atar card`/`atar dashboard`, so a new user's
+  first run showed "0 vouches" everywhere (the blob was never added to the
+  local store). The quickstart now includes the `atar add` step, and
+  `atar vouch` prints a hint that the blob is not in the store yet.
+  Regression-tested by walking the documented flow via the CLI.
 - The file-backed stores (vouches, revocations, disputes) no longer lose
   entries when two processes write concurrently: the load -> mutate -> save
   cycle now runs under a cross-process advisory lock (`<file>.lock`) and

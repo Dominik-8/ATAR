@@ -79,10 +79,13 @@ atar vouch --from alice --for "did:key:..." --score 0.95 --scope coding \
 # 3. anyone verifies the vouch signature offline (no server, no internet)
 atar verify bob-vouch.json          # -> VALID
 
-# 4. build an agent card (DID + name + vouches) to present on contact
+# 4. add it to the local store so cards/dashboards/graphs can see it
+atar add bob-vouch.json
+
+# 5. build an agent card (DID + name + vouches) to present on contact
 atar card --name bob --out card.json
 
-# 5. render the Know-Your-Agent dashboard from a local trust graph
+# 6. render the Know-Your-Agent dashboard from a local trust graph
 atar dashboard --seed "did:key:..." --scope coding --out dash.html
 ```
 
@@ -188,7 +191,7 @@ any ATAR UI, web page, or digest so the design stays consistent.
 | 31 | `atar watch` (cron-ready monitoring + ALERT) | ✅ |
 | 26 | Real-agent claim issuance (`issue` / `verify-claim`) | ✅ |
 
-All phases implemented and tested (244 tests, CI green). See
+All phases implemented and tested (246 tests, CI green). See
 [`SPEC.md`](SPEC.md) for the authoritative protocol specification and
 [`docs/test-vectors.md`](docs/test-vectors.md) for the golden
 interoperability vectors every wire format is pinned against.
