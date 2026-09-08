@@ -17,8 +17,21 @@ from __future__ import annotations
 
 import base64
 import json
+import secrets
+
+import base58
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from .vouch import verify_vouch
+
+
+def _public_key_from_did(did: str) -> Ed25519PublicKey:
+    """Reconstruct the Ed25519 public key embedded in a ``did:agent:`` DID."""
+    if not isinstance(did, str) or not did.startswith("did:agent:"):
+        raise ValueError(f"not a did:agent: DID: {did!r}")
+    raw = base58.b58decode(did[len("did:agent:"):])
+    return Ed25519PublicKey.from_public_bytes(raw)
 
 
 def _b64url_encode(data: bytes) -> str:
@@ -91,3 +104,47 @@ def verify_agent_card(card: dict) -> dict:
         "valid_vouches": valid,
         "invalid_vouches": invalid,
     }
+
+
+# --- Proof of possession (SPEC §11.3) ---------------------------------------
+#
+# A card proves only that *someone* holds Bob's vouches - copied bytes present
+# identically. The challenge-response below proves the presenter controls the
+# private key behind the card's DID: the recipient sends a fresh nonce, the
+# presenter signs it, the recipient verifies against the DID's key.
+
+POP_CONTEXT = "atar-pop/1"
+
+
+def new_pop_challenge() -> str:
+    """Fresh 128-bit random nonce for a proof-of-possession challenge (hex)."""
+    return secrets.token_hex(16)
+
+
+def pop_message(did: str, nonce: str) -> bytes:
+    """The exact bytes a PoP proof signs (domain-separated, DID-bound)."""
+    return f"{POP_CONTEXT}|{did}|{nonce}".encode("utf-8")
+
+
+def sign_pop_proof(identity, did: str, nonce: str) -> dict:
+    """Presenter side: sign the recipient's challenge nonce with the card key.
+
+    ``identity`` may be an ``Identity`` or a bare ``Ed25519PrivateKey`` (CLI).
+    """
+    return {"nonce": nonce, "signature": identity.sign(pop_message(did, nonce)).hex()}
+
+
+def verify_pop_proof(did: str, nonce: str, proof: dict | None) -> bool:
+    """Recipient side: True iff ``proof`` signs THIS nonce with the DID's key.
+
+    False for a missing proof, a nonce mismatch (replay of a captured proof),
+    a signature by any other key, or any malformed input.
+    """
+    try:
+        if not proof or proof.get("nonce") != nonce:
+            return False
+        pub = _public_key_from_did(did)
+        pub.verify(bytes.fromhex(proof["signature"]), pop_message(did, nonce))
+        return True
+    except (InvalidSignature, ValueError, KeyError, TypeError, AttributeError):
+        return False

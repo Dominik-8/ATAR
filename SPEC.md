@@ -242,7 +242,27 @@ The receiver decodes, then runs §5 verification offline.
 ```
 
 An agent attaches a verifiable agent card (with revocation-aware verification) to
-every brief it sends.
+every brief it sends. When the recipient challenges it, the card also carries
+a `proof` (§11.3).
+
+### 11.3 Proof of possession (challenge–response)
+
+A card alone proves only that *someone* holds the subject's vouches — copied
+bytes present identically. To prove the presenter controls the card's key,
+the recipient runs a nonce challenge:
+
+1. The recipient generates a fresh nonce (≥128-bit random) and sends it to
+   the presenter.
+2. The presenter signs `atar-pop/1|<did>|<nonce>` with the private key behind
+   the card's DID and attaches
+   `"proof": {"nonce": "<nonce>", "signature": "<hex ed25519>"}` to the card.
+3. The recipient reconstructs the public key from the card's DID, verifies
+   the signature, and checks the nonce matches the one it sent.
+
+A fresh nonce per presentation prevents replay of a captured proof.
+
+CLI: `atar card --name N --challenge NONCE` embeds the proof;
+`atar verify-card CARD --challenge NONCE` enforces it (exit 1 on failure).
 
 ---
 
@@ -260,6 +280,7 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | Threat | Status |
 |---|---|
 | **Forgery** | Impossible without the issuer's private key (Ed25519). |
+| **Card copying** (presenting someone else's agent card) | Mitigated by proof-of-possession (§11.3): the recipient's fresh nonce must be signed by the card's key. |
 | **Tampering** | Any `payload` change invalidates the signature. |
 | **Stale trust** | Mitigated by Freshness/TTL (§7) — trust must be renewed. |
 | **Key leak** | Mitigated by Revocation (§6) + Rotation (§10) — recover without total loss. |
@@ -278,6 +299,8 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar keygen --name X` | generate identity, print DID |
 | `atar vouch --from A --for <did> --score S --scope C` | create signed vouch |
 | `atar verify [--max-age N]` | VALID / REVOKED / EXPIRED / INVALID |
+| `atar card --name X [--challenge N]` | build an agent card (with PoP proof when challenged) |
+| `atar verify-card PATH [--challenge N]` | verify card vouches (+ PoP proof when challenged) |
 | `atar revoke <vouch.json>` | add to local revocation list |
 | `atar add <vouch.json>` | add to store (rejects revoked/expired) |
 | `atar list` / `atar scopes` | inspect store / list scopes |

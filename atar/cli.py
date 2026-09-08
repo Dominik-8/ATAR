@@ -141,7 +141,9 @@ def verify(path: str, max_age):
 @cli.command()
 @click.option("--name", required=True, help="identity name to build the card for")
 @click.option("--out", default="agent-card.json", help="output file")
-def card(name: str, out: str):
+@click.option("--challenge", default=None,
+              help="nonce from the verifier - signs a proof-of-possession into the card (SPEC §11.3)")
+def card(name: str, out: str, challenge: str | None):
     """Build an agent card (DID + name + all stored vouches for this DID)."""
     keys = _load_keys()
     if name not in keys:
@@ -159,18 +161,39 @@ def card(name: str, out: str):
             except (json.JSONDecodeError, KeyError):
                 continue
     card_doc = make_agent_card(did=did, name=name, vouches=vouches)
+    if challenge is not None:
+        # prove we hold the card's private key by signing the verifier's nonce
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from .identity import Identity
+        from .atc import sign_pop_proof
+        priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[name]["private"]))
+        ident = Identity(private_key=priv, public_key=priv.public_key())
+        card_doc["proof"] = sign_pop_proof(ident, did, challenge)
     with open(out, "w", encoding="utf-8") as f:
         json.dump(card_doc, f, indent=2)
     click.echo(f"agent card written to {out} ({len(vouches)} vouch(es))")
+    if challenge is not None:
+        click.echo("proof-of-possession embedded (SPEC §11.3)")
 
 
 @cli.command()
 @click.argument("path")
-def verify_card(path: str):
+@click.option("--challenge", default=None,
+              help="nonce you sent the presenter - verifies the card's proof-of-possession (SPEC §11.3)")
+def verify_card(path: str, challenge: str | None):
     """Verify every vouch inside an agent card. Prints a report (flags revoked)."""
     with open(path, "r", encoding="utf-8") as f:
         card_doc = json.load(f)
     report = verify_agent_card(card_doc)
+    if challenge is not None:
+        from .atc import verify_pop_proof
+        if verify_pop_proof(report["did"], challenge, card_doc.get("proof")):
+            click.echo("proof-of-possession : VALID")
+        else:
+            click.echo("proof-of-possession : INVALID (missing, replayed, or wrong key)")
+            sys.exit(1)
+    elif card_doc.get("proof"):
+        click.echo("proof-of-possession : present (pass --challenge NONCE to verify)")
     click.echo(f"agent : {report['name']} ({report['did']})")
     click.echo(f"valid vouches   : {len(report['valid_vouches'])}")
     click.echo(f"invalid vouches : {len(report['invalid_vouches'])}")
