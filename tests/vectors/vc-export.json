@@ -1,0 +1,55 @@
+{
+  "description": "W3C VC export (SPEC \u00a73.3): the vouch from vouch.json as an unsigned Verifiable Credential, and the same credential with a Data Integrity proof (eddsa-jcs-2022, proof.created fixed for reproducibility).",
+  "unsigned_credential": {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      {
+        "atar": "https://github.com/Dominik-8/ATAR/ns#"
+      }
+    ],
+    "type": [
+      "VerifiableCredential",
+      "ATARVouch"
+    ],
+    "issuer": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+    "validFrom": "2023-11-14T22:13:20Z",
+    "credentialSubject": {
+      "id": "did:key:z6MknGc3ocHs3zdPiJbnaaqDi58NGb4pk1Sp9WxWufuXSdxf",
+      "atar:scope": "coding",
+      "atar:score": 0.9,
+      "atar:evidence": [
+        "https://example.org/observations/42"
+      ]
+    }
+  },
+  "signed_credential": {
+    "@context": [
+      "https://www.w3.org/ns/credentials/v2",
+      {
+        "atar": "https://github.com/Dominik-8/ATAR/ns#"
+      }
+    ],
+    "type": [
+      "VerifiableCredential",
+      "ATARVouch"
+    ],
+    "issuer": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+    "validFrom": "2023-11-14T22:13:20Z",
+    "credentialSubject": {
+      "id": "did:key:z6MknGc3ocHs3zdPiJbnaaqDi58NGb4pk1Sp9WxWufuXSdxf",
+      "atar:scope": "coding",
+      "atar:score": 0.9,
+      "atar:evidence": [
+        "https://example.org/observations/42"
+      ]
+    },
+    "proof": {
+      "type": "DataIntegrityProof",
+      "cryptosuite": "eddsa-jcs-2022",
+      "created": "2023-11-14T22:16:40Z",
+      "verificationMethod": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG#z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+      "proofPurpose": "assertionMethod",
+      "proofValue": "z2WtjRFYTFh1VW5p1YZUDLET8w6QJhkqtpfE8o72qk6ttjyXSuFAetLZ7derRe68Yx9CbDF4BqBYpFQqH5LFMxYdo"
+    }
+  }
+}

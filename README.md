@@ -188,8 +188,10 @@ any ATAR UI, web page, or digest so the design stays consistent.
 | 31 | `atar watch` (cron-ready monitoring + ALERT) | ✅ |
 | 26 | Real-agent claim issuance (`issue` / `verify-claim`) | ✅ |
 
-All phases implemented and tested (235 tests, CI green). See
-[`SPEC.md`](SPEC.md) for the authoritative protocol specification.
+All phases implemented and tested (244 tests, CI green). See
+[`SPEC.md`](SPEC.md) for the authoritative protocol specification and
+[`docs/test-vectors.md`](docs/test-vectors.md) for the golden
+interoperability vectors every wire format is pinned against.
 
 **Realignment Stage C shipped (2026-09-08):** HTTP gossip transport
 (`atar peer`, SPEC §9.1), the CrewAI framework plugin

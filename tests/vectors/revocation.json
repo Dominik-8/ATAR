@@ -1,0 +1,9 @@
+{
+  "description": "Signed revocation entry (SPEC \u00a76) for the vouch in vouch.json, signed by its issuer.",
+  "entry": {
+    "vid": "vouch:c3b86eb8c52f470b2747a4599dcab666ac5635fa73f98fa8c7080dfa9c6b6281",
+    "revoked_by": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+    "ts": 1700000100,
+    "signature": "usb8ieb6QCq/onQtCNMFRTPXcwVkl+77UVyw9NRNIOAxRFY8zzzeGWHyVyIkEKR1wtY9Ys6HnJYmRPempcrFAg=="
+  }
+}

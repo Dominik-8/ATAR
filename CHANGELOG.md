@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (overnight hardening, 2026-09)
+- Public interoperability test vectors under `tests/vectors/` (documented in
+  `docs/test-vectors.md`): golden, byte-exact vectors for `did:key`/`did:agent:`
+  derivation, JCS canonicalization, the native vouch format + content address,
+  the revocation entry format, and the W3C VC export with its `eddsa-jcs-2022`
+  proof. `tests/test_vectors.py` asserts the implementation keeps matching
+  them, so a second implementation can verify interop against fixed targets
+  and format drift cannot sneak in silently.
+
 ### Fixed (overnight hardening, 2026-09)
 - The file-backed stores (vouches, revocations, disputes) no longer lose
   entries when two processes write concurrently: the load -> mutate -> save

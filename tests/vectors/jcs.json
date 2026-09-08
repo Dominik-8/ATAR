@@ -1,0 +1,79 @@
+{
+  "description": "JCS (RFC 8785) canonicalization subset used by the eddsa-jcs-2022 VC bridge.",
+  "vectors": [
+    {
+      "note": "key ordering",
+      "input": {
+        "b": 1,
+        "a": 2
+      },
+      "canonical": "{\"a\":2,\"b\":1}"
+    },
+    {
+      "note": "mixed types",
+      "input": {
+        "nested": {
+          "z": [
+            3,
+            1.5,
+            true,
+            null
+          ],
+          "a": "x"
+        }
+      },
+      "canonical": "{\"nested\":{\"a\":\"x\",\"z\":[3,1.5,true,null]}}"
+    },
+    {
+      "note": "string escapes",
+      "input": {
+        "s": "quote \" backslash \\ newline\n tab\t unicode \u00e9"
+      },
+      "canonical": "{\"s\":\"quote \\\" backslash \\\\ newline\\n tab\\t unicode \u00e9\"}"
+    },
+    {
+      "note": "control characters",
+      "input": {
+        "ctrl": "\u0001\u001f"
+      },
+      "canonical": "{\"ctrl\":\"\\u0001\\u001f\"}"
+    },
+    {
+      "note": "integers incl. max safe",
+      "input": {
+        "i": 42,
+        "neg": -7,
+        "zero": 0,
+        "big": 9007199254740991
+      },
+      "canonical": "{\"big\":9007199254740991,\"i\":42,\"neg\":-7,\"zero\":0}"
+    },
+    {
+      "note": "ECMAScript number formatting",
+      "input": {
+        "f": 1.5,
+        "whole": 3.0,
+        "tiny": 1e-07,
+        "huge": 1e+21,
+        "negzero": -0.0
+      },
+      "canonical": "{\"f\":1.5,\"huge\":1e+21,\"negzero\":0,\"tiny\":1e-7,\"whole\":3}"
+    },
+    {
+      "note": "top-level array",
+      "input": [
+        1,
+        "two",
+        {
+          "three": 3
+        }
+      ],
+      "canonical": "[1,\"two\",{\"three\":3}]"
+    },
+    {
+      "note": "top-level string",
+      "input": "plain string",
+      "canonical": "\"plain string\""
+    }
+  ]
+}
