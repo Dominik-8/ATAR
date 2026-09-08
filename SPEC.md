@@ -570,6 +570,7 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar list` / `atar scopes` | inspect store / list scopes |
 | `atar sync --with <peer>` / `atar auto-sync` | gossip exchange (directory or `http(s)://` peer URL) |
 | `atar dashboard [--seed DID] [--scope C] [--out F]` | render the Know-Your-Agent HTML dashboard |
+| `atar graph [--seed DID] [--scope C]` | print transitive-trust ranking (§8.1) |
 | `atar peer [--port P] [--bind B]` | serve the local store as an HTTP gossip peer (§9.1) |
 | `atar dispute VOUCH --from N --reason R` / `atar disputes` | file / list signed disputes against foreign vouches (§8.2) |
 | `atar rotate --name X` | generate new key + rotation statement |
@@ -589,11 +590,13 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 
 ## 15. Status & roadmap
 
-**Realignment (2026-09-08):** ATAR is moving onto the standard formats —
+**Realignment (2026-09-08):** ATAR moved onto the standard formats —
 `did:key` identity, W3C Verifiable Credentials for vouches, A2A-compatible
 signed agent cards — while keeping its core (transitive trust, lifecycle,
-tooling). The staged plan (A: honesty + security, B: standards alignment,
-C: network/plugin/standardization) lives in
+tooling). Stages A (honesty + security) and B (standards alignment) shipped
+the same day; of stage C, the HTTP gossip transport, the CrewAI plugin, and
+score semantics + disputes are shipped, and standardization drafts await the
+owner's review. The staged plan lives in
 [ROADMAP.md](ROADMAP.md); the `did:agent:` → `did:key` decision is recorded
 in issue #2.
 

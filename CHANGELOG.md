@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (overnight hardening, 2026-09)
+- Docs coherence sweep: SPEC §14 gained the missing `atar graph` row;
+  `docs/test-vectors.md` section references corrected (JCS is §4, VC
+  mapping is §3.1, rotation is §10.1); ROADMAP now marks stages A1-A3 and
+  B1-B3 as shipped 2026-09-08 (verified against closed issues #2-#5 and
+  the landing commits); SPEC §15 status paragraph updated from "moving
+  onto" to the actual shipped state; the stale 3-command usage example in
+  the `cli.py` docstring now points at `atar --help` / SPEC §14.
 - Fixed CI red since 5aa3ad8: `.gitignore` generated-artifact patterns
   (`agent-card.json`, `rotation.json`, `vouch*.json`, ...) were
   repo-wide and swallowed same-named fixtures under `tests/vectors/` —

@@ -17,34 +17,36 @@ that speaks the standard formats.*
 
 ## Stage A — Honesty and foundation (1–2 weeks)
 
-- **A1 — DID method decision.** The `did:agent:` method name is registered to
+- **A1 — DID method decision.** ✅ Shipped 2026-09-08.
+  The `did:agent:` method name is registered to
   another project in the W3C registry (May 2026). **Decision (2026-09-08):
   adopt `did:key`** — a finished standard, no registration, and ATAR's
   identity is already just an Ed25519 key. "ATAR" stays the protocol name.
   → [#2](https://github.com/Dominik-8/ATAR/issues/2)
-- **A2 — Correct the claims.** Honest landscape positioning (ERC-8004, A2A,
+- **A2 — Correct the claims.** ✅ Shipped 2026-09-08. Honest landscape positioning (ERC-8004, A2A,
   W3C, ai-wot exist); precise "offline-verifiable" (signatures offline,
   revocation status via gossip); honest TTL semantics (re-signing, not
   re-earning). → [#3](https://github.com/Dominik-8/ATAR/issues/3)
-- **A3 — Close two protocol gaps.** Verify revocation signatures at every
-  intake path + issuer binding ([#4](https://github.com/Dominik-8/ATAR/issues/4));
+- **A3 — Close two protocol gaps.** ✅ Shipped 2026-09-08. Revocation
+  signatures are now verified at every intake path + issuer binding ([#4](https://github.com/Dominik-8/ATAR/issues/4));
   proof-of-possession challenge for agent cards
   ([#5](https://github.com/Dominik-8/ATAR/issues/5)).
 
 ## Stage B — Standards alignment (3–4 weeks)
 
-- **B1 — Identity as `did:key`.** New identity type (Multibase/Multicodec per
+- **B1 — Identity as `did:key`.** ✅ Shipped 2026-09-08. New identity type (Multibase/Multicodec per
   spec). Migration: existing `did:agent:` identities stay importable (alias in
   the store), old vouches stay verifiable — no data loss, no hard cut. Spec §2
   rewrite; `keygen` outputs `did:key`.
-- **B2 — Vouches as W3C Verifiable Credentials.** VC export + verify alongside
+- **B2 — Vouches as W3C Verifiable Credentials.** ✅ Shipped 2026-09-08.
+  VC export + verify alongside
   the native format: `credentialSubject` with scope/score/claim, proof as an
   Ed25519 Data Integrity signature. The lean native format stays internal; the
   VC path is the bridge out — any VC tooling can check an ATAR vouch. Spec §3
   gains the VC mapping.
-- **B3 — A2A-compatible signed agent card.** Rebuild the card (§11.2) as an
-  A2A Agent Card with a signature extension instead of the own
-  `atar-agent-card/1.0` schema, so any A2A-speaking system can read it and
+- **B3 — A2A-compatible signed agent card.** ✅ Shipped 2026-09-08. The card
+  (§11.2) is now an A2A Agent Card with a signature extension instead of the
+  own `atar-agent-card/1.0` schema, so any A2A-speaking system can read it and
   ATAR supplies the trust data as an extension.
 
 ## Stage C — Becoming real (ongoing, after B)

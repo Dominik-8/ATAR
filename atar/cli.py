@@ -1,12 +1,8 @@
 """Command-line interface for the ATAR protocol.
 
-Usage:
-    atar keygen [--name NAME]          # create an agent identity, print its DID
-    atar vouch --from NAME --for DID   # issuer vouches for subject DID
-            --score F --scope STR
-    atar verify PATH                    # verify a vouch blob file
-
-Keys are stored locally under $ATAR_HOME (default ~/.atar) as keys.json.
+Run ``atar --help`` for the full command list; SPEC.md section 14 is the
+reference table. Keys are stored locally under $ATAR_HOME (default
+~/.atar) as keys.json.
 """
 
 from __future__ import annotations
