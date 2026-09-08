@@ -48,10 +48,12 @@ def test_agent_card_detects_invalid_vouch():
     bob = generate_identity()
     v = create_vouch(alice, bob.public_key, score=0.9, scope="coding")
     card = make_agent_card(did_from_public(bob.public_key), "bob", [v])
-    # tamper the stored vouch token inside the card
-    tok = card["atar"]["vouches"][0]
+    # tamper the stored vouch token inside the card's trust extension
+    from atar.atc import _trust_params
+    params = _trust_params(card)
+    tok = params["vouches"][0]
     bad = tok[:-4] + ("ZZZZ" if tok[-4:] != "ZZZZ" else "YYYY")
-    card["atar"]["vouches"][0] = bad
+    params["vouches"][0] = bad
     result = verify_agent_card(card)
     assert len(result["valid_vouches"]) == 0
     assert len(result["invalid_vouches"]) == 1

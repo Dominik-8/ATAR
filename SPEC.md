@@ -344,20 +344,55 @@ token = base64url( canonical_json(vouch_blob) )   # no padding
 
 The receiver decodes, then runs §5 verification offline.
 
-### 11.2 Agent card
+### 11.2 Agent card (A2A-compatible, signed)
+
+The card is a standard **A2A Agent Card** — any A2A-speaking system can read
+it. ATAR's trust data rides in a declared capability extension, and the whole
+card is signed, so the trust data is tamper-evident:
 
 ```json
 {
-  "schema": "atar-agent-card/1.0",
-  "did": "did:key:...",
   "name": "bob",
-  "atar": { "vouches": ["<token>", "<token>", "..."] }
+  "description": "ATAR agent 'bob' - identity and vouches carried in the ATAR trust extension",
+  "url": "urn:atar:agent:did:key:z6Mk...",
+  "version": "1.0.0",
+  "capabilities": {
+    "extensions": [{
+      "uri": "https://github.com/Dominik-8/ATAR/ext/atar-trust/1.0",
+      "description": "ATAR trust data: identity, vouch tokens, optional PoP",
+      "required": false,
+      "params": {
+        "identity": "did:key:z6Mk...",
+        "vouches": ["<token>", "<token>", "..."],
+        "proof": { "nonce": "...", "signature": "..." }
+      }
+    }]
+  },
+  "defaultInputModes": ["application/json"],
+  "defaultOutputModes": ["application/json"],
+  "skills": [],
+  "signatures": [{
+    "protected": "<b64u({\"alg\":\"EdDSA\",\"kid\":\"did:key:z6Mk...#z6Mk...\",\"typ\":\"JWS\"})>",
+    "signature": "<b64u(ed25519 signature)>"
+  }]
 }
 ```
 
-An agent attaches a verifiable agent card (with revocation-aware verification) to
-every brief it sends. When the recipient challenges it, the card also carries
-a `proof` (§11.3).
+**Rules**
+- The extension params carry the presented `identity` DID, the vouch tokens
+  (§11.1), and — when challenged — the `proof` (§11.3).
+- `signatures` follows the A2A Agent Card signing convention (JWS flattened
+  JSON entries): the signing input is `b64u(protected) || "." ||
+  b64u(payload)` where the payload is the canonical JSON (§4) of the card
+  minus `signatures`; `kid` MUST identify the presented identity (§2.1 alias
+  rules apply).
+- `url` is the agent's A2A endpoint when it has one; offline agents use a
+  `urn:atar:agent:<did>` identifier URI.
+- An agent attaches its card (with revocation-aware verification of the
+  vouches) to every brief it sends.
+- Legacy `atar-agent-card/1.0` cards stay verifiable: verifiers read the old
+  standalone layout as the same trust data, and report the absent signature
+  as "unsigned", not "invalid".
 
 ### 11.3 Proof of possession (challenge–response)
 
