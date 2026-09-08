@@ -38,7 +38,8 @@ def test_vouch_rejects_malformed_did(tmp_path, monkeypatch):
                             "--score", "0.9", "--scope", "intel",
                             "--out", str(tmp_path / "v.json")])
     assert r.exit_code == 2
-    assert "invalid subject DID" in r.output
+    # neither a DID nor a known local name - the error says both
+    assert "no local identity" in r.output
 
 
 def test_issue_tolerates_crlf_did(tmp_path, monkeypatch):

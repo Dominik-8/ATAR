@@ -98,18 +98,22 @@ def identities():
 
 @cli.command()
 @click.option("--from", "from_name", required=True, help="issuer identity name")
-@click.option("--for", "for_did", required=True, help="subject agent DID")
+@click.option("--for", "for_did", required=True, help="subject agent DID or local identity name")
 @click.option("--score", type=float, required=True, help="trust score 0..1")
 @click.option("--scope", required=True, help="capability scope, e.g. coding")
 @click.option("--out", default="vouch.json", help="output file")
 def vouch(from_name: str, for_did: str, score: float, scope: str, out: str):
     """Create a signed vouch from one identity for a subject DID."""
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    for_did = for_did.strip()  # tolerate CRLF / trailing whitespace from pipes
-    from .identity import public_key_from_did, is_supported_did
-    if not is_supported_did(for_did):
-        click.echo(f"invalid subject DID (expected did:key:... or legacy did:agent:...): {for_did!r}")
+    resolved = _resolve_did(for_did)
+    if resolved is None:
+        click.echo(f"unknown subject (not a DID and no local identity with "
+                   f"that name): {for_did.strip()!r}")
         sys.exit(2)
+    if resolved != for_did.strip():
+        click.echo(f"resolved '{for_did.strip()}' -> {resolved}")
+    for_did = resolved
+    from .identity import public_key_from_did
     if not 0.0 <= score <= 1.0:
         click.echo(f"score must be within [0, 1] (SPEC §3.2), got {score}")
         sys.exit(2)
@@ -270,7 +274,7 @@ def verify_card(path: str, challenge: str | None):
 
 @cli.command()
 @click.option("--from", "from_name", required=True, help="issuer identity name")
-@click.option("--for", "for_did", required=True, help="subject agent DID")
+@click.option("--for", "for_did", required=True, help="subject agent DID or local identity name")
 @click.option("--scope", required=True, help="capability scope, e.g. coding")
 @click.option("--score", type=float, required=True, help="trust score 0..1")
 @click.option("--claim", default="", help="free-text capability claim about the subject")
@@ -282,11 +286,12 @@ def issue(from_name: str, for_did: str, scope: str, score: float, claim: str, ou
     file (not the store) so any agent can issue/verify it peer-to-peer.
     """
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    for_did = for_did.strip()  # tolerate CRLF / trailing whitespace from pipes
-    from .identity import public_key_from_did, is_supported_did
-    if not is_supported_did(for_did):
-        click.echo(f"invalid subject DID (expected did:key:... or legacy did:agent:...): {for_did!r}")
+    resolved = _resolve_did(for_did)
+    if resolved is None:
+        click.echo(f"unknown subject (not a DID and no local identity with "
+                   f"that name): {for_did.strip()!r}")
         sys.exit(2)
+    for_did = resolved
     if not 0.0 <= score <= 1.0:
         click.echo(f"score must be within [0, 1] (SPEC §3.2), got {score}")
         sys.exit(2)
@@ -294,7 +299,7 @@ def issue(from_name: str, for_did: str, scope: str, score: float, claim: str, ou
     if from_name not in keys:
         click.echo(f"no identity '{from_name}'"); sys.exit(1)
     priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[from_name]["private"]))
-    from .identity import Identity
+    from .identity import Identity, public_key_from_did
     issuer = Identity(private_key=priv, public_key=priv.public_key())
     # reconstruct subject public key from DID (did:key or legacy did:agent:)
     subject_pub = public_key_from_did(for_did)
@@ -388,6 +393,24 @@ def _load_store_vouches() -> list[dict]:
     return VouchStore(_store_path()).all()
 
 
+def _resolve_did(value: str):
+    """Resolve a CLI argument that may be a DID or a local identity name.
+
+    Returns the DID string, or None when ``value`` is neither a supported
+    DID nor a known local name. Lets a user say ``--for bob`` / ``--seed
+    alice`` instead of copy-pasting DIDs between commands.
+    """
+    from .identity import is_supported_did
+    value = value.strip()
+    if is_supported_did(value):
+        return value
+    try:
+        from .agent_bootstrap import known_agent_names
+        return known_agent_names().get(value)
+    except Exception:
+        return None
+
+
 def _default_seed():
     """Return the DID of the seeded agent in the registry, or None."""
     try:
@@ -401,7 +424,7 @@ def _default_seed():
 
 
 @cli.command()
-@click.option("--seed", default=None, help="trusted seed DID (default: the seeded agent from the registry)")
+@click.option("--seed", default=None, help="trusted seed DID or local identity name (default: the seeded agent from the registry)")
 @click.option("--scope", default="intelligence", help="capability scope to evaluate")
 @click.option("--home", "home", default=None, help="override ATAR_HOME (vouch store)")
 def graph(seed: str | None, scope: str, home: str | None):
@@ -413,7 +436,15 @@ def graph(seed: str | None, scope: str, home: str | None):
     """
     if home:
         os.environ["ATAR_HOME"] = home
-    seed = seed or _default_seed()
+    if seed:
+        resolved = _resolve_did(seed)
+        if resolved is None:
+            raise SystemExit(
+                f"unknown seed (not a DID and no local identity with that "
+                f"name): {seed.strip()!r}")
+        seed = resolved
+    else:
+        seed = _default_seed()
     if not seed:
         raise SystemExit("no --seed given and no seeded agent in registry")
     from .transparency import TrustGraph
@@ -456,7 +487,7 @@ def graph(seed: str | None, scope: str, home: str | None):
 
 
 @cli.command()
-@click.option("--seed", default=None, help="trusted seed DID (default: the seeded agent from the registry)")
+@click.option("--seed", default=None, help="trusted seed DID or local identity name (default: the seeded agent from the registry)")
 @click.option("--scope", default="intelligence", help="capability scope to render")
 @click.option("--out", default="atar-dashboard.html", help="output HTML file")
 @click.option("--home", "home", default=None, help="override ATAR_HOME (vouch store)")
@@ -469,7 +500,15 @@ def dashboard(seed: str | None, scope: str, out: str, home: str | None):
     """
     if home:
         os.environ["ATAR_HOME"] = home
-    seed = seed or _default_seed()
+    if seed:
+        resolved = _resolve_did(seed)
+        if resolved is None:
+            raise SystemExit(
+                f"unknown seed (not a DID and no local identity with that "
+                f"name): {seed.strip()!r}")
+        seed = resolved
+    else:
+        seed = _default_seed()
     if not seed:
         raise SystemExit("no --seed given and no seeded agent in registry")
     from .dashboard import render_dashboard_html

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (overnight hardening, 2026-09)
+- DID arguments now accept local identity names everywhere the docs told
+  users to paste a DID: `atar vouch --for`, `atar issue --for`,
+  `atar graph --seed`, `atar dashboard --seed` (`resolved 'bob' ->
+  did:key:...` is echoed on resolution; unknown names get a clear error).
+  The README quickstart no longer requires copy-pasting DIDs.
 - Export/import round-trip now carries the whole trust graph: bundles
   include disputes (previously dropped - silent loss of negative signals,
   SPEC 8.2) and agent names from BOTH identity stores (registry AND

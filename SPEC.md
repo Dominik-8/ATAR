@@ -11,7 +11,7 @@
 > (web-of-trust) and can be revoked, expired, or rotated — so the graph stays
 > alive instead of rotting.
 
-Status: **implemented and tested** (274 tests, CI green). This document is the
+Status: **implemented and tested** (281 tests, CI green). This document is the
 authoritative wire + algorithm spec.
 
 ---
@@ -561,7 +561,7 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 |---|---|
 | `atar keygen --name X` | generate identity, print DID |
 | `atar identities` | list local identities (name -> DID) |
-| `atar vouch --from A --for <did> --score S --scope C` | create signed vouch |
+| `atar vouch --from A --for <did|name> --score S --scope C` | create signed vouch |
 | `atar verify [--max-age N]` | VALID / REVOKED / EXPIRED / INVALID |
 | `atar card --name X [--challenge N]` | build an agent card (with PoP proof when challenged) |
 | `atar verify-card PATH [--challenge N]` | verify card vouches (+ PoP proof when challenged) |
@@ -569,8 +569,8 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar add <vouch.json>` | add to store (rejects revoked/expired) |
 | `atar list` / `atar scopes` | inspect store / list scopes |
 | `atar sync --with <peer>` / `atar auto-sync` | gossip exchange (directory or `http(s)://` peer URL) |
-| `atar dashboard [--seed DID] [--scope C] [--out F]` | render the Know-Your-Agent HTML dashboard |
-| `atar graph [--seed DID] [--scope C]` | print transitive-trust ranking (§8.1) |
+| `atar dashboard [--seed DID|name] [--scope C] [--out F]` | render the Know-Your-Agent HTML dashboard |
+| `atar graph [--seed DID|name] [--scope C]` | print transitive-trust ranking (§8.1) |
 | `atar peer [--port P] [--bind B]` | serve the local store as an HTTP gossip peer (§9.1) |
 | `atar dispute VOUCH --from N --reason R` / `atar disputes` | file / list signed disputes against foreign vouches (§8.2) |
 | `atar rotate --name X` | generate new key + rotation statement |
@@ -581,7 +581,7 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar export [--include-keys] FILE` | bundle trust graph (vouches + revocations + disputes + agent names, or full identity) to `.atpkg` |
 | `atar import FILE` | restore a network bundle (verified intake; names restored DID-only) |
 | `atar watch [--interval S] [--once]` | monitor health; alert on unhealthy transition |
-| `atar issue --from N --for DID --scope S --score X [--claim C]` | issue a signed capability claim (standalone file) |
+| `atar issue --from N --for DID|name --scope S --score X [--claim C]` | issue a signed capability claim (standalone file) |
 | `atar verify-claim FILE` | verify a signed capability claim (independent of store) |
 | `atar vc-export F --from N` | export a vouch as a W3C Verifiable Credential (§3.1) |
 | `atar vc-verify FILE` | verify an exported VC offline (§3.1) |
