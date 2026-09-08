@@ -36,7 +36,8 @@ def _canonical(payload: dict) -> bytes:
 
 
 def create_vouch(issuer, subject_public_key, *, score: float, scope: str,
-                 claim: str | None = None, ts: int | None = None) -> dict:
+                 claim: str | None = None, evidence: list[str] | None = None,
+                 ts: int | None = None) -> dict:
     """Create a signed vouch from ``issuer`` for ``subject_public_key``.
 
     ``issuer`` may be an ``Identity`` or a bare ``Ed25519PrivateKey`` (as used
@@ -55,6 +56,11 @@ def create_vouch(issuer, subject_public_key, *, score: float, scope: str,
         "claim": claim,
         "ts": int(ts if ts is not None else time.time()),
     }
+    if evidence:
+        # Optional evidence references (SPEC §3.2): URIs or free-form pointers
+        # to the observations behind the score. Part of the signed claim, so
+        # it joins the content address (dedup key) when present.
+        payload["evidence"] = [str(e) for e in evidence]
     body = _canonical(payload)
     sig = issuer.sign(body)
     return {"payload": payload, "signature": sig.hex()}

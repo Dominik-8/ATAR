@@ -11,7 +11,7 @@
 > (web-of-trust) and can be revoked, expired, or rotated — so the graph stays
 > alive instead of rotting.
 
-Status: **implemented and tested** (197 tests, CI green). This document is the
+Status: **implemented and tested** (211 tests, CI green). This document is the
 authoritative wire + algorithm spec.
 
 ---
@@ -102,6 +102,9 @@ agent for a capability *scope* with a *score*.
   (`coding`, `research`, `finance`, `intelligence`, …).
 - `claim` is optional free text, used only for *self-vouches*
   (`issuer == subject`).
+- `evidence` is an optional list of references (URIs or free-form pointers)
+  to the observations behind the score (§3.2). When present it is part of the
+  signed payload — and of the content address (§8).
 - `ts` is a Unix epoch timestamp (seconds). **Used for Freshness (§7).**
 - `signature` is the hex-encoded Ed25519 signature over the **canonical** JSON
   of `payload` (§4).
@@ -164,6 +167,38 @@ Field mapping:
 
 CLI: `atar vc-export VOUCH --from NAME` (issuer-signed export),
 `atar vc-verify VC` (offline proof verification).
+
+### 3.2 Score semantics — what `score 0.95` means
+
+A score is a **dimensionless confidence** in [0.0, 1.0]: the issuer's
+subjective probability that the subject will perform reliably in `scope`,
+*as observed by the issuer*. It is not a measurement with physical units and
+never aggregates across scopes — scores compare only within a scope and are
+only as meaningful as the issuer behind them (which is why trust is computed
+transitively, §8.1: an unknown issuer's 0.99 contributes nothing).
+
+Calibration anchors (recommended, not enforced):
+
+| Score | Meaning |
+|---|---|
+| 1.0 | The issuer stakes its own reputation without reservation (e.g. its own subagent, long flawless track record). |
+| 0.8 | Repeatedly observed good performance. Default for a single successfully observed task (see the CrewAI plugin). |
+| 0.5 | Neutral: no negative evidence, no strong positive evidence. |
+| 0.2 | Weak or indirect evidence only. |
+| 0.0 | No confidence — do not vouch at all (a 0-scored vouch adds no trust). |
+
+**Evidence references.** Scores SHOULD carry their basis in the optional
+`evidence` list: URIs or pointers to the tasks, reviews, logs, or documents
+the score rests on (`https://…/task/42`, `ticket:ATAR-7`, a content hash).
+Evidence lets a verifier *re-check the basis* instead of trusting the number
+blindly, and makes scores comparable across operators: two 0.9 vouches with
+inspectable evidence beat one bare 0.99. Evidence is signed with the vouch
+and joins its content address — it cannot be edited after the fact.
+
+TTL interaction (§7): re-signing refreshes the *freshness* of the claim, not
+its evidence. Honest re-vouching after new observations SHOULD reference the
+new evidence; mechanical re-signing keeps the old evidence and only resets
+the clock.
 
 ---
 
@@ -272,6 +307,37 @@ Given a seed DID (your own identity, or a trusted root) and a scope:
 - Propagation is bounded (depth ≤ 8, or until contribution < 1e-9).
 - Only cryptographically valid vouches are admitted, so a forgery cannot inject
   fake trust.
+
+### 8.2 Disputes — signed negative signals
+
+Revocation (§6) belongs to the issuer. Everyone else gets the **dispute**: a
+signed warning against a *foreign* vouch, gossiped like any other object.
+
+```json
+{
+  "vid": "<canonical vouch id>",
+  "disputed_by": "did:key:...",
+  "reason": "<free text>",
+  "ts": 1690000000,
+  "signature": "<base64(ed25519 over \"vid|disputed_by|reason|ts\")>"
+}
+```
+
+**Rules**
+- `disputed_by` MUST NOT be the vouch's `issuer` — the issuer's negative
+  signal is revocation (§6). Where the vouch is known, issuer-signed disputes
+  are rejected at intake.
+- Signatures are verified at every intake path (sync, import, load, HTTP
+  peer), exactly like revocations (§6). A forged dispute never enters a list.
+- Disputes are content-addressed by `vid|disputed_by|reason` and dedup; they
+  gossip over both transports (§9 filesystem, §9.1 HTTP `/disputes`).
+- A dispute **never invalidates** a vouch. It is advisory: `atar verify`
+  still prints VALID but notes disputes on record; `atar disputes` lists them.
+- **Trust computation:** `compute_trust` runs two passes when a dispute list
+  is present. Pass 1 establishes trust ignoring disputes; pass 2 excludes any
+  vouch carrying a valid dispute from a disputer whose pass-1 trust is
+  ≥ 0.5. A warning counts only from inside the trusted graph — a Sybil
+  minting disputes cannot move anyone's score (§13).
 
 ---
 
@@ -467,6 +533,8 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | **Stale trust** | Mitigated by Freshness/TTL (§7) — trust must be renewed. |
 | **Key leak** | Mitigated by Revocation (§6) + Rotation (§10) — recover without total loss. |
 | **Zombie trust** | Mitigated by Revocation + Freshness combined. |
+| **Undisputed fraud** (third party observes a bad vouch, issuer stays silent) | Mitigated by disputes (§8.2): any agent can file a signed warning; trusted disputers discount the vouch in trust computation. |
+| **Dispute spam / Sybil smear** | Disputes from untrusted identities are stored and shown but move no scores (§8.2 threshold). |
 | **Sybil** | **Out of scope.** Free identity means anyone can mint agents and
   self-vouch. Self-vouches contribute nothing (issuer must already be trusted).
   Real trust requires real agents vouching. ATAR provides the mechanism;
@@ -488,6 +556,7 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar list` / `atar scopes` | inspect store / list scopes |
 | `atar sync --with <peer>` / `atar auto-sync` | gossip exchange (directory or `http(s)://` peer URL) |
 | `atar peer [--port P] [--bind B]` | serve the local store as an HTTP gossip peer (§9.1) |
+| `atar dispute VOUCH --from N --reason R` / `atar disputes` | file / list signed disputes against foreign vouches (§8.2) |
 | `atar rotate --name X` | generate new key + rotation statement |
 | `atar reissue --name X [--commit]` | re-sign under new key (commit = +add +revoke old) |
 | `atar bootstrap --config agents.toml` | reproducible network |
