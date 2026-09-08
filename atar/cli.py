@@ -385,11 +385,19 @@ def graph(seed: str | None, scope: str, home: str | None):
     if not seed:
         raise SystemExit("no --seed given and no seeded agent in registry")
     from .transparency import TrustGraph
+    from .revocation import RevocationList
+    from .dispute import DisputeList
+    from .freshness import VOUCH_TTL_DEFAULT
     g = TrustGraph()
     for v in _load_store_vouches():
         g.add(v)
     loaded = len(g.all_vouches())
-    trust = g.compute_trust(seed_did=seed, scope=scope)
+    # SPEC §8.1/8.2: only valid, unrevoked, unexpired vouches carry trust;
+    # trusted (>= 0.5) disputers discount the vouches they warn against.
+    trust = g.compute_trust(seed_did=seed, scope=scope,
+                            revocations=RevocationList.load(_revocations_path()),
+                            disputes=DisputeList.load(_disputes_path()),
+                            ttl=VOUCH_TTL_DEFAULT)
     ranked = sorted(trust.items(), key=lambda kv: kv[1], reverse=True)
     click.echo(f"seed  : {seed}")
     click.echo(f"scope : {scope}")

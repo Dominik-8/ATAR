@@ -59,10 +59,6 @@ border-color:var(--accent-dim);box-shadow:0 0 14px rgba(57,255,20,0.18);}
 
 def dashboard_data(net: dict, *, scope: str) -> dict:
     """Compute the ranked agent list + paths + revocation state for the dashboard."""
-    g = graph_from_vouches(net["vouches"])
-    trust = g.compute_trust(seed_did=net["seed_did"], scope=scope)
-    name_by_did = {v: k for k, v in net["agents"].items()}
-
     # revocation awareness (Phase 16/17): load the local revocation list
     revoked_by = {}
     try:
@@ -72,6 +68,18 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
             revoked_by[e["vid"]] = e["revoked_by"]
     except Exception:
         rl = None
+
+    # SPEC §8.1/8.2: trust flows only through valid, unrevoked, unexpired
+    # vouches, discounted by disputes from inside the trusted graph - the
+    # dashboard must show the same numbers `atar graph` computes.
+    from atar.dispute import DisputeList
+    from atar.freshness import VOUCH_TTL_DEFAULT
+    g = graph_from_vouches(net["vouches"])
+    trust = g.compute_trust(seed_did=net["seed_did"], scope=scope,
+                            revocations=rl,
+                            disputes=DisputeList.load(_disputes_path_for(net)),
+                            ttl=VOUCH_TTL_DEFAULT)
+    name_by_did = {v: k for k, v in net["agents"].items()}
 
     # build incoming-edge map: subject -> list of (issuer_name, score)
     edges = {}
@@ -83,7 +91,9 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
             (name_by_did.get(p["issuer"], "?"), float(p["score"]))
         )
 
+    from atar.transparency import TrustGraph as _TG
     agents = []
+    listed: set[str] = set()
     for did, score in sorted(trust.items(), key=lambda kv: kv[1], reverse=True):
         paths = edges.get(did, [])
         # an agent is "revoked" if any incoming vouch to it is on the list
@@ -108,6 +118,32 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
             "revoked": agent_revoked,
             "revoked_by": revoker,
         })
+        listed.add(did)
+
+    # Revoked vouches no longer propagate trust (SPEC §8.1), so an agent
+    # whose only incoming vouches are revoked drops out of the trust dict -
+    # but it must still be VISIBLE, flagged REVOKED with trust 0, not
+    # silently disappeared.
+    for v in net["vouches"]:
+        p = v["payload"]
+        if p.get("scope") != scope:
+            continue
+        did = _TG._alias(p["subject"])
+        if did in listed:
+            continue
+        if rl is None or not rl.is_revoked_for(v):
+            continue
+        from atar.revocation import revoke_payload_id as _rid
+        agents.append({
+            "name": name_by_did.get(did, name_by_did.get(p["subject"], "?")),
+            "did": did,
+            "trust": 0.0,
+            "is_seed": did == net["seed_did"],
+            "paths": [],
+            "revoked": True,
+            "revoked_by": name_by_did.get(revoked_by.get(_rid(v), ""), "?"),
+        })
+        listed.add(did)
     return {"seed_did": net["seed_did"], "scope": scope, "agents": agents}
 
 
@@ -119,6 +155,16 @@ def _revocations_path_for(net: dict) -> str:
     home = os.environ.get("ATAR_HOME",
                           os.path.join(os.path.expanduser("~"), ".atar"))
     return os.path.join(home, "revocations.json")
+
+
+def _disputes_path_for(net: dict) -> str:
+    """Resolve the disputes.json path (net may carry an override)."""
+    import os
+    if net.get("_disputes_path"):
+        return net["_disputes_path"]
+    home = os.environ.get("ATAR_HOME",
+                          os.path.join(os.path.expanduser("~"), ".atar"))
+    return os.path.join(home, "disputes.json")
 
 
 def render_cards(net: dict, *, scope: str) -> str:

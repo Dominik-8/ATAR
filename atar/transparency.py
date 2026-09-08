@@ -66,12 +66,19 @@ class TrustGraph:
             return did
 
     def compute_trust(self, *, seed_did: str, scope: str, decay: float = 1.0,
-                      disputes=None) -> dict[str, float]:
+                      disputes=None, revocations=None, ttl: int | None = None,
+                      now: int | None = None) -> dict[str, float]:
         """Compute transitive trust scores from a trusted seed DID.
 
         Score of a node = sum over incoming valid vouches of
         (issuer_trust * vouch_score), only counting edges within ``scope``.
         Seed node starts at 1.0. Decay < 1.0 weakens longer paths.
+
+        Revocation + freshness (SPEC §8.1): only *valid, unrevoked,
+        unexpired* vouches carry trust. When ``revocations`` (a
+        RevocationList) is given, issuer-revoked vouches are excluded; when
+        ``ttl`` (seconds, see freshness.VOUCH_TTL_DEFAULT) is given, expired
+        vouches are excluded. Both checks mirror ``freshness.trust_valid``.
 
         Disputes (SPEC §8.2): when ``disputes`` (a DisputeList) is given, the
         computation runs in two passes. Pass 1 ignores disputes and
@@ -82,13 +89,25 @@ class TrustGraph:
         honest vouches. A dispute never removes the vouch from the store; it
         only discounts its contribution here.
         """
+        excluded: set[str] = set()
+        if revocations is not None or ttl is not None:
+            from .freshness import is_fresh
+            for vid, v in self._vouches.items():
+                if revocations is not None and revocations.is_revoked_for(v):
+                    excluded.add(vid)
+                elif ttl is not None and not is_fresh(v, ttl=ttl, now=now):
+                    excluded.add(vid)
+
         discounted: set[str] = set()
         if disputes is not None:
             from .dispute import DISPUTE_TRUST_THRESHOLD
             baseline = self.compute_trust(seed_did=seed_did, scope=scope,
-                                          decay=decay)
+                                          decay=decay, revocations=revocations,
+                                          ttl=ttl, now=now)
             for v in self._vouches.values():
                 if v["payload"].get("scope") != scope:
+                    continue
+                if canonical_vouch_id(v) in excluded:
                     continue
                 for e in disputes.disputes_for(v):
                     disputer = self._alias(e["disputed_by"])
@@ -103,7 +122,8 @@ class TrustGraph:
             p = v["payload"]
             if p.get("scope") != scope:
                 continue
-            if canonical_vouch_id(v) in discounted:
+            vid = canonical_vouch_id(v)
+            if vid in excluded or vid in discounted:
                 continue
             issuer = self._alias(p["issuer"])
             edges.setdefault(issuer, []).append((self._alias(p["subject"]), float(p["score"])))
