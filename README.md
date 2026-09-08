@@ -14,8 +14,11 @@ and lets agents vouch for one another with signed, tamper-evident attestations.
 Think of it as a **passport + word-of-mouth trust network** for software agents:
 anyone can verify who an agent is and who vouches for it — offline, for $0.
 
-This is the still-unclaimed **top layer** of the AI era: transport (MCP/A2A) is
-solved, but *trust & attribution* is not. ATAR is the open protocol for it.
+Transport for agents (MCP/A2A) is solved and consolidated. Trust & attribution
+is the active frontier: ERC-8004, A2A signed Agent Cards, the W3C agent-identity
+community work and ai-wot all attack it from different angles. ATAR's bet is to
+be the **open-source trust graph with a full lifecycle** — transitive trust,
+revocation, TTL and key rotation — on top of the emerging standards.
 
 ## Contents
 
@@ -33,14 +36,18 @@ solved, but *trust & attribution* is not. ATAR is the open protocol for it.
 
 - **Transport is solved.** MCP (tools) and A2A (agent-to-agent) are now
   consolidated under the Linux Foundation. You cannot reinvent HTTP.
-- **Trust is not.** No free, decentralized, serverless "who is this agent and
-  who vouches for it" layer exists in 2026. Central registries reintroduce a
-  server; blockchains cost gas and are empirically hollow (ERC-8004: 59–90%
-  Sybil reviewers).
-- **ATAR is the gap.** Identity + vouching with zero infrastructure. The
-  protocol itself captures no value (a public good, like HTTP) — value accrues
-  to the applications built on top (directories, "Know Your Agent" analytics),
-  exactly as Google built on top of a free HTTP.
+- **Trust is contested, not unclaimed.** ERC-8004 puts agent reputation
+  on-chain (and struggles with Sybil reviewers), A2A is adding signed Agent
+  Cards, W3C community work is converging on agent identity, and ai-wot
+  explores a web-of-trust. What none of them ships today is ATAR's core: a
+  free, serverless trust graph with a **full lifecycle** — transitive trust
+  computation, active revocation, TTL-based decay, key rotation — plus
+  operator tooling (audit, watch, dashboard, export/import).
+- **ATAR's angle.** Identity + vouching with zero infrastructure, as a public
+  good (like HTTP): value accrues to the applications built on top
+  (directories, "Know Your Agent" analytics), exactly as Google built on top
+  of a free HTTP. ATAR aims to ride the standard formats, not compete with a
+  fifth parallel one — see [ROADMAP.md](ROADMAP.md).
 
 ## Install
 
@@ -70,7 +77,7 @@ atar keygen --name bob
 atar vouch --from alice --for "did:agent:..." --score 0.95 --scope coding \
     --out bob-vouch.json
 
-# 3. anyone verifies the vouch offline (no server, no internet)
+# 3. anyone verifies the vouch signature offline (no server, no internet)
 atar verify bob-vouch.json          # -> VALID
 
 # 4. build an agent card (DID + name + vouches) to present on contact
@@ -94,7 +101,8 @@ atar bootstrap --config demo.toml     # demo illustration, not real
 ## How it works
 
 1. **Identity** — Ed25519 keypair; `did:agent:` derived from the public key.
-   Self-resolving, offline-verifiable, $0.
+   Self-resolving, $0. Vouch *signatures* verify offline; *revocation status*
+   propagates via gossip sync ([`SPEC.md`](SPEC.md) §6/§9).
 2. **Vouch** — a signed attestation: *issuer vouches subject for scope@score*.
    Tamper-evident (any change invalidates the signature).
 3. **ATC Carrier** — vouches encoded as header-safe tokens + an "agent card"
