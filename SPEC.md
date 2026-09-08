@@ -4,9 +4,11 @@
 
 > ATAR is the trust layer for autonomous agents. It gives every agent a
 > self-sovereign `did:agent:` identity, lets agents vouch for each other's
-> capabilities, and lets any observer verify that trust **offline, for $0,
-> with no server**. Trust propagates transitively (web-of-trust) and can be
-> revoked, expired, or rotated — so the graph stays alive instead of rotting.
+> capabilities, and lets any observer verify vouch signatures **offline, for
+> $0, with no server**. (Revocation and expiry state is data, not signatures:
+> it propagates peer-to-peer via gossip, §9.) Trust propagates transitively
+> (web-of-trust) and can be revoked, expired, or rotated — so the graph stays
+> alive instead of rotting.
 
 Status: **implemented and tested** (122 tests, CI green). This document is the
 authoritative wire + algorithm spec.
@@ -18,7 +20,7 @@ authoritative wire + algorithm spec.
 | Principle | Consequence |
 |---|---|
 | **No server** | Identity = Ed25519 keypair. DID derived from public key. Nothing to host. |
-| **Offline-verifiable** | Any vouch verifies with the issuer's public key alone. No round-trip. |
+| **Offline-verifiable signatures** | Any vouch *signature* verifies with the issuer's public key alone. No round-trip. Revocation/freshness *status* is current only as of the last gossip sync (§9). |
 | **Content-addressed** | Every vouch/revocation has a deterministic ID → gossip + dedup without an operator. |
 | **Trust is scoped** | An agent is trusted *for a capability*, not universally. |
 | **Trust is alive** | Revocation (active kill) + Freshness/TTL (passive decay) + Rotation (recovery). |
@@ -135,6 +137,12 @@ One revocation entry:
 Revocation kills trust *actively*. Freshness lets stale trust *decay*: a vouch
 older than the active max-age is **EXPIRED** and rejected. This forces periodic
 re-vouching, so the graph stays alive instead of accumulating zombie trust.
+
+Honest semantics: TTL forces the *issuer to re-sign* (a freshness signal —
+"the issuer still stands behind this"), not the subject to *re-earn* trust.
+An issuer can re-sign mechanically; TTL bounds how long a silent issuer's
+vouches keep working, it does not by itself create new evidence of
+trustworthiness.
 
 ```
 is_fresh(vouch, ttl) := (now - vouch.payload.ts) <= ttl
