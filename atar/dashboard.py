@@ -2,8 +2,6 @@
 
 Renders your private trust network as a dark, corporate HTML page
 (near-black bg, gift-green accents, GitHub-blue DIDs).
-This is the application that captures value while the ATAR protocol itself
-stays free — the Google/FB model: own the surface, give away the pipes.
 
 Private, local, $0. No server required; open the file in any browser.
 """
@@ -79,19 +77,21 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
                             revocations=rl,
                             disputes=DisputeList.load(_disputes_path_for(net)),
                             ttl=VOUCH_TTL_DEFAULT)
-    name_by_did = {v: k for k, v in net["agents"].items()}
+    from atar.transparency import TrustGraph as _TG
+    name_by_did = {_TG._alias(v): k for k, v in net["agents"].items()}
 
     # build incoming-edge map: subject -> list of (issuer_name, score)
+    # (keyed by canonical alias, like the trust dict - legacy did:agent:
+    # spellings resolve to the same node, SPEC §2.1)
     edges = {}
     for v in net["vouches"]:
         p = v["payload"]
         if p.get("scope") != scope:
             continue
-        edges.setdefault(p["subject"], []).append(
+        edges.setdefault(_TG._alias(p["subject"]), []).append(
             (name_by_did.get(p["issuer"], "?"), float(p["score"]))
         )
 
-    from atar.transparency import TrustGraph as _TG
     agents = []
     listed: set[str] = set()
     for did, score in sorted(trust.items(), key=lambda kv: kv[1], reverse=True):
@@ -101,7 +101,7 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
         revoker = None
         for v in net["vouches"]:
             p = v["payload"]
-            if p.get("subject") != did:
+            if _TG._alias(p["subject"]) != did:
                 continue
             from atar.revocation import revoke_payload_id as _rid
             # issuer-bound (SPEC §6): only a revocation by the vouch's issuer applies
@@ -212,6 +212,7 @@ def render_cards(net: dict, *, scope: str) -> str:
 
 def render_dashboard_html(net: dict, *, scope: str) -> str:
     """Render the Know-Your-Agent dashboard as a standalone HTML page."""
+    import html as _html
     data = dashboard_data(net, scope=scope)
     cards = render_cards(net, scope=scope)
     return f"""<!doctype html>
@@ -227,7 +228,7 @@ def render_dashboard_html(net: dict, *, scope: str) -> str:
     <div class="hero">
       <div class="brand">ATAR</div>
       <h1>Know Your Agent</h1>
-      <div class="sub">trust network &middot; scope: {data['scope']}</div>
+      <div class="sub">trust network &middot; scope: {_html.escape(str(data['scope']))}</div>
     </div>
     {cards if cards else '<div class="empty">No agents in this scope yet.</div>'}
   </div>

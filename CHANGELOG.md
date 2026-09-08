@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (senior-engineer pre-release audit, 2026-09)
+- Trust computation no longer counts self-vouches: a self-endorsement used to
+  inflate the issuer's own transitive trust (0.9 became 1.8); SPEC §13 always
+  said self-vouches contribute nothing. Regression-tested.
+- Dashboard: the scope label is HTML-escaped in the single-scope renderer.
+  The live server reflects `?scope=` into the page, so an unescaped scope was
+  a reflected-XSS hole (the same class the stored-XSS regressions cover).
+- `atar import --force` now actually stores the vouches it counts (previously
+  it reported them as imported without writing anything); forced imports are
+  still signature-verified.
+- `atar keygen` refuses to silently overwrite an existing identity (the old
+  key — and every vouch its DID issued or received — would be orphaned
+  without warning); `--force` opts in explicitly.
+- `atar reissue` now requires a recorded rotation: without one it would have
+  re-signed *other* agents' vouches under the caller's key.
+- HTTP gossip intake skips malformed remote entries instead of crashing:
+  vouch, revocation, and dispute pulls from untrusted peers are guarded.
+- `atar sync --with <url>` reports an unreachable peer and continues, like
+  `auto-sync` always did, instead of dying with a traceback.
+- The agent registry (`agents/registry.json`, which holds private keys) is
+  now written owner-only (`0o600`), matching `keys.json`.
+- Store, revocation, dispute, registry and key files are written atomically
+  (temp file + rename), so a crash mid-write cannot truncate them.
+- `create_vouch` validates the score (finite, in [0.0, 1.0], SPEC §3);
+  `atar bootstrap` skips invalid config vouches with a clean message.
+- `python -m atar.cli` exposes all commands again (a mid-file `__main__`
+  guard used to hide `dispute`/`disputes` from that entry path).
+- Docs synced: test counts (235), the `/disputes` peer routes (SPEC §9.1),
+  the `dashboard` CLI row (SPEC §14), the insertion-vs-evaluation wording for
+  revocation/expiry (SPEC §9), and a stale demo diagram score.
+- Release workflow now runs the full test suite before building/publishing.
+
 ### Fixed (pre-publication audit)
 - `atar card` now reads the persistent vouch store instead of scanning
   loose files, so cards include the vouches the store actually holds.

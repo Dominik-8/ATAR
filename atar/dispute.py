@@ -130,8 +130,8 @@ class DisputeList:
         return list(self.entries.values())
 
     def save(self, path: str) -> None:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"disputes": self.all()}, f, indent=2)
+        from .store import atomic_save_json
+        atomic_save_json({"disputes": self.all()}, path)
 
     @classmethod
     def load(cls, path: str) -> "DisputeList":

@@ -124,7 +124,7 @@ See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 | `atar vouch --from A --for DID --score S --scope C` | create a signed vouch |
 | `atar verify PATH [--max-age N]` | `VALID` / `REVOKED` / `EXPIRED` / `INVALID` |
 | `atar revoke PATH` | add a vouch to the local revocation list |
-| `atar add PATH` | add a vouch to the store (rejects revoked/expired) |
+| `atar add PATH` | add a vouch to the store (rejects invalid/revoked) |
 | `atar list` / `atar scopes` | inspect store / list scopes + counts |
 | `atar card --name N` | build an agent card (DID + vouches) |
 | `atar verify-card PATH` | verify every vouch in an agent card |
@@ -188,7 +188,7 @@ any ATAR UI, web page, or digest so the design stays consistent.
 | 31 | `atar watch` (cron-ready monitoring + ALERT) | ✅ |
 | 26 | Real-agent claim issuance (`issue` / `verify-claim`) | ✅ |
 
-All phases implemented and tested (211 tests, CI green). See
+All phases implemented and tested (235 tests, CI green). See
 [`SPEC.md`](SPEC.md) for the authoritative protocol specification.
 
 **Realignment Stage C shipped (2026-09-08):** HTTP gossip transport

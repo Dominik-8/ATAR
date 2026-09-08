@@ -15,7 +15,7 @@ from __future__ import annotations
 import time
 
 from .vouch import verify_vouch
-from .revocation import RevocationList, revoke_payload_id
+from .revocation import RevocationList
 
 # Default trust lifetime: 180 days. Re-vouch before it lapses.
 VOUCH_TTL_DEFAULT = 180 * 24 * 3600

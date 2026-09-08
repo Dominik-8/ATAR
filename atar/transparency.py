@@ -126,7 +126,13 @@ class TrustGraph:
             if vid in excluded or vid in discounted:
                 continue
             issuer = self._alias(p["issuer"])
-            edges.setdefault(issuer, []).append((self._alias(p["subject"]), float(p["score"])))
+            subject = self._alias(p["subject"])
+            if issuer == subject:
+                # self-vouches are claims, not endorsements (SPEC §13): they
+                # must not add transitive trust — otherwise a self-endorsement
+                # would inflate the issuer's own score.
+                continue
+            edges.setdefault(issuer, []).append((subject, float(p["score"])))
 
         seed_did = self._alias(seed_did)
         trust: dict[str, float] = {seed_did: 1.0}

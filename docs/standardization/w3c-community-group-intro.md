@@ -35,7 +35,7 @@ standardized ground:
    attestations, advisory by design, weighted by the disputer's own standing
    in the graph so Sybil smears move nothing.
 
-Everything above is implemented, specified, and tested (211 tests, CI green)
+Everything above is implemented, specified, and tested (235 tests, CI green)
 in the repo, with a threat model that states plainly what the protocol does
 NOT solve (Sybil resistance stays out of scope).
 
@@ -55,6 +55,6 @@ Happy to join a call or continue here — whatever suits the group.
 
 - Confirm the current name/venue of the W3C agent-identity community work
   before posting (the landscape moved during 2026; cite the exact group).
-- Numbers current as of 2026-09-08 (211 tests); re-check before sending.
+- Numbers current as of 2026-09-08 (235 tests); re-check before sending.
 - Keep the "collaborator, not competitor" framing — the honest-positioning
   rule from realignment A2 applies here too.

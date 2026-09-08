@@ -14,13 +14,12 @@ from __future__ import annotations
 import json
 import os
 import sys
-import time
 
 import click
 
 from .identity import generate_identity, did_from_public
 from .vouch import create_vouch, verify_vouch
-from .atc import make_agent_card, verify_agent_card, vouch_to_token
+from .atc import make_agent_card, verify_agent_card
 
 
 def _home() -> str:
@@ -40,9 +39,8 @@ def _load_keys() -> dict:
 
 
 def _save_keys(keys: dict) -> None:
-    os.makedirs(_home(), exist_ok=True)
-    with open(_keys_path(), "w", encoding="utf-8") as f:
-        json.dump(keys, f, indent=2)
+    from .store import atomic_save_json
+    atomic_save_json(keys, _keys_path())
     os.chmod(_keys_path(), 0o600)  # private keys: owner-read/write only
 
 
@@ -63,11 +61,24 @@ def cli():
 
 @cli.command()
 @click.option("--name", default="default", help="label for this identity")
-def keygen(name: str):
-    """Generate a new agent identity and print its DID."""
+@click.option("--force", is_flag=True,
+              help="overwrite an existing identity with this name "
+                   "(WARNING: the old key is destroyed; its DID is orphaned)")
+def keygen(name: str, force: bool):
+    """Generate a new agent identity and print its DID.
+
+    Refuses to overwrite an existing identity unless --force is given:
+    silently replacing a key would orphan every vouch the old DID issued
+    and received, with no way back.
+    """
+    keys = _load_keys()
+    if name in keys and not force:
+        click.echo(f"identity '{name}' already exists ({keys[name]['did']}).", err=True)
+        click.echo("refusing to overwrite: a new key orphans the old DID. "
+                   "Use --force if you really mean it.", err=True)
+        sys.exit(1)
     ident = generate_identity()
     priv_hex = ident.private_key.private_bytes_raw().hex()
-    keys = _load_keys()
     keys[name] = {"private": priv_hex, "did": did_from_public(ident.public_key)}
     _save_keys(keys)
     click.echo(did_from_public(ident.public_key))
@@ -117,7 +128,7 @@ def verify(path: str, max_age):
     older than that many seconds (Phase 24 freshness). Revocation kills trust
     actively; freshness lets stale trust decay so the graph stays alive.
     """
-    from .freshness import is_fresh, VOUCH_TTL_DEFAULT
+    from .freshness import is_fresh
     with open(path, "r", encoding="utf-8") as f:
         blob = json.load(f)
     if not verify_vouch(blob):
@@ -125,7 +136,7 @@ def verify(path: str, max_age):
         sys.exit(1)
     # revocation awareness (Phase 16/17/22)
     try:
-        from .revocation import RevocationList, revoke_payload_id
+        from .revocation import RevocationList
         rl = RevocationList.load(_revocations_path())
         if rl.is_revoked_for(blob):
             click.echo("REVOKED")
@@ -227,7 +238,7 @@ def verify_card(path: str, challenge: str | None):
     click.echo(f"invalid vouches : {len(report['invalid_vouches'])}")
     # revocation awareness (Phase 22): flag any vouch on the local revocation list
     try:
-        from .revocation import RevocationList, revoke_payload_id
+        from .revocation import RevocationList
         rl = RevocationList.load(_revocations_path())
         revoked = [v for v in report["valid_vouches"]
                    if rl.is_revoked_for(v)]
@@ -465,7 +476,7 @@ def add(path: str):
         blob = json.load(f)
     # revocation check BEFORE admitting to the store
     try:
-        from .revocation import RevocationList, revoke_payload_id
+        from .revocation import RevocationList
         rl = RevocationList.load(_revocations_path())
         if rl.is_revoked_for(blob):
             click.echo("rejected (vouch is REVOKED)")
@@ -621,7 +632,12 @@ def sync(peer):
     disp_in_total = 0
     for p in peer:
         if is_url(p):
-            counts = sync_with_url(p, self_store, self_rl, disputes_path=_disputes_path())
+            from urllib.error import URLError
+            try:
+                counts = sync_with_url(p, self_store, self_rl, disputes_path=_disputes_path())
+            except (URLError, OSError, json.JSONDecodeError) as exc:
+                click.echo(f"  (peer {p}: unreachable ({exc}), skipped)")
+                continue
             total_in += counts["vouches_in"]
             rev_in += counts["revocations_in"]
             disp_in_total += counts["disputes_in"]
@@ -722,8 +738,13 @@ def bootstrap(config: str):
         reg = AgentRegistry()  # reload so seed_did is set
     added = 0
     for v in cfg.get("vouches", []):
-        if reg.vouch(v["issuer"], v["subject"],
-                     score=float(v["score"]), scope=v["scope"]):
+        try:
+            ok = reg.vouch(v["issuer"], v["subject"],
+                           score=float(v["score"]), scope=v["scope"])
+        except (ValueError, KeyError) as exc:
+            click.echo(f"skipping invalid vouch entry {v!r}: {exc}", err=True)
+            continue
+        if ok:
             added += 1
     click.echo(f"bootstrap done: {len(reg._agents) - 1} agents, "
                f"{added} new vouch(es) added")
@@ -824,6 +845,11 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
     # them under the NEW key.
     keys = _load_keys()
     old_did = keys.get(name, {}).get("rotated_from")
+    if not old_did:
+        click.echo(f"no rotation recorded for '{name}' - run `atar rotate --name {name}` first. "
+                   "Re-issuing without a rotation would re-sign OTHER agents' vouches "
+                   "under your key.", err=True)
+        sys.exit(1)
     reissued = []
     old_vouches = []
     for v in store.all():
@@ -924,13 +950,20 @@ def import_cmd(bundle: str, force: bool):
     imported only if the bundle contains them (--include-keys export).
     """
     from .store import VouchStore
-    from .revocation import RevocationList, revoke_payload_id
+    from .revocation import RevocationList
     with open(bundle, "r", encoding="utf-8") as f:
         data = json.load(f)
     store = VouchStore(_store_path())
     added = 0
     for v in data.get("vouches", []):
-        if force or store.add(v):
+        if store.add(v):
+            added += 1
+        elif force and verify_vouch(v):
+            # --force: overwrite an existing entry (still signature-verified;
+            # an invalid vouch is never imported, force or not)
+            from .transparency import canonical_vouch_id
+            store._vouches[canonical_vouch_id(v)] = v
+            store._save()
             added += 1
     rl = RevocationList.load(_revocations_path())
     revoked = 0
@@ -957,7 +990,7 @@ def import_cmd(bundle: str, force: bool):
 def _audit_state(max_age):
     """Compute the trust-network health state dict (shared by audit + watch)."""
     from .store import VouchStore
-    from .revocation import RevocationList, revoke_payload_id
+    from .revocation import RevocationList
     from .freshness import is_fresh
     store = VouchStore(_store_path())
     vouches = store.all()
@@ -1098,7 +1131,6 @@ def revoke(vouch_file: str):
     priv = _identity_from_name(name)
     # rebuild an Identity from the private key
     from .identity import Identity
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     ident = Identity(private_key=priv, public_key=priv.public_key())
     rlist = RevocationList.load(_revocations_path())
     if revoke_vouch(rlist, ident, revoke_payload_id(v)):
@@ -1114,10 +1146,6 @@ def _revocations_path() -> str:
 
 def _disputes_path() -> str:
     return os.path.join(_home(), "disputes.json")
-
-
-if __name__ == "__main__":
-    cli()
 
 
 @cli.command()
@@ -1169,3 +1197,7 @@ def disputes():
     for e in dl.all():
         click.echo(f"  {e['vid'][:20]}... disputed by {e['disputed_by']}: "
                    f"{e['reason']}")
+
+
+if __name__ == "__main__":
+    cli()

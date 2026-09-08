@@ -31,7 +31,6 @@ import os
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib import request as urlrequest
-from urllib.error import URLError
 
 from .dispute import DisputeList
 from .revocation import RevocationList, verify_revocation_entry
@@ -69,7 +68,7 @@ class _PeerState:
         return DisputeList.load(self.disputes_path)
 
     def admit_vouch(self, vouch: dict) -> str:
-        """'added' | 'duplicate' | 'rejected' — same rules as filesystem sync."""
+        """'added' | 'duplicates' | 'rejected' — same rules as filesystem sync."""
         if not verify_vouch(vouch):
             return "rejected"
         rl = self.revocations()
@@ -208,7 +207,9 @@ def run_peer(port: int = 8790, bind: str = "127.0.0.1", home: str | None = None,
 
 def _get_json(url: str, timeout: float = 10.0) -> dict:
     with urlrequest.urlopen(url, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+        data = json.loads(resp.read().decode("utf-8"))
+    # a peer (or anything answering on that port) may return a non-object
+    return data if isinstance(data, dict) else {}
 
 
 def _post_json(url: str, obj: dict, timeout: float = 10.0) -> dict:
@@ -234,6 +235,8 @@ def sync_with_url(url: str, store: VouchStore, rlist: RevocationList,
 
     remote_vouches = _get_json(f"{base}/vouches").get("vouches", [])
     for v in remote_vouches:
+        if not isinstance(v, dict):
+            continue  # untrusted remote data: malformed entries are skipped
         if rlist.is_revoked_for(v):
             continue
         if store.add(v):
@@ -246,9 +249,13 @@ def sync_with_url(url: str, store: VouchStore, rlist: RevocationList,
 
     remote_revs = _get_json(f"{base}/revocations").get("revocations", [])
     for e in remote_revs:
-        if rlist.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
-                     vouch=store.get(e["vid"])):
-            counts["revocations_in"] += 1
+        # remote data is untrusted: a malformed entry is skipped, never fatal
+        try:
+            if rlist.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
+                         vouch=store.get(e.get("vid"))):
+                counts["revocations_in"] += 1
+        except (KeyError, TypeError):
+            continue
 
     if rlist.all():
         resp = _post_json(f"{base}/revocations", {"revocations": rlist.all()})
@@ -259,7 +266,9 @@ def sync_with_url(url: str, store: VouchStore, rlist: RevocationList,
     dlist = DisputeList.load(disputes_path) if disputes_path else DisputeList()
     remote_disps = _get_json(f"{base}/disputes").get("disputes", [])
     for e in remote_disps:
-        if dlist.add(e, vouch=store.get(e["vid"])):
+        if not isinstance(e, dict):
+            continue
+        if dlist.add(e, vouch=store.get(e.get("vid"))):
             counts["disputes_in"] += 1
     if disputes_path:
         dlist.save(disputes_path)

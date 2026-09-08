@@ -46,12 +46,16 @@ def create_vouch(issuer, subject_public_key, *, score: float, scope: str,
     tests and for re-issuing a vouch with a fresh validity window during key
     rotation).
     """
+    score = float(score)
+    import math
+    if not math.isfinite(score) or not 0.0 <= score <= 1.0:
+        raise ValueError(f"score must be a finite number in [0.0, 1.0] (SPEC §3), got {score!r}")
     issuer_pub = issuer.public_key() if hasattr(issuer, "public_key") and callable(getattr(issuer, "public_key")) else issuer.public_key
     payload = {
         "type": "vouch",
         "issuer": did_from_public(issuer_pub),
         "subject": did_from_public(subject_public_key),
-        "score": float(score),
+        "score": score,
         "scope": scope,
         "claim": claim,
         "ts": int(ts if ts is not None else time.time()),

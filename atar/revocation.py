@@ -26,7 +26,6 @@ import json
 import os
 import time
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.exceptions import InvalidSignature
 from .identity import Identity, did_from_public, public_key_from_did, normalize_did
 from .transparency import canonical_vouch_id
@@ -137,8 +136,8 @@ class RevocationList:
         return list(self.entries.values())
 
     def save(self, path: str) -> None:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump({"revocations": self.all()}, f, indent=2)
+        from .store import atomic_save_json
+        atomic_save_json({"revocations": self.all()}, path)
 
     @classmethod
     def load(cls, path: str) -> "RevocationList":

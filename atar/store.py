@@ -17,6 +17,19 @@ import os
 from .transparency import canonical_vouch_id, verify_vouch
 
 
+def atomic_save_json(obj, path: str) -> None:
+    """Write JSON to ``path`` atomically (temp file + os.replace).
+
+    A crash mid-write must never leave a truncated store behind: the previous
+    complete file stays in place until the new one is fully written.
+    """
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, indent=2)
+    os.replace(tmp, path)
+
+
 class VouchStore:
     """A local, file-backed collection of valid vouches."""
 
@@ -39,9 +52,7 @@ class VouchStore:
             self._vouches = {}
 
     def _save(self) -> None:
-        os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
-        with open(self.path, "w", encoding="utf-8") as f:
-            json.dump({"vouches": list(self._vouches.values())}, f, indent=2)
+        atomic_save_json({"vouches": list(self._vouches.values())}, self.path)
 
     def add(self, vouch: dict) -> bool:
         """Add a vouch if valid + new. Returns True if stored."""

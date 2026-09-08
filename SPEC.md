@@ -11,7 +11,7 @@
 > (web-of-trust) and can be revoked, expired, or rotated — so the graph stays
 > alive instead of rotting.
 
-Status: **implemented and tested** (211 tests, CI green). This document is the
+Status: **implemented and tested** (235 tests, CI green). This document is the
 authoritative wire + algorithm spec.
 
 ---
@@ -362,8 +362,11 @@ atar auto-sync                    # reads atar_peers.json, for cron/agent hooks
   when the revoked vouch is known at merge time, non-issuer entries are
   rejected at intake — and a non-issuer entry never applies at evaluation,
   wherever it came from.
-- **Defense-in-depth:** revoked or expired vouches are never admitted to the
-  store, even via sync (§6/§7 enforced at insertion).
+- **Defense-in-depth:** vouches revoked by their issuer are never admitted
+  to the store, whatever transport they arrive on (§6 enforced at insertion).
+  Expiry (§7) is enforced at *evaluation* time — verify, trust computation,
+  audit — because expiry is relative to the current time: a vouch admitted
+  today may expire tomorrow, so insertion-time rejection cannot work.
 - Revocation lists are merged so a revocation made by one peer reaches all.
 
 ### 9.1 HTTP peer transport
@@ -383,14 +386,19 @@ Endpoint surface (JSON only):
 
 | Route | Semantics |
 |---|---|
-| `GET /` | peer info: `{"protocol": "atar-peer/1.0", "vouches": n, "revocations": m}` |
+| `GET /` | peer info: `{"protocol": "atar-peer/1.0", "vouches": n, "revocations": m, "disputes": k}` |
 | `GET /vouches` | the peer's full vouch set |
 | `POST /vouches` | one vouch blob or `{"vouches": [...]}` → `{"added", "duplicates", "rejected"}` |
 | `GET /revocations` | the peer's full revocation list |
 | `POST /revocations` | one entry or `{"revocations": [...]}` → `{"added", "duplicates", "rejected"}` |
+| `GET /disputes` | the peer's full dispute list (§8.2) |
+| `POST /disputes` | one entry or `{"disputes": [...]}` → `{"added", "duplicates", "rejected"}` |
+
+Malformed remote entries are skipped, never fatal: a peer (or anything
+answering on that port) cannot crash a sync with junk data.
 
 Intake rules are identical to filesystem sync (§6, §9): vouch signatures are
-verified, issuer-revoked or expired vouches are never admitted, revocation
+verified, issuer-revoked vouches are never admitted, revocation
 entries are signature-verified and issuer-bound when the vouch is known. The
 transport is dumb on purpose — all trust decisions stay in the store. Peers
 exchange full sets and dedup by content address, so sync is idempotent and
@@ -535,7 +543,7 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | **Tampering** | Any `payload` change invalidates the signature. |
 | **Forged revocation** | Rejected at intake: every revocation entry's signature is verified against `revoked_by` on sync/import/load (§6). |
 | **Cross-key revocation** (attacker revokes someone else's vouch with their own key) | Inert: a revocation applies only when `revoked_by` is the vouch's issuer (§6). |
-| **Stale trust** | Mitigated by Freshness/TTL (§7) — trust must be renewed. |
+| **Stale trust** | Mitigated by Freshness/TTL (§7) — trust must be renewed. A *future-dated* `ts` is treated as fresh (an issuer can postpone its own vouch's expiry); issuers gain nothing by doing this visibly, and verifiers MAY reject timestamps beyond local clock skew. |
 | **Key leak** | Mitigated by Revocation (§6) + Rotation (§10) — recover without total loss. |
 | **Zombie trust** | Mitigated by Revocation + Freshness combined. |
 | **Undisputed fraud** (third party observes a bad vouch, issuer stays silent) | Mitigated by disputes (§8.2): any agent can file a signed warning; trusted disputers discount the vouch in trust computation. |
@@ -560,6 +568,7 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar add <vouch.json>` | add to store (rejects revoked/expired) |
 | `atar list` / `atar scopes` | inspect store / list scopes |
 | `atar sync --with <peer>` / `atar auto-sync` | gossip exchange (directory or `http(s)://` peer URL) |
+| `atar dashboard [--seed DID] [--scope C] [--out F]` | render the Know-Your-Agent HTML dashboard |
 | `atar peer [--port P] [--bind B]` | serve the local store as an HTTP gossip peer (§9.1) |
 | `atar dispute VOUCH --from N --reason R` / `atar disputes` | file / list signed disputes against foreign vouches (§8.2) |
 | `atar rotate --name X` | generate new key + rotation statement |

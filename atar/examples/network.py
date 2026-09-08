@@ -24,7 +24,7 @@ def build_demo_network() -> dict:
         seed          ──0.8──> market
         research      ──0.7──> founder_intel
         market        ──0.6──> founder_intel
-        reporting     ──0.7──> research   (mutual reinforcement)
+        reporting     ──0.75──> research  (mutual reinforcement)
 
     So founder_intel is reachable transitively two ways, research is directly
     trusted by seed, etc. Demonstrates multi-path transitive trust.

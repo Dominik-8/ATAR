@@ -64,8 +64,10 @@ class AgentRegistry:
         return {}
 
     def _save(self) -> None:
-        with open(self._agents_file, "w", encoding="utf-8") as f:
-            json.dump(self._agents, f, indent=2)
+        from .store import atomic_save_json
+        atomic_save_json(self._agents, self._agents_file)
+        # the registry holds private keys: owner-read/write only
+        os.chmod(self._agents_file, 0o600)
 
     def register(self, name: str) -> str:
         """Create + persist an agent identity; return its DID (stable)."""
