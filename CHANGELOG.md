@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (realignment C4, prep only)
+- Standardization drafts for review (nothing submitted): a W3C
+  agent-identity community intro post and an IETF Internet-Draft skeleton
+  (`draft-dbrueck-atar-lifecycle-00`) positioning ATAR's lifecycle
+  (revocation, TTL, rotation, disputes) as the contribution. Both live in
+  `docs/standardization/` and supersede the pre-realignment
+  `draft-dbrueck-atar-00.txt` (kept for history).
+
 ### Added (realignment C3)
 - Score semantics (SPEC §3.2): score defined as dimensionless issuer
   confidence with calibration anchors, plus optional signed `evidence`
