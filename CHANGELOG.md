@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (pre-publication audit)
+- `atar card` now reads the persistent vouch store instead of scanning
+  loose files, so cards include the vouches the store actually holds.
+- Trust computation (`atar graph`, dashboard) now counts only valid,
+  unrevoked, unexpired vouches and applies the SPEC §8.2 dispute discount,
+  as SPEC §8.1 always promised. Revoked agents stay visible in the
+  dashboard, flagged REVOKED with trust 0.
+- SPEC §8 `vouch_id` formula synced with the implementation
+  (`"vouch:"` prefix, `ts` excluded).
+- README install leads with install-from-source; the stale PyPI package
+  (`1.0.0a1`, pre-realignment) is marked pending update.
+- Package metadata and repo description reflect the did:key realignment;
+  version on master is `1.0.0a2.dev0` (alpha development toward the next
+  packaged release).
+
 ### Added (realignment C4, prep only)
 - Standardization drafts for review (nothing submitted): a W3C
   agent-identity community intro post and an IETF Internet-Draft skeleton
