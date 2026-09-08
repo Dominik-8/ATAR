@@ -297,6 +297,14 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 
 ## 15. Status & roadmap
 
+**Realignment (2026-09-08):** ATAR is moving onto the standard formats —
+`did:key` identity, W3C Verifiable Credentials for vouches, A2A-compatible
+signed agent cards — while keeping its core (transitive trust, lifecycle,
+tooling). The staged plan (A: honesty + security, B: standards alignment,
+C: network/plugin/standardization) lives in
+[ROADMAP.md](ROADMAP.md); the `did:agent:` → `did:key` decision is recorded
+in issue #2.
+
 **Implemented (phases 1–31):** identity, vouch, ATC, transparency/transitive
 trust, revocation (local + gossip + dashboard + verify + add/sync), freshness/
 TTL, key rotation (rotate + reissue + commit), gossip sync + auto-sync,
