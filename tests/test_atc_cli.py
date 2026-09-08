@@ -13,7 +13,7 @@ def test_card_and_verify_card(tmp_path, monkeypatch):
     assert r1.exit_code == 0
     r2 = runner.invoke(cli, ["keygen", "--name", "bob"])
     assert r2.exit_code == 0
-    bob_did = [l for l in r2.output.splitlines() if l.startswith("did:agent:")][0]
+    bob_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
     # alice vouches for bob
     out = tmp_path / "sub" / "v.json"
     out.parent.mkdir()

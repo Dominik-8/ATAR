@@ -77,10 +77,8 @@ def rotate_identity(old, new) -> RotationStatement:
 def verify_rotation(stmt: RotationStatement) -> bool:
     """True iff the rotation is genuinely signed by the OLD key."""
     try:
-        from base58 import b58decode
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-        raw = b58decode(stmt.old_did[len("did:agent:"):])
-        pub = Ed25519PublicKey.from_public_bytes(raw)
+        from .identity import public_key_from_did
+        pub = public_key_from_did(stmt.old_did)
         payload = {
             "type": "rotation",
             "old_did": stmt.old_did,
@@ -103,11 +101,9 @@ def reissue_vouch(old_issuer, new_issuer, vouch: dict, *, scope: str | None = No
     """
     p = vouch["payload"]
     subject_did = p["subject"]
-    # recover the subject public key from its DID
-    from base58 import b58decode
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-    subj_raw = b58decode(subject_did[len("did:agent:"):])
-    subj_pub = Ed25519PublicKey.from_public_bytes(subj_raw)
+    # recover the subject public key from its DID (did:key or legacy)
+    from .identity import public_key_from_did
+    subj_pub = public_key_from_did(subject_did)
     out = create_vouch(
         new_issuer,
         subj_pub,

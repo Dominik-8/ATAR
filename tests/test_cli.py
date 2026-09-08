@@ -10,7 +10,7 @@ def test_keygen_cli_prints_did(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     r = CliRunner().invoke(cli, ["keygen"])
     assert r.exit_code == 0
-    assert "did:agent:" in r.output
+    assert "did:key:" in r.output
     # a key file was written
     assert (tmp_path / "keys.json").exists()
 
@@ -24,7 +24,7 @@ def test_vouch_and_verify_cli(tmp_path, monkeypatch):
     # create subject
     r2 = runner.invoke(cli, ["keygen", "--name", "subject"])
     assert r2.exit_code == 0
-    subject_did = [l for l in r2.output.splitlines() if l.startswith("did:agent:")][0]
+    subject_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
     # issuer vouches for subject
     out_file = tmp_path / "vouch.json"
     r3 = runner.invoke(cli, ["vouch", "--from", "issuer", "--for", subject_did,

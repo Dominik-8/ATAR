@@ -14,7 +14,7 @@ No server, no cost. Modeled on CRL/OCSP but local and P2P.
 Wire format (one entry):
     {
       "vid": "<canonical vouch id>",
-      "revoked_by": "<did:agent: of issuer/revoker>",
+      "revoked_by": "<did:key (or legacy did:agent:) of issuer/revoker>",
       "ts": 1690000000,
       "signature": "<base64 Ed25519 over (vid|revoked_by|ts)>"
     }
@@ -28,9 +28,24 @@ import time
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.exceptions import InvalidSignature
-from .identity import Identity, did_from_public, public_key_from_did
+from .identity import Identity, did_from_public, public_key_from_did, normalize_did
 from .transparency import canonical_vouch_id
 from .vouch import verify_vouch
+
+
+def _same_did(a: str, b: str) -> bool:
+    """True iff two DID strings identify the same Ed25519 key.
+
+    Compares canonical aliases (SPEC §2): a ``did:agent:`` entry and the
+    ``did:key`` of the same key match. Unparseable DIDs fall back to plain
+    string equality.
+    """
+    if a == b:
+        return True
+    try:
+        return normalize_did(a) == normalize_did(b)
+    except ValueError:
+        return False
 
 
 def revoke_payload_id(vouch: dict) -> str:
@@ -57,7 +72,7 @@ def verify_revocation_entry(entry: dict, verify_key=None) -> bool:
     """True iff the entry's signature verifies against the ``revoked_by`` key.
 
     When ``verify_key`` is not given, the public key is reconstructed from the
-    ``revoked_by`` DID (a ``did:agent:`` embeds the raw Ed25519 key), so an
+    ``revoked_by`` DID (both spellings embed the raw Ed25519 key, SPEC §2), so an
     entry can always be checked standalone — no trusted source needed.
     """
     from base64 import b64decode
@@ -95,7 +110,7 @@ class RevocationList:
         """
         if vid in self.entries:
             return False
-        if vouch is not None and vouch.get("payload", {}).get("issuer") != revoked_by:
+        if vouch is not None and not _same_did(vouch.get("payload", {}).get("issuer"), revoked_by):
             return False
         entry = {
             "vid": vid,
@@ -116,7 +131,7 @@ class RevocationList:
         vouch's issuer (SPEC §6). An entry signed by anyone else verifies
         fine against its own ``revoked_by`` key but never applies here."""
         entry = self.entries.get(revoke_payload_id(vouch))
-        return entry is not None and entry.get("revoked_by") == vouch.get("payload", {}).get("issuer")
+        return entry is not None and _same_did(entry.get("revoked_by"), vouch.get("payload", {}).get("issuer"))
 
     def all(self) -> list[dict]:
         return list(self.entries.values())

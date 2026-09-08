@@ -2,7 +2,7 @@
 
 This is the glue that turns ATAR from a demo into *your* system. Each of
 your agents (a primary agent, a reporting cron, a research agent, ...) gets
-a persistent ``did:agent:`` and can vouch for others. Vouches land in the
+a persistent ``did:key`` and can vouch for others. Vouches land in the
 persistent store (Phase 7), so the Know-Your-Agent dashboard reflects a real,
 durable network.
 

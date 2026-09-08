@@ -16,8 +16,8 @@ def _seed_real_net(home: str, monkeypatch):
     runner.invoke(cli, ["keygen", "--name", "seed_agent"])
     r2 = runner.invoke(cli, ["keygen", "--name", "research"])
     r3 = runner.invoke(cli, ["keygen", "--name", "market"])
-    research_did = [l for l in r2.output.splitlines() if l.startswith("did:agent:")][0]
-    market_did = [l for l in r3.output.splitlines() if l.startswith("did:agent:")][0]
+    research_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
+    market_did = [l for l in r3.output.splitlines() if l.startswith("did:key:")][0]
     # seed root + vouches into store
     from atar.agent_bootstrap import AgentRegistry, seed_trust_root
     reg = AgentRegistry()

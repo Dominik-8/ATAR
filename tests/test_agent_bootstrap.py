@@ -12,7 +12,7 @@ def test_register_agent_persists_did(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     reg = AgentRegistry()
     did = reg.register("seed_agent")
-    assert did.startswith("did:agent:")
+    assert did.startswith("did:key:z6Mk")
     # reload -> same DID (stable)
     reg2 = AgentRegistry()
     assert reg2.did_of("seed_agent") == did

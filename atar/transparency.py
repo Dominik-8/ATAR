@@ -53,6 +53,18 @@ class TrustGraph:
     def all_vouches(self) -> list[dict]:
         return list(self._vouches.values())
 
+    @staticmethod
+    def _alias(did: str) -> str:
+        """Canonical alias of a DID (SPEC §2): legacy did:agent: maps to the
+        did:key of the same key, so pre-realignment vouches keep carrying
+        trust to the same identity. Unparseable DIDs pass through unchanged
+        (they can never verify, so they never enter the graph anyway)."""
+        try:
+            from .identity import normalize_did
+            return normalize_did(did)
+        except ValueError:
+            return did
+
     def compute_trust(self, *, seed_did: str, scope: str, decay: float = 1.0) -> dict[str, float]:
         """Compute transitive trust scores from a trusted seed DID.
 
@@ -67,9 +79,10 @@ class TrustGraph:
             p = v["payload"]
             if p.get("scope") != scope:
                 continue
-            issuer = p["issuer"]
-            edges.setdefault(issuer, []).append((p["subject"], float(p["score"])))
+            issuer = self._alias(p["issuer"])
+            edges.setdefault(issuer, []).append((self._alias(p["subject"]), float(p["score"])))
 
+        seed_did = self._alias(seed_did)
         trust: dict[str, float] = {seed_did: 1.0}
         # bounded propagation (BFS by trust contribution)
         frontier = [seed_did]

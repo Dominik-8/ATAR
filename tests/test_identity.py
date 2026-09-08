@@ -5,7 +5,7 @@ def test_generate_identity_returns_keypair():
     ident = generate_identity()
     assert ident is not None
     assert hasattr(ident, "private_key") and hasattr(ident, "public_key")
-    assert did_from_public(ident.public_key).startswith("did:agent:")
+    assert did_from_public(ident.public_key).startswith("did:key:z6Mk")
 
 
 def test_sign_and_verify():

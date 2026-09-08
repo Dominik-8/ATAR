@@ -81,21 +81,19 @@ def keygen(name: str):
 def vouch(from_name: str, for_did: str, score: float, scope: str, out: str):
     """Create a signed vouch from one identity for a subject DID."""
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    from base58 import b58decode
     for_did = for_did.strip()  # tolerate CRLF / trailing whitespace from pipes
-    if not for_did.startswith("did:agent:"):
-        click.echo(f"invalid subject DID (expected did:agent:...): {for_did!r}")
+    from .identity import public_key_from_did, is_supported_did
+    if not is_supported_did(for_did):
+        click.echo(f"invalid subject DID (expected did:key:... or legacy did:agent:...): {for_did!r}")
         sys.exit(2)
     keys = _load_keys()
     if from_name not in keys:
         click.echo(f"no identity '{from_name}'"); sys.exit(1)
     priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[from_name]["private"]))
-    from .identity import Identity, did_from_public
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    from .identity import Identity
     issuer = Identity(private_key=priv, public_key=priv.public_key())
-    # reconstruct subject public key from DID
-    raw = b58decode(for_did[len("did:agent:"):])
-    subject_pub = Ed25519PublicKey.from_public_bytes(raw)
+    # reconstruct subject public key from DID (did:key or legacy did:agent:)
+    subject_pub = public_key_from_did(for_did)
     blob = create_vouch(issuer, subject_pub, score=score, scope=scope)
     with open(out, "w", encoding="utf-8") as f:
         json.dump(blob, f, indent=2)
@@ -149,14 +147,25 @@ def card(name: str, out: str, challenge: str | None):
     if name not in keys:
         click.echo(f"no identity '{name}'"); sys.exit(1)
     did = keys[name]["did"]
-    # collect vouches stored locally where subject == this DID
+    # collect vouches stored locally where subject == this DID, across both
+    # spellings of the same key (SPEC §2 aliasing: did:agent: <-> did:key)
+    from .identity import normalize_did
+    try:
+        my_canonical = normalize_did(did)
+    except ValueError:
+        my_canonical = did
     vouches = []
     for fn in os.listdir(_home()):
         if fn.endswith(".json") and fn != "keys.json":
             try:
                 with open(os.path.join(_home(), fn), "r", encoding="utf-8") as f:
                     blob = json.load(f)
-                if blob.get("payload", {}).get("subject") == did:
+                subj = blob.get("payload", {}).get("subject")
+                try:
+                    subj_canonical = normalize_did(subj)
+                except (ValueError, TypeError):
+                    subj_canonical = subj
+                if subj_canonical == my_canonical:
                     vouches.append(blob)
             except (json.JSONDecodeError, KeyError):
                 continue
@@ -228,11 +237,11 @@ def issue(from_name: str, for_did: str, scope: str, score: float, claim: str, ou
     Like `vouch` but carries a free-text claim and is written to a standalone
     file (not the store) so any agent can issue/verify it peer-to-peer.
     """
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
-    from base58 import b58decode
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     for_did = for_did.strip()  # tolerate CRLF / trailing whitespace from pipes
-    if not for_did.startswith("did:agent:"):
-        click.echo(f"invalid subject DID (expected did:agent:...): {for_did!r}")
+    from .identity import public_key_from_did, is_supported_did
+    if not is_supported_did(for_did):
+        click.echo(f"invalid subject DID (expected did:key:... or legacy did:agent:...): {for_did!r}")
         sys.exit(2)
     keys = _load_keys()
     if from_name not in keys:
@@ -240,9 +249,8 @@ def issue(from_name: str, for_did: str, scope: str, score: float, claim: str, ou
     priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[from_name]["private"]))
     from .identity import Identity
     issuer = Identity(private_key=priv, public_key=priv.public_key())
-    # reconstruct subject public key from DID
-    raw = b58decode(for_did[len("did:agent:"):])
-    subject_pub = Ed25519PublicKey.from_public_bytes(raw)
+    # reconstruct subject public key from DID (did:key or legacy did:agent:)
+    subject_pub = public_key_from_did(for_did)
     blob = create_vouch(issuer, subject_pub, score=score, scope=scope, claim=claim)
     with open(out, "w", encoding="utf-8") as f:
         json.dump(blob, f, indent=2)

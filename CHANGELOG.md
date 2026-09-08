@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed (realignment B1)
+- Identity is now W3C `did:key` (multicodec `ed25519-pub` + multibase
+  base58btc) instead of ATAR's own `did:agent:` spelling. `atar keygen` prints
+  `did:key` DIDs; new vouches/claims/rotations/cards record the `did:key` form.
+- Migration without data loss: legacy `did:agent:` DIDs stay decodable
+  everywhere, old vouches/revocations/rotations verify unchanged, and trust
+  decisions (revocation matching, transitive-trust graph, agent-card subject
+  collection) compare canonical aliases so both spellings are one identity.
+
 ## [1.0.0a1] - 2026-09-06
 
 ### Added

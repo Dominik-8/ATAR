@@ -19,7 +19,6 @@ import base64
 import json
 import secrets
 
-import base58
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
@@ -27,11 +26,9 @@ from .vouch import verify_vouch
 
 
 def _public_key_from_did(did: str) -> Ed25519PublicKey:
-    """Reconstruct the Ed25519 public key embedded in a ``did:agent:`` DID."""
-    if not isinstance(did, str) or not did.startswith("did:agent:"):
-        raise ValueError(f"not a did:agent: DID: {did!r}")
-    raw = base58.b58decode(did[len("did:agent:"):])
-    return Ed25519PublicKey.from_public_bytes(raw)
+    """Reconstruct the Ed25519 public key embedded in a DID (did:key or legacy)."""
+    from .identity import public_key_from_did
+    return public_key_from_did(did)
 
 
 def _b64url_encode(data: bytes) -> str:
