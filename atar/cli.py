@@ -479,6 +479,22 @@ def list():
 
 
 @cli.command()
+@click.option("--port", default=8790, help="port to listen on (default 8790)")
+@click.option("--bind", default="127.0.0.1",
+              help="bind address (default 127.0.0.1; use 0.0.0.0 to serve the LAN)")
+def peer(port, bind):
+    """Serve the local store as an HTTP gossip peer (Stage C1, SPEC 9.1).
+
+    Exposes GET/POST of vouches and revocations so operators on different
+    machines can sync without a shared filesystem: point this host's URL at
+    `atar sync --with http://host:port` (or list it in atar_peers.json).
+    Still content-addressed, still no central server - every peer is equal.
+    """
+    from .peer import run_peer
+    run_peer(port=port, bind=bind, home=_home())
+
+
+@cli.command()
 def auto_sync():
     """Gossip with all known peers from atar_peers.json (for cron/agent hooks).
 
@@ -488,8 +504,10 @@ def auto_sync():
     hands-free. Missing peer dirs are skipped; an empty/missing peer list is a
     no-op, not an error.
     """
+    from urllib.error import URLError
     from .store import VouchStore
     from .revocation import RevocationList
+    from .peer import is_url, sync_with_url
     peers_file = os.path.join(_home(), "atar_peers.json")
     if not os.path.exists(peers_file):
         click.echo("no peers configured (atar_peers.json absent) — nothing to sync")
@@ -508,6 +526,19 @@ def auto_sync():
     total_new = 0
     rev_new = 0
     for p in peers:
+        if is_url(p):
+            try:
+                counts = sync_with_url(p, self_store, self_rl)
+            except (URLError, OSError, json.JSONDecodeError) as exc:
+                click.echo(f"  (peer {p}: unreachable ({exc}), skipped)")
+                continue
+            total_new += counts["vouches_in"]
+            rev_new += counts["revocations_in"]
+            click.echo(f"  synced {p}: +{counts['vouches_in']} vouches, "
+                       f"+{counts['revocations_in']} revocations "
+                       f"(to peer: +{counts['vouches_out']} vouches, "
+                       f"+{counts['revocations_out']} revocations)")
+            continue
         if not os.path.isdir(p):
             click.echo(f"  (peer {p}: dir missing, skipped)")
             continue
@@ -540,7 +571,7 @@ def auto_sync():
 
 @cli.command()
 @click.option("--with", "peer", required=True, multiple=True,
-              help="peer ATAR_HOME directory to exchange vouches with (repeatable)")
+              help="peer ATAR_HOME directory or http(s):// peer URL to exchange vouches with (repeatable)")
 def sync(peer):
     """Gossip vouches between local agent stores (decentralized, no server).
 
@@ -551,6 +582,7 @@ def sync(peer):
     """
     from .store import VouchStore
     from .revocation import RevocationList
+    from .peer import is_url, sync_with_url
     self_path = _store_path()
     self_store = VouchStore(self_path)
     self_rl = RevocationList.load(_revocations_path())
@@ -558,6 +590,15 @@ def sync(peer):
     total_in = 0
     rev_in = 0
     for p in peer:
+        if is_url(p):
+            counts = sync_with_url(p, self_store, self_rl)
+            total_in += counts["vouches_in"]
+            rev_in += counts["revocations_in"]
+            click.echo(f"  synced {p}: +{counts['vouches_in']} vouches, "
+                       f"+{counts['revocations_in']} revocations "
+                       f"(to peer: +{counts['vouches_out']} vouches, "
+                       f"+{counts['revocations_out']} revocations)")
+            continue
         peer_path = os.path.join(p, "vouches.json")
         # VouchStore creates the file on first add, so a missing peer store is
         # simply empty (not an error) — we just exchange into it.

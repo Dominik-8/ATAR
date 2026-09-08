@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (realignment C1)
+- HTTP gossip transport: `atar peer` serves the local store over a slim HTTP
+  endpoint (GET/POST of vouches and revocations, content-addressed, no central
+  server), and `atar sync --with http://...` / `auto-sync` exchange with
+  remote peers the same way they do with filesystem peers. Intake rules are
+  identical on both transports (signature verification, issuer binding,
+  revoked/expired vouches never admitted). Spec: SPEC §9.1.
+
 ### Changed (realignment B3)
 - The agent card is now an **A2A-compatible signed Agent Card** (SPEC §11.2):
   ATAR trust data (identity, vouch tokens, PoP proof) lives in a declared

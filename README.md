@@ -131,7 +131,8 @@ See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 | `atar verify-card PATH` | verify every vouch in an agent card |
 | `atar graph --seed DID --scope C` | print transitive-trust ranking |
 | `atar dashboard --seed DID --scope C` | render Know-Your-Agent HTML dashboard |
-| `atar sync --with <peer>` / `atar auto-sync` | gossip vouches + revocations between peers |
+| `atar sync --with <peer>` / `atar auto-sync` | gossip vouches + revocations between peers (directory or `http(s)://` URL) |
+| `atar peer --port 8790` | serve the local store as an HTTP gossip peer (SPEC §9.1) |
 | `atar rotate --name N` | generate a new key + signed rotation statement |
 | `atar reissue --name N [--commit]` | re-sign vouches under the new key (commit = +add old-revoked) |
 | `atar bootstrap --config agents.toml` | reproducible agent network |
