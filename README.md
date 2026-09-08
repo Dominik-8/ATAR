@@ -44,15 +44,20 @@ solved, but *trust & attribution* is not. ATAR is the open protocol for it.
 
 ## Install
 
-ATAR is not yet on PyPI. For now, install from source:
+```bash
+pip install atar-trust
+```
+
+The current release is `1.0.0a1` (alpha) - see [CHANGELOG.md](CHANGELOG.md)
+for what shipped. The package is `atar-trust`; the CLI command is `atar`.
+
+For development, install from source:
 
 ```bash
 git clone https://github.com/Dominik-8/ATAR.git
-cd atar
+cd ATAR
 pip install -e ".[dev]"
 ```
-
-> PyPI release (`pip install atar`) coming soon.
 
 ## Quickstart
 

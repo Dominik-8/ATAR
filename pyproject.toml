@@ -4,10 +4,38 @@ version = "1.0.0a1"
 description = "ATAR — Agent Trust & Attribution Root: the free, decentralized trust layer for AI agents (did:agent: + signed vouches + ATC carrier)."
 readme = "README.md"
 requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    { name = "Dominik Brück" },
+]
+keywords = [
+    "ai-agents",
+    "decentralized-identity",
+    "did",
+    "ed25519",
+    "trust",
+    "web-of-trust",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Software Development :: Libraries",
+]
 dependencies = ["cryptography", "base58", "click"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+
+[project.urls]
+Repository = "https://github.com/Dominik-8/ATAR"
+Issues = "https://github.com/Dominik-8/ATAR/issues"
+Changelog = "https://github.com/Dominik-8/ATAR/blob/master/CHANGELOG.md"
+Specification = "https://github.com/Dominik-8/ATAR/blob/master/SPEC.md"
 
 [project.scripts]
 atar = "atar.cli:cli"
