@@ -8,7 +8,7 @@ from atar.cli import cli
 
 # Commands documented in SPEC.md §14 (CLI surface reference)
 EXPECTED_COMMANDS = {
-    "keygen", "vouch", "verify", "revoke", "add", "list", "scopes",
+    "keygen", "identities", "vouch", "verify", "revoke", "add", "list", "scopes",
     "card", "verify-card", "graph", "dashboard", "sync", "auto-sync",
     "rotate", "reissue", "bootstrap", "serve", "audit", "export", "import", "watch",
     "issue", "verify-claim",

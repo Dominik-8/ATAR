@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (overnight hardening, 2026-09)
+- `atar identities`: list the local identities (name -> DID). A new user
+  following the quickstart had no way to see the identities they created —
+  `atar list` shows vouches, not identities, and the only record was inside
+  `keys.json`. Private keys are never printed.
 - Randomized invariant tests for the trust computation
   (`tests/test_trust_invariants.py`, seeded stdlib random, no new deps):
   non-negativity, seed baseline, self-vouch exclusion (SPEC §13),

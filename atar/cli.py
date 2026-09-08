@@ -85,6 +85,18 @@ def keygen(name: str, force: bool):
 
 
 @cli.command()
+def identities():
+    """List the local identities (name -> DID). Private keys are never shown."""
+    keys = _load_keys()
+    if not keys:
+        click.echo("no identities yet - create one with: atar keygen --name <name>")
+        return
+    width = max(len(n) for n in keys)
+    for name, rec in keys.items():
+        click.echo(f"{name:{width}s}  {rec['did']}")
+
+
+@cli.command()
 @click.option("--from", "from_name", required=True, help="issuer identity name")
 @click.option("--for", "for_did", required=True, help="subject agent DID")
 @click.option("--score", type=float, required=True, help="trust score 0..1")

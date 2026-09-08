@@ -124,6 +124,7 @@ See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 | Command | Purpose |
 |---|---|
 | `atar keygen --name N` | create an agent identity, print its `did:key` |
+| `atar identities` | list local identities (name -> DID; keys never shown) |
 | `atar vouch --from A --for DID --score S --scope C` | create a signed vouch |
 | `atar verify PATH [--max-age N]` | `VALID` / `REVOKED` / `EXPIRED` / `INVALID` |
 | `atar revoke PATH` | add a vouch to the local revocation list |
@@ -191,7 +192,7 @@ any ATAR UI, web page, or digest so the design stays consistent.
 | 31 | `atar watch` (cron-ready monitoring + ALERT) | ✅ |
 | 26 | Real-agent claim issuance (`issue` / `verify-claim`) | ✅ |
 
-All phases implemented and tested (253 tests, CI green). See
+All phases implemented and tested (255 tests, CI green). See
 [`SPEC.md`](SPEC.md) for the authoritative protocol specification and
 [`docs/test-vectors.md`](docs/test-vectors.md) for the golden
 interoperability vectors every wire format is pinned against.

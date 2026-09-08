@@ -11,7 +11,7 @@
 > (web-of-trust) and can be revoked, expired, or rotated — so the graph stays
 > alive instead of rotting.
 
-Status: **implemented and tested** (253 tests, CI green). This document is the
+Status: **implemented and tested** (255 tests, CI green). This document is the
 authoritative wire + algorithm spec.
 
 ---
@@ -560,6 +560,7 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | Command | Purpose |
 |---|---|
 | `atar keygen --name X` | generate identity, print DID |
+| `atar identities` | list local identities (name -> DID) |
 | `atar vouch --from A --for <did> --score S --scope C` | create signed vouch |
 | `atar verify [--max-age N]` | VALID / REVOKED / EXPIRED / INVALID |
 | `atar card --name X [--challenge N]` | build an agent card (with PoP proof when challenged) |
