@@ -186,3 +186,45 @@ def test_trust_propagation_order_independent():
     early = graph(["seed->b weak", "b->a", "seed->a strong", "a->b"])
     late = graph(["seed->a strong", "a->b", "seed->b weak", "b->a"])
     assert early == late
+
+
+def test_disconnected_components_never_gain_trust():
+    """Nodes unreachable from the seed must never appear in the trust map -
+    no matter how dense their own internal vouching is (a Sybil cluster
+    vouching only for itself earns exactly nothing)."""
+    rng = random.Random(20260909)
+    for _ in range(30):
+        g, idents, _ = _random_graph(rng, n_nodes=8, n_edges=20)
+        # add a dense, isolated Sybil cluster of 4 extra identities
+        sybils = [generate_identity() for _ in range(4)]
+        for s in sybils:
+            for t in sybils:
+                if s is not t:
+                    g.add(create_vouch(s, t.public_key, score=1.0,
+                                       scope="coding", ts=1_700_000_000))
+        trust = g.compute_trust(seed_did=_did(idents[0]), scope="coding")
+        for s in sybils:
+            assert _did(s) not in trust
+
+
+def test_reissued_vouch_does_not_double_count():
+    """Re-issuing the same claim with a new timestamp (freshness re-sign,
+    SPEC §7) collapses to one content-addressed vouch. Trust after a
+    re-issue must equal trust before it - the refresh must not add weight."""
+    seed, bob = generate_identity(), generate_identity()
+    seed_did = _did(seed)
+
+    def graph(with_reissue: bool) -> float:
+        g = TrustGraph()
+        v1 = create_vouch(seed, bob.public_key, score=0.8, scope="coding",
+                          ts=1_700_000_000)
+        g.add(v1)
+        if with_reissue:
+            v2 = create_vouch(seed, bob.public_key, score=0.8, scope="coding",
+                              ts=1_700_100_000)  # same claim, fresh ts
+            g.add(v2)
+            assert len(g.all_vouches()) == 1, "re-issue must dedup by claim"
+        return g.compute_trust(seed_did=seed_did, scope="coding")[
+            _did(bob)]
+
+    assert graph(with_reissue=False) == graph(with_reissue=True)

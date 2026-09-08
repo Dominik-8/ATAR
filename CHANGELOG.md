@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (overnight hardening, 2026-09)
+- Two more trust invariants pinned under random graphs: a dense isolated
+  Sybil cluster vouching only for itself earns exactly zero trust (nodes
+  unreachable from the seed never appear in the trust map), and
+  re-issuing a vouch with a fresh timestamp (SPEC §7 refresh) dedups by
+  claim and never double-counts trust weight.
 - PoP hardening pins: two new tests lock the proof-of-possession DID
   binding - a proof made for one card's DID can never validate against a
   different card even when the same nonce is reused (cross-card replay).
