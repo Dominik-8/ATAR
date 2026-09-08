@@ -70,6 +70,9 @@ def _build_net() -> dict:
 def build_dashboard_response(*, scope: str | None = None) -> str:
     """Single-scope render (used when ?scope= is given)."""
     net = _build_net()
+    if not net["seed_did"]:
+        from .dashboard import render_no_seed_html
+        return render_no_seed_html()
     sc = scope or "intelligence"
     return render_dashboard_html(net, scope=sc)
 
@@ -79,6 +82,9 @@ def build_dashboard_response_multi(*, scopes: list[str] | None = None,
     """Multi-scope render (one section per scope). If `focus` is set, that
     scope is shown as a single full view (alias for build_dashboard_response)."""
     net = _build_net()
+    if not net["seed_did"]:
+        from .dashboard import render_no_seed_html
+        return render_no_seed_html()
     if focus:
         return render_dashboard_html(net, scope=focus)
     sc = scopes or _all_scopes()

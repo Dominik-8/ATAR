@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and format drift cannot sneak in silently.
 
 ### Fixed (overnight hardening, 2026-09)
+- A network without a configured trust seed no longer renders a bogus
+  anonymous "?" card with `trust=1.000` on the live dashboard (a seedless
+  computation artifact shown as if it were a trusted agent). Both render
+  paths now show an honest setup notice instead. Visually verified.
 - Dashboards and the live server showed "?" for every agent (and "via ?"
   for trust paths) when the network was built with plain CLI commands —
   names resolved only from the bootstrap registry, never from keys.json.

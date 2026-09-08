@@ -236,6 +236,42 @@ def render_dashboard_html(net: dict, *, scope: str) -> str:
 </html>"""
 
 
+def render_no_seed_html() -> str:
+    """Honest empty state when no trust seed is configured.
+
+    Without a seed DID the trust computation has no root: rendering the store
+    anyway used to produce a bogus anonymous "?" card with trust=1.000 — the
+    exact opposite of what a trust dashboard may ever show. Show setup
+    guidance instead.
+    """
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATAR — Know Your Agent</title>
+<style>{_CSS}</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="brand">ATAR</div>
+      <h1>Know Your Agent</h1>
+      <div class="sub">trust network</div>
+    </div>
+    <div class="card">
+      <div class="empty">
+        No trust seed configured yet. Trust scores need a root to flow from.<br><br>
+        1. create an identity: <span class="tab">atar keygen --name seed</span><br>
+        2. seed the network: <span class="tab">atar bootstrap --config agents.toml</span><br>
+        3. reload this page.
+      </div>
+    </div>
+  </div>
+</body>
+</html>"""
+
+
 def render_multi_scope_html(net: dict, *, scopes: list[str]) -> str:
     """Render the dashboard with one section per scope (tabs in the hero)."""
     import html as _html
