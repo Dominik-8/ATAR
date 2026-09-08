@@ -11,7 +11,7 @@
 > (web-of-trust) and can be revoked, expired, or rotated — so the graph stays
 > alive instead of rotting.
 
-Status: **implemented and tested** (255 tests, CI green). This document is the
+Status: **implemented and tested** (256 tests, CI green). This document is the
 authoritative wire + algorithm spec.
 
 ---

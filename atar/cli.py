@@ -71,16 +71,20 @@ def keygen(name: str, force: bool):
     silently replacing a key would orphan every vouch the old DID issued
     and received, with no way back.
     """
-    keys = _load_keys()
-    if name in keys and not force:
-        click.echo(f"identity '{name}' already exists ({keys[name]['did']}).", err=True)
-        click.echo("refusing to overwrite: a new key orphans the old DID. "
-                   "Use --force if you really mean it.", err=True)
-        sys.exit(1)
-    ident = generate_identity()
-    priv_hex = ident.private_key.private_bytes_raw().hex()
-    keys[name] = {"private": priv_hex, "did": did_from_public(ident.public_key)}
-    _save_keys(keys)
+    from .store import file_lock
+    # load -> mutate -> save under a cross-process lock: two concurrent CLI
+    # commands (keygen/rotate/reissue/import) must not lose each other's keys
+    with file_lock(_keys_path()):
+        keys = _load_keys()
+        if name in keys and not force:
+            click.echo(f"identity '{name}' already exists ({keys[name]['did']}).", err=True)
+            click.echo("refusing to overwrite: a new key orphans the old DID. "
+                       "Use --force if you really mean it.", err=True)
+            sys.exit(1)
+        ident = generate_identity()
+        priv_hex = ident.private_key.private_bytes_raw().hex()
+        keys[name] = {"private": priv_hex, "did": did_from_public(ident.public_key)}
+        _save_keys(keys)
     click.echo(did_from_public(ident.public_key))
 
 
@@ -806,24 +810,25 @@ def rotate(name: str, out: str):
     the old key. Trust carries forward under the new DID — no total loss.
     """
     from .rotation import rotate_identity, verify_rotation
-    keys = _load_keys()
-    if name not in keys:
-        click.echo(f"no identity '{name}'"); sys.exit(1)
-    old = _identity_from_name(name)  # Ed25519PrivateKey
+    old = _identity_from_name(name)  # Ed25519PrivateKey (exits when unknown)
     new = generate_identity()
     stmt = rotate_identity(old, new)
-    # persist the new key under the same name (replaces old)
-    keys[name] = {
-        "did": did_from_public(new.public_key),
-        "public": new.public_key.public_bytes_raw().hex(),
-        "private": new.private_key.private_bytes_raw().hex(),
-        "rotated_from": did_from_public(old.public_key()),
-        # kept ONLY so `reissue --commit` can sign the retirement revocations
-        # of pre-rotation vouches with the key that issued them (SPEC §6:
-        # revoked_by must be the vouch's issuer); deleted after commit.
-        "old_private": old.private_bytes_raw().hex(),
-    }
-    _save_keys(keys)
+    # persist the new key under the same name (replaces old) — under the
+    # cross-process lock so a concurrent keygen/import is not lost
+    from .store import file_lock
+    with file_lock(_keys_path()):
+        keys = _load_keys()
+        keys[name] = {
+            "did": did_from_public(new.public_key),
+            "public": new.public_key.public_bytes_raw().hex(),
+            "private": new.private_key.private_bytes_raw().hex(),
+            "rotated_from": did_from_public(old.public_key()),
+            # kept ONLY so `reissue --commit` can sign the retirement revocations
+            # of pre-rotation vouches with the key that issued them (SPEC §6:
+            # revoked_by must be the vouch's issuer); deleted after commit.
+            "old_private": old.private_bytes_raw().hex(),
+        }
+        _save_keys(keys)
     out_path = os.path.join(_home(), out)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(stmt.to_dict(), f, indent=2)
@@ -905,8 +910,12 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
     rl.save(_revocations_path())
     if old_priv_hex:
         # old key has served its only remaining purpose — retire it locally
-        keys[name].pop("old_private", None)
-        _save_keys(keys)
+        # (re-read under the lock so a concurrent write is not clobbered)
+        from .store import file_lock
+        with file_lock(_keys_path()):
+            keys = _load_keys()
+            keys.get(name, {}).pop("old_private", None)
+            _save_keys(keys)
     click.echo(f"committed: +{added} re-issued vouch(es) to store, {revoked} old-key vouch(es) revoked")
     click.echo("rotation complete — old key fully retired, trust carried under new DID")
 
@@ -991,12 +1000,14 @@ def import_cmd(bundle: str, force: bool):
     # restore keys if present
     keys_restored = 0
     if "keys" in data:
-        keys = _load_keys()
-        for name, k in data["keys"].items():
-            if name not in keys or force:
-                keys[name] = k
-                keys_restored += 1
-        _save_keys(keys)
+        from .store import file_lock
+        with file_lock(_keys_path()):
+            keys = _load_keys()
+            for name, k in data["keys"].items():
+                if name not in keys or force:
+                    keys[name] = k
+                    keys_restored += 1
+            _save_keys(keys)
     click.echo(f"imported {added} vouch(es), {revoked} revocation(s)"
                + (f", {keys_restored} key(s)" if keys_restored else ""))
 
