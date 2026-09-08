@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (realignment B3)
+- The agent card is now an **A2A-compatible signed Agent Card** (SPEC §11.2):
+  ATAR trust data (identity, vouch tokens, PoP proof) lives in a declared
+  capability extension, and `atar card` signs the whole card (JWS-style EdDSA
+  entry in the card's `signatures` array). The standalone
+  `atar-agent-card/1.0` schema is replaced; legacy cards stay verifiable.
+
 ### Added (realignment B2)
 - Vouches export as W3C Verifiable Credentials (VC 2.0): `credentialSubject`
   carries scope/score/claim, proofs are `eddsa-jcs-2022` Data Integrity proofs

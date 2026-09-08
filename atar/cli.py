@@ -169,18 +169,22 @@ def card(name: str, out: str, challenge: str | None):
                     vouches.append(blob)
             except (json.JSONDecodeError, KeyError):
                 continue
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from .identity import Identity
+    from .atc import sign_pop_proof, sign_agent_card, ATAR_TRUST_EXT_URI
     card_doc = make_agent_card(did=did, name=name, vouches=vouches)
+    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[name]["private"]))
+    ident = Identity(private_key=priv, public_key=priv.public_key())
     if challenge is not None:
         # prove we hold the card's private key by signing the verifier's nonce
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-        from .identity import Identity
-        from .atc import sign_pop_proof
-        priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[name]["private"]))
-        ident = Identity(private_key=priv, public_key=priv.public_key())
-        card_doc["proof"] = sign_pop_proof(ident, did, challenge)
+        for ext in card_doc["capabilities"]["extensions"]:
+            if ext.get("uri") == ATAR_TRUST_EXT_URI:
+                ext["params"]["proof"] = sign_pop_proof(ident, did, challenge)
+    # A2A signed agent card: sign the whole card with the card key (§11.2)
+    card_doc = sign_agent_card(card_doc, ident)
     with open(out, "w", encoding="utf-8") as f:
         json.dump(card_doc, f, indent=2)
-    click.echo(f"agent card written to {out} ({len(vouches)} vouch(es))")
+    click.echo(f"agent card written to {out} ({len(vouches)} vouch(es), signed)")
     if challenge is not None:
         click.echo("proof-of-possession embedded (SPEC §11.3)")
 
@@ -193,15 +197,24 @@ def verify_card(path: str, challenge: str | None):
     """Verify every vouch inside an agent card. Prints a report (flags revoked)."""
     with open(path, "r", encoding="utf-8") as f:
         card_doc = json.load(f)
+    from .atc import _trust_params
     report = verify_agent_card(card_doc)
+    params = _trust_params(card_doc)
+    if report["signature_valid"] is True:
+        click.echo("card signature    : VALID")
+    elif report["signature_valid"] is False:
+        click.echo("card signature    : INVALID")
+        sys.exit(1)
+    else:
+        click.echo("card signature    : absent (legacy card)")
     if challenge is not None:
         from .atc import verify_pop_proof
-        if verify_pop_proof(report["did"], challenge, card_doc.get("proof")):
+        if verify_pop_proof(report["did"], challenge, params.get("proof") or card_doc.get("proof")):
             click.echo("proof-of-possession : VALID")
         else:
             click.echo("proof-of-possession : INVALID (missing, replayed, or wrong key)")
             sys.exit(1)
-    elif card_doc.get("proof"):
+    elif params.get("proof") or card_doc.get("proof"):
         click.echo("proof-of-possession : present (pass --challenge NONCE to verify)")
     click.echo(f"agent : {report['name']} ({report['did']})")
     click.echo(f"valid vouches   : {len(report['valid_vouches'])}")
