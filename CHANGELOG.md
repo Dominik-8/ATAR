@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (overnight hardening, 2026-09)
+- Peer endpoint hardening: unexpected intake errors now return a 500 JSON
+  body instead of dropping the connection mid-thread (matters more now that
+  the peer is multi-threaded), and a non-list batch payload
+  (`{"vouches": {...}}`) gets a clear 400 instead of silently reporting
+  zero counts. POST routing deduplicated across the three endpoints.
 - Docs coherence sweep: SPEC §14 gained the missing `atar graph` row;
   `docs/test-vectors.md` section references corrected (JCS is §4, VC
   mapping is §3.1, rotation is §10.1); ROADMAP now marks stages A1-A3 and

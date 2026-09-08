@@ -135,7 +135,7 @@ def make_peer_handler(state: _PeerState):
             except (json.JSONDecodeError, UnicodeDecodeError):
                 return None
 
-        def do_GET(self):  # noqa: N802  (stdlib API)
+        def _route_GET(self) -> None:
             if self.path == "/" or self.path.startswith("/?"):
                 self._send_json({
                     "protocol": PROTOCOL,
@@ -152,31 +152,50 @@ def make_peer_handler(state: _PeerState):
             else:
                 self._send_json({"error": "not found"}, status=404)
 
+        def do_GET(self):  # noqa: N802  (stdlib API)
+            try:
+                self._route_GET()
+            except Exception:  # noqa: BLE001 - never drop a connection bare
+                self._send_json({"error": "internal error"}, status=500)
+
         def do_POST(self):  # noqa: N802  (stdlib API)
+            try:
+                self._route_POST()
+            except Exception:  # noqa: BLE001 - never drop a connection bare
+                self._send_json({"error": "internal error"}, status=500)
+
+        def _batch(self, body: object, key: str):
+            """Normalize a POST body to a list of items, or None on misuse:
+            a single blob posts bare, a batch posts {"<key>": [...]}."""
+            if isinstance(body, dict) and key in body:
+                items = body[key]
+                return items if isinstance(items, list) else None
+            return [body]
+
+        def _route_POST(self) -> None:
             body = self._read_json()
             if body is None:
                 self._send_json({"error": "invalid JSON body"}, status=400)
                 return
-            if self.path == "/vouches":
-                items = body.get("vouches") if isinstance(body, dict) and "vouches" in body else [body]
-                counts = {"added": 0, "duplicates": 0, "rejected": 0}
-                for v in items if isinstance(items, list) else []:
-                    counts[state.admit_vouch(v)] += 1
-                self._send_json(counts)
-            elif self.path == "/revocations":
-                items = body.get("revocations") if isinstance(body, dict) and "revocations" in body else [body]
-                counts = {"added": 0, "duplicates": 0, "rejected": 0}
-                for e in items if isinstance(items, list) else []:
-                    counts[state.admit_revocation(e)] += 1
-                self._send_json(counts)
-            elif self.path == "/disputes":
-                items = body.get("disputes") if isinstance(body, dict) and "disputes" in body else [body]
-                counts = {"added": 0, "duplicates": 0, "rejected": 0}
-                for e in items if isinstance(items, list) else []:
-                    counts[state.admit_dispute(e)] += 1
-                self._send_json(counts)
-            else:
+            routes = {
+                "/vouches": ("vouches", state.admit_vouch),
+                "/revocations": ("revocations", state.admit_revocation),
+                "/disputes": ("disputes", state.admit_dispute),
+            }
+            route = routes.get(self.path)
+            if route is None:
                 self._send_json({"error": "not found"}, status=404)
+                return
+            key, admit = route
+            items = self._batch(body, key)
+            if items is None:
+                self._send_json(
+                    {"error": f"'{key}' must be a list"}, status=400)
+                return
+            counts = {"added": 0, "duplicates": 0, "rejected": 0}
+            for item in items:
+                counts[admit(item)] += 1
+            self._send_json(counts)
 
         def log_message(self, *args):  # silence default stderr logging
             return
