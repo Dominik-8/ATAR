@@ -29,7 +29,7 @@ from __future__ import annotations
 import json
 import os
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib import request as urlrequest
 
 from .dispute import DisputeList
@@ -189,7 +189,12 @@ def run_peer(port: int = 8790, bind: str = "127.0.0.1", home: str | None = None,
     """Serve the local store over HTTP. ``_block=False`` returns the server
     (used by tests; the caller must ``shutdown()`` it)."""
     state = _PeerState(home or _default_home())
-    server = HTTPServer((bind, port), make_peer_handler(state))
+    # ThreadingHTTPServer: gossip requests no longer serialize behind one
+    # slow peer. Store/revocation/dispute writes are serialized by the
+    # cross-process file lock (store.file_lock), so concurrent handlers are
+    # safe — each request re-reads under the lock before writing.
+    server = ThreadingHTTPServer((bind, port), make_peer_handler(state))
+    server.daemon_threads = True
     if not _block:
         t = threading.Thread(target=server.serve_forever, daemon=True)
         t.start()

@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (overnight hardening, 2026-09)
+- The HTTP gossip peer now serves with `ThreadingHTTPServer`: gossip
+  requests no longer serialize behind one slow peer. Made safe by the new
+  store locks; regression-tested with 4 concurrent HTTP clients posting
+  disjoint vouches (all 16 land).
 - `atar graph` resolves known agent names (registry + keygen identities)
   in the trust ranking, like the dashboard does, instead of raw DIDs only.
 - `atar identities`: list the local identities (name -> DID). A new user
