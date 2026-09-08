@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (realignment C2)
+- CrewAI plugin (`atar.integrations.crewai`): framework agents get a
+  persistent did:key identity automatically, earn a signed operator vouch
+  after each successfully completed task, and can present a signed
+  A2A-compatible agent card. No hard CrewAI dependency (duck-typed). Working
+  example: `python -m atar.examples.crewai_integration`; docs:
+  `docs/crewai-plugin.md`.
+
 ### Added (realignment C1)
 - HTTP gossip transport: `atar peer` serves the local store over a slim HTTP
   endpoint (GET/POST of vouches and revocations, content-addressed, no central

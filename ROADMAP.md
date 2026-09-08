@@ -54,9 +54,11 @@ that speaks the standard formats.*
   revocations, still content-addressed, no central server) and
   `atar sync --with http://...` / `auto-sync` gossip with remote peers.
   Spec: SPEC §9.1.
-- **C2 — One framework plugin as adoption proof.** A CrewAI or LangGraph
-  plugin: framework agents get an identity, vouch after successful tasks,
-  present a card. One visible integration beats more CLI phases.
+- **C2 — One framework plugin as adoption proof.** ✅ Shipped
+  2026-09-08: `atar.integrations.crewai` — CrewAI agents get a did:key
+  identity automatically, earn an operator-signed vouch after each successful
+  task, and present a signed A2A-compatible card. Docs:
+  `docs/crewai-plugin.md`; example: `atar.examples.crewai_integration`.
 - **C3 — Score semantics and negative signals.** Define what `score 0.95`
   means (units, evidence references) so scores compare across operators; add
   signed disputes next to positive vouches and revocations.
