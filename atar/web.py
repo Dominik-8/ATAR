@@ -58,7 +58,8 @@ def _build_net() -> dict:
         reg = AgentRegistry()
         seed = reg.seed_did or ""
         vouches = reg._store.all()
-        agents = {n: d["did"] for n, d in reg._agents.items() if n != "_seed"}
+        from .agent_bootstrap import known_agent_names
+        agents = known_agent_names()  # registry + plain keygen identities
     except Exception:
         seed = ""
         vouches = VouchStore(_store_path()).all() if _store_path_exists() else []

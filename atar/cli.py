@@ -463,12 +463,8 @@ def dashboard(seed: str | None, scope: str, out: str, home: str | None):
     if not seed:
         raise SystemExit("no --seed given and no seeded agent in registry")
     from .dashboard import render_dashboard_html
-    from .agent_bootstrap import AgentRegistry
-    try:
-        reg = AgentRegistry()
-        agents = {n: d["did"] for n, d in reg._agents.items() if n != "_seed"}
-    except Exception:
-        agents = {}
+    from .agent_bootstrap import known_agent_names
+    agents = known_agent_names()  # registry + plain keygen identities
     net = {"agents": agents, "seed_did": seed, "vouches": _load_store_vouches()}
     html = render_dashboard_html(net, scope=scope)
     with open(out, "w", encoding="utf-8") as f:

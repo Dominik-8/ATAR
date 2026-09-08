@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and format drift cannot sneak in silently.
 
 ### Fixed (overnight hardening, 2026-09)
+- Dashboards and the live server showed "?" for every agent (and "via ?"
+  for trust paths) when the network was built with plain CLI commands —
+  names resolved only from the bootstrap registry, never from keys.json.
+  Both renderers now use `known_agent_names()` (registry + keygen
+  identities). Visually verified.
 - keys.json (which holds private keys) had the same cross-process
   lost-update window as the vouch store: two concurrent CLI commands
   (keygen/rotate/reissue --commit/import) could silently drop each other's

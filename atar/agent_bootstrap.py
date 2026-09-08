@@ -47,6 +47,36 @@ def _identity_from_private_hex(hex_str: str) -> Identity:
     return Identity(private_key=priv, public_key=priv.public_key())
 
 
+def known_agent_names() -> dict[str, str]:
+    """name -> DID for every locally known agent.
+
+    Merges the bootstrap registry (agents/registry.json) with the plain CLI
+    identities in keys.json, so dashboards and the live server can name
+    agents created with a bare `atar keygen` too — before this, a CLI-only
+    network rendered every agent as "?". The registry wins on name conflicts
+    (it is the curated bootstrap source). Never raises: dashboards degrade
+    to "?" instead of failing.
+    """
+    names: dict[str, str] = {}
+    keys_path = os.path.join(_home(), "keys.json")
+    try:
+        if os.path.exists(keys_path):
+            with open(keys_path, "r", encoding="utf-8") as f:
+                for n, rec in json.load(f).items():
+                    if isinstance(rec, dict) and isinstance(rec.get("did"), str):
+                        names[n] = rec["did"]
+    except (json.JSONDecodeError, OSError):
+        pass
+    try:
+        reg = AgentRegistry()
+        for n, d in reg._agents.items():
+            if n != "_seed" and isinstance(d, dict) and isinstance(d.get("did"), str):
+                names[n] = d["did"]
+    except Exception:
+        pass
+    return names
+
+
 class AgentRegistry:
     """Manage persistent agent identities + vouches for your local network."""
 
