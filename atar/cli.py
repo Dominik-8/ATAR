@@ -163,20 +163,14 @@ def card(name: str, out: str, challenge: str | None):
     except ValueError:
         my_canonical = did
     vouches = []
-    for fn in os.listdir(_home()):
-        if fn.endswith(".json") and fn != "keys.json":
-            try:
-                with open(os.path.join(_home(), fn), "r", encoding="utf-8") as f:
-                    blob = json.load(f)
-                subj = blob.get("payload", {}).get("subject")
-                try:
-                    subj_canonical = normalize_did(subj)
-                except (ValueError, TypeError):
-                    subj_canonical = subj
-                if subj_canonical == my_canonical:
-                    vouches.append(blob)
-            except (json.JSONDecodeError, KeyError):
-                continue
+    for blob in _load_store_vouches():
+        subj = blob.get("payload", {}).get("subject")
+        try:
+            subj_canonical = normalize_did(subj)
+        except (ValueError, TypeError):
+            subj_canonical = subj
+        if subj_canonical == my_canonical:
+            vouches.append(blob)
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from .identity import Identity
     from .atc import sign_pop_proof, sign_agent_card, ATAR_TRUST_EXT_URI
