@@ -1,5 +1,5 @@
 {
-  "description": "W3C VC export (SPEC \u00a73.3): the vouch from vouch.json as an unsigned Verifiable Credential, and the same credential with a Data Integrity proof (eddsa-jcs-2022, proof.created fixed for reproducibility).",
+  "description": "W3C VC export (SPEC \u00a73.3): the vouch from native-vouch.json as an unsigned Verifiable Credential, and the same credential with a Data Integrity proof (eddsa-jcs-2022, proof.created fixed for reproducibility).",
   "unsigned_credential": {
     "@context": [
       "https://www.w3.org/ns/credentials/v2",

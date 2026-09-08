@@ -1,0 +1,21 @@
+{
+  "description": "Native ATAR vouch (SPEC \u00a73): fixed keys + timestamp, Ed25519 is deterministic so the signature is reproducible. canonical_vouch_id excludes ts/signature.",
+  "issuer_did": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+  "subject_did": "did:key:z6MknGc3ocHs3zdPiJbnaaqDi58NGb4pk1Sp9WxWufuXSdxf",
+  "vouch": {
+    "payload": {
+      "type": "vouch",
+      "issuer": "did:key:z6MkjchhfUsD6mmvni8mCdXHw216Xrm9bQe2mBH1P5RDjVJG",
+      "subject": "did:key:z6MknGc3ocHs3zdPiJbnaaqDi58NGb4pk1Sp9WxWufuXSdxf",
+      "score": 0.9,
+      "scope": "coding",
+      "claim": null,
+      "ts": 1700000000,
+      "evidence": [
+        "https://example.org/observations/42"
+      ]
+    },
+    "signature": "197d73c1e87737d242c2d74fbc105bb992d235e42535806997f6fd6f0e39bdb8fedcae5e1cb68545afa292b9e3a8b9f615dcc9dcb74257be0607e18baad38e0e"
+  },
+  "canonical_vouch_id": "vouch:c3b86eb8c52f470b2747a4599dcab666ac5635fa73f98fa8c7080dfa9c6b6281"
+}

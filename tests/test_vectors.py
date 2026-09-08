@@ -63,7 +63,7 @@ def test_jcs_canonicalization_matches_vectors():
 
 
 def test_vouch_vector_matches_and_verifies():
-    data = _load("vouch.json")
+    data = _load("native-vouch.json")
     vouch = data["vouch"]
     # the pinned vouch verifies through the public path
     assert verify_vouch(vouch)
@@ -86,15 +86,15 @@ def test_vouch_vector_matches_and_verifies():
 def test_revocation_vector_verifies():
     data = _load("revocation.json")
     assert verify_revocation_entry(data["entry"])
-    # the entry revokes the pinned vouch from vouch.json
-    vouch = _load("vouch.json")["vouch"]
+    # the entry revokes the pinned vouch from native-vouch.json
+    vouch = _load("native-vouch.json")["vouch"]
     assert data["entry"]["vid"] == canonical_vouch_id(vouch)
     assert data["entry"]["revoked_by"] == vouch["payload"]["issuer"]
 
 
 def test_vc_export_vector_matches_and_verifies():
     data = _load("vc-export.json")
-    vouch = _load("vouch.json")["vouch"]
+    vouch = _load("native-vouch.json")["vouch"]
     # unsigned export is fully deterministic
     assert vouch_to_credential(vouch) == data["unsigned_credential"]
     # the pinned signed credential verifies offline through the public path
