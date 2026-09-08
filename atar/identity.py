@@ -31,3 +31,15 @@ def generate_identity() -> Identity:
 def did_from_public(public_key: Ed25519PublicKey) -> str:
     raw = public_key.public_bytes_raw()
     return "did:agent:" + base58.b58encode(raw).decode()
+
+
+def public_key_from_did(did: str) -> Ed25519PublicKey:
+    """Reconstruct the Ed25519 public key embedded in a ``did:agent:`` DID.
+
+    Raises ValueError for malformed DIDs (wrong prefix, bad base58, wrong
+    length) — callers decide whether to reject or skip.
+    """
+    if not isinstance(did, str) or not did.startswith("did:agent:"):
+        raise ValueError(f"not a did:agent: DID: {did!r}")
+    raw = base58.b58decode(did[len("did:agent:"):])
+    return Ed25519PublicKey.from_public_bytes(raw)

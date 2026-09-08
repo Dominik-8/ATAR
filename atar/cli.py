@@ -125,7 +125,7 @@ def verify(path: str, max_age):
     try:
         from .revocation import RevocationList, revoke_payload_id
         rl = RevocationList.load(_revocations_path())
-        if rl.is_revoked(revoke_payload_id(blob)):
+        if rl.is_revoked_for(blob):
             click.echo("REVOKED")
             sys.exit(2)
     except FileNotFoundError:
@@ -179,7 +179,7 @@ def verify_card(path: str):
         from .revocation import RevocationList, revoke_payload_id
         rl = RevocationList.load(_revocations_path())
         revoked = [v for v in report["valid_vouches"]
-                   if rl.is_revoked(revoke_payload_id(v))]
+                   if rl.is_revoked_for(v)]
     except FileNotFoundError:
         # no revocation list yet — nothing to check
         revoked = []
@@ -350,7 +350,7 @@ def add(path: str):
     try:
         from .revocation import RevocationList, revoke_payload_id
         rl = RevocationList.load(_revocations_path())
-        if rl.is_revoked(revoke_payload_id(blob)):
+        if rl.is_revoked_for(blob):
             click.echo("rejected (vouch is REVOKED)")
             sys.exit(1)
     except Exception:
@@ -416,16 +416,17 @@ def auto_sync():
         # pull vouches, but skip any that are revoked (defense-in-depth)
         added_self = 0
         for v in peer_store.all():
-            from .revocation import revoke_payload_id as _rid
-            if self_rl.is_revoked(_rid(v)):
+            if self_rl.is_revoked_for(v):
                 continue
             if self_store.add(v):
                 added_self += 1
         added_peer = sum(1 for v in self_store.all() if peer_store.add(v))
         added_rev_self = sum(1 for e in peer_rl.all()
-                             if self_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"]))
+                             if self_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
+                                            vouch=self_store.get(e["vid"]) or peer_store.get(e["vid"])))
         added_rev_peer = sum(1 for e in self_rl.all()
-                             if peer_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"]))
+                             if peer_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
+                                            vouch=peer_store.get(e["vid"]) or self_store.get(e["vid"])))
         peer_rl.save(os.path.join(p, "revocations.json"))
         self_rl.save(_revocations_path())
         total_new += added_self
@@ -461,9 +462,11 @@ def sync(peer):
         # VouchStore creates the file on first add, so a missing peer store is
         # simply empty (not an error) — we just exchange into it.
         peer_store = VouchStore(peer_path)
-        # pull: vouches peer has that we lack
+        # pull: vouches peer has that we lack (skip ones revoked by their issuer)
         added_to_self = 0
         for v in peer_store.all():
+            if self_rl.is_revoked_for(v):
+                continue
             if self_store.add(v):
                 added_to_self += 1
         # push: vouches we have that peer lacks
@@ -475,11 +478,13 @@ def sync(peer):
         peer_rl = RevocationList.load(os.path.join(p, "revocations.json"))
         added_rev_self = 0
         for e in peer_rl.all():
-            if self_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"]):
+            if self_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
+                           vouch=self_store.get(e["vid"]) or peer_store.get(e["vid"])):
                 added_rev_self += 1
         added_rev_peer = 0
         for e in self_rl.all():
-            if peer_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"]):
+            if peer_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
+                           vouch=peer_store.get(e["vid"]) or self_store.get(e["vid"])):
                 added_rev_peer += 1
         peer_rl.save(os.path.join(p, "revocations.json"))
         self_rl.save(_revocations_path())
@@ -589,6 +594,10 @@ def rotate(name: str, out: str):
         "public": new.public_key.public_bytes_raw().hex(),
         "private": new.private_key.private_bytes_raw().hex(),
         "rotated_from": did_from_public(old.public_key()),
+        # kept ONLY so `reissue --commit` can sign the retirement revocations
+        # of pre-rotation vouches with the key that issued them (SPEC §6:
+        # revoked_by must be the vouch's issuer); deleted after commit.
+        "old_private": old.private_bytes_raw().hex(),
     }
     _save_keys(keys)
     out_path = os.path.join(_home(), out)
@@ -648,23 +657,27 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
     added = sum(1 for r in reissued if store.add(r))
     rl = RevocationList.load(_revocations_path())
     revoked = 0
+    # Retire pre-rotation vouches with a revocation signed by the OLD key —
+    # the only key that can sign for the old DID (SPEC §6: revoked_by is the
+    # vouch's issuer). `rotate` keeps the old key locally for exactly this.
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from .revocation import revoke_vouch
+    old_priv_hex = keys.get(name, {}).get("old_private")
+    old_id = None
+    if old_priv_hex and old_did:
+        from .identity import Identity
+        old_priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(old_priv_hex))
+        old_id = Identity(private_key=old_priv, public_key=old_priv.public_key())
     for v in old_vouches:
         vid = revoke_payload_id(v)
-        if not rl.is_revoked(vid):
-            # sign the revocation with the NEW key so it's cryptographically verifiable
-            # (the new key now controls this identity; the old key is retired)
-            from base64 import b64encode
-            ts = int(time.time())
-            msg = f"{vid}|{old_did or my_did}|{ts}".encode("utf-8")
-            sig = b64encode(new_id.sign(msg)).decode("ascii")
-            rl.entries[vid] = {
-                "vid": vid,
-                "revoked_by": old_did or my_did,
-                "ts": ts,
-                "signature": sig,
-            }
-            revoked += 1
+        if not rl.is_revoked(vid) and old_id is not None:
+            if revoke_vouch(rl, old_id, vid):
+                revoked += 1
     rl.save(_revocations_path())
+    if old_priv_hex:
+        # old key has served its only remaining purpose — retire it locally
+        keys[name].pop("old_private", None)
+        _save_keys(keys)
     click.echo(f"committed: +{added} re-issued vouch(es) to store, {revoked} old-key vouch(es) revoked")
     click.echo("rotation complete — old key fully retired, trust carried under new DID")
 
@@ -733,8 +746,10 @@ def import_cmd(bundle: str, force: bool):
     rl = RevocationList.load(_revocations_path())
     revoked = 0
     for e in data.get("revocations", []):
-        if not rl.is_revoked(e["vid"]):
-            rl.entries[e["vid"]] = e
+        # verified at intake like any other source: signature against
+        # revoked_by, plus issuer binding when the vouch is in the bundle
+        if rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
+                  vouch=store.get(e["vid"])):
             revoked += 1
     rl.save(_revocations_path())
     # restore keys if present
@@ -768,7 +783,7 @@ def _audit_state(max_age):
             invalid += 1
             by_scope[scope]["invalid"] += 1
             continue
-        if rl.is_revoked(revoke_payload_id(v)):
+        if rl.is_revoked_for(v):
             revoked += 1
             by_scope[scope]["revoked"] += 1
             continue

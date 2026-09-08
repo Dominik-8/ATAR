@@ -54,6 +54,10 @@ class VouchStore:
         self._save()
         return True
 
+    def get(self, vid: str) -> dict | None:
+        """Return the vouch with this canonical ID, or None."""
+        return self._vouches.get(vid)
+
     def all(self) -> list[dict]:
         return list(self._vouches.values())
 

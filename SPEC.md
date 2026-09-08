@@ -124,7 +124,14 @@ One revocation entry:
 **Rules**
 - `vid` = canonical vouch ID (§8).
 - `revoked_by` MUST equal the revoked vouch's `issuer` DID.
-- `signature` is verified against `revoked_by`'s public key.
+- `signature` is verified against `revoked_by`'s public key — and this check
+  is **enforced at every intake path** (sync, import, load), not only at
+  definition time: an entry whose signature does not verify is dropped,
+  exactly like a forged vouch (§9 defense-in-depth). A `did:agent:` embeds
+  the raw Ed25519 key, so any peer can verify any entry standalone.
+- A revocation only *applies* to a vouch when `revoked_by` equals the vouch's
+  `issuer`. A well-formed entry signed by anyone else is inert: it may sit in
+  a list, but it revokes nothing.
 - A revoked vouch is treated as **REVOKED** even when its original signature is
   still cryptographically valid.
 - Revocation lists are content-addressed and gossip-synced like vouches (§9),
@@ -188,8 +195,12 @@ atar sync --with <peer_home>      # one-shot exchange
 atar auto-sync                    # reads atar_peers.json, for cron/agent hooks
 ```
 
-- Vouches are added if valid + new (dedup by `vouch_id`).
-- Revocations are merged (dedup by `vid`).
+- Vouches are added if valid + new (dedup by `vouch_id`); vouches revoked by
+  their issuer are never admitted.
+- Revocations are merged (dedup by `vid`) after signature verification (§6);
+  when the revoked vouch is known at merge time, non-issuer entries are
+  rejected at intake — and a non-issuer entry never applies at evaluation,
+  wherever it came from.
 - **Defense-in-depth:** revoked or expired vouches are never admitted to the
   store, even via sync (§6/§7 enforced at insertion).
 - Revocation lists are merged so a revocation made by one peer reaches all.
@@ -222,6 +233,11 @@ After rotation, the agent re-signs its out-going vouches under the **new** key
 `atar reissue --commit`, the re-issued vouches are written to the store **and**
 the old-key vouches are revoked — the old key is fully retired, trust carried
 forward. The trust graph survives a key compromise.
+
+The retirement revocations are signed with the **old** key: §6 requires
+`revoked_by` to be the vouch's issuer, and only the old key can sign for the
+old DID. `atar rotate` therefore retains the old private key locally for
+exactly this purpose, and `reissue --commit` deletes it afterwards.
 
 ---
 
@@ -269,6 +285,8 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 |---|---|
 | **Forgery** | Impossible without the issuer's private key (Ed25519). |
 | **Tampering** | Any `payload` change invalidates the signature. |
+| **Forged revocation** | Rejected at intake: every revocation entry's signature is verified against `revoked_by` on sync/import/load (§6). |
+| **Cross-key revocation** (attacker revokes someone else's vouch with their own key) | Inert: a revocation applies only when `revoked_by` is the vouch's issuer (§6). |
 | **Stale trust** | Mitigated by Freshness/TTL (§7) — trust must be renewed. |
 | **Key leak** | Mitigated by Revocation (§6) + Rotation (§10) — recover without total loss. |
 | **Zombie trust** | Mitigated by Revocation + Freshness combined. |
