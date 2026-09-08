@@ -295,6 +295,37 @@ atar auto-sync                    # reads atar_peers.json, for cron/agent hooks
   store, even via sync (§6/§7 enforced at insertion).
 - Revocation lists are merged so a revocation made by one peer reaches all.
 
+### 9.1 HTTP peer transport
+
+Filesystem sync requires a shared disk. To gossip between **separate
+operators**, any peer can expose its local store over a slim HTTP endpoint —
+still content-addressed, still serverless in the trust sense (every peer is
+equal; there is no central coordinator or registry):
+
+```
+atar peer --port 8790            # serve this ATAR_HOME over HTTP
+atar sync --with http://host:8790   # exchange with a remote peer
+# atar_peers.json entries may be URLs too (auto-sync handles both)
+```
+
+Endpoint surface (JSON only):
+
+| Route | Semantics |
+|---|---|
+| `GET /` | peer info: `{"protocol": "atar-peer/1.0", "vouches": n, "revocations": m}` |
+| `GET /vouches` | the peer's full vouch set |
+| `POST /vouches` | one vouch blob or `{"vouches": [...]}` → `{"added", "duplicates", "rejected"}` |
+| `GET /revocations` | the peer's full revocation list |
+| `POST /revocations` | one entry or `{"revocations": [...]}` → `{"added", "duplicates", "rejected"}` |
+
+Intake rules are identical to filesystem sync (§6, §9): vouch signatures are
+verified, issuer-revoked or expired vouches are never admitted, revocation
+entries are signature-verified and issuer-bound when the vouch is known. The
+transport is dumb on purpose — all trust decisions stay in the store. Peers
+exchange full sets and dedup by content address, so sync is idempotent and
+order-independent. The endpoint binds to `127.0.0.1` by default; exposing it
+to a network is the operator's explicit choice (`--bind`).
+
 ---
 
 ## 10. Key rotation (recovery without total loss)
@@ -455,7 +486,8 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar revoke <vouch.json>` | add to local revocation list |
 | `atar add <vouch.json>` | add to store (rejects revoked/expired) |
 | `atar list` / `atar scopes` | inspect store / list scopes |
-| `atar sync --with <peer>` / `atar auto-sync` | gossip exchange |
+| `atar sync --with <peer>` / `atar auto-sync` | gossip exchange (directory or `http(s)://` peer URL) |
+| `atar peer [--port P] [--bind B]` | serve the local store as an HTTP gossip peer (§9.1) |
 | `atar rotate --name X` | generate new key + rotation statement |
 | `atar reissue --name X [--commit]` | re-sign under new key (commit = +add +revoke old) |
 | `atar bootstrap --config agents.toml` | reproducible network |

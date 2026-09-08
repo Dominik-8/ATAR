@@ -49,10 +49,11 @@ that speaks the standard formats.*
 
 ## Stage C — Becoming real (ongoing, after B)
 
-- **C1 — Minimal network transport for gossip.** Today gossip is
-  filesystem-only (`atar sync --with <peer_home>`). A slim HTTP peer endpoint
-  (POST/GET of vouches and revocations, still content-addressed, no central
-  server) makes the network real between separate operators.
+- **C1 — Minimal network transport for gossip.** ✅ Shipped 2026-09-08:
+  `atar peer` serves the local store over HTTP (GET/POST of vouches and
+  revocations, still content-addressed, no central server) and
+  `atar sync --with http://...` / `auto-sync` gossip with remote peers.
+  Spec: SPEC §9.1.
 - **C2 — One framework plugin as adoption proof.** A CrewAI or LangGraph
   plugin: framework agents get an identity, vouch after successful tasks,
   present a card. One visible integration beats more CLI phases.
