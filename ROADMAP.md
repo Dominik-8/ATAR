@@ -62,10 +62,12 @@ that speaks the standard formats.*
 - **C3 — Score semantics and negative signals.** Define what `score 0.95`
   means (units, evidence references) so scores compare across operators; add
   signed disputes next to positive vouches and revocations.
-- **C4 — Standardization path.** Join the W3C agent-identity community work
-  and bring ATAR's lifecycle ideas (revocation, TTL, rotation) there;
-  optionally an IETF Internet-Draft via the datatracker. Influence through
-  the standards track instead of competing with ERC-8004 and A2A.
+- **C4 — Standardization path.** Drafts prepared 2026-09-08 for the
+  owner's review (nothing submitted): `docs/standardization/` holds a W3C
+  community intro post and an IETF Internet-Draft skeleton
+  (`draft-dbrueck-atar-lifecycle-00`) positioning the lifecycle
+  (revocation, TTL, rotation, disputes) as the contribution. Next step is
+  the owner's call: review, then submit/join.
 
 ## What deliberately stays
 
