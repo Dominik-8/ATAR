@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (overnight hardening, 2026-09)
+- PoP hardening pins: two new tests lock the proof-of-possession DID
+  binding - a proof made for one card's DID can never validate against a
+  different card even when the same nonce is reused (cross-card replay).
+- Dashboard cards no longer print the agent name twice (header + body);
+  the revoked strikethrough moved to the card header. Verified by
+  rendered screenshot.
 - DID arguments now accept local identity names everywhere the docs told
   users to paste a DID: `atar vouch --for`, `atar issue --for`,
   `atar graph --seed`, `atar dashboard --seed` (`resolved 'bob' ->

@@ -116,3 +116,32 @@ def test_cli_verify_card_challenge_without_proof_fails(tmp_path, monkeypatch):
     r = runner.invoke(cli, ["verify-card", card_path, "--challenge", new_pop_challenge()])
     assert r.exit_code == 1
     assert "proof-of-possession : INVALID" in r.output
+
+
+def test_pop_proof_is_bound_to_the_challenged_did():
+    """Cross-card replay: a proof Bob made for HIS card must not validate
+    when the same nonce is presented against a different card. The signed
+    message embeds the DID (domain-separated), so this follows from the
+    construction - this test pins it."""
+    bob = generate_identity()
+    carol = generate_identity()
+    did_bob = did_from_public(bob.public_key)
+    did_carol = did_from_public(carol.public_key)
+    nonce = new_pop_challenge()
+    proof = sign_pop_proof(bob, did_bob, nonce)
+    # same nonce, same proof, different card DID -> must fail
+    assert verify_pop_proof(did_carol, nonce, proof) is False
+    # and the honest use still passes
+    assert verify_pop_proof(did_bob, nonce, proof) is True
+
+
+def test_pop_nonce_reuse_across_cards_does_not_help_mallory():
+    """Mallory captures Bob's proof for nonce N, then gets challenged with
+    the same nonce N while presenting her own card: still rejected."""
+    bob = generate_identity()
+    mallory = generate_identity()
+    did_bob = did_from_public(bob.public_key)
+    did_mallory = did_from_public(mallory.public_key)
+    nonce = new_pop_challenge()
+    captured = sign_pop_proof(bob, did_bob, nonce)
+    assert verify_pop_proof(did_mallory, nonce, captured) is False

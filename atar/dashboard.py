@@ -34,7 +34,7 @@ border-bottom:1px solid #222;}
 border-radius:999px;padding:2px 10px;text-transform:uppercase;letter-spacing:1px;}
 .badge.revoked{color:#ff4d4d;border-color:#5c1a1a;background:#1a0808;}
 .card.revoked{border-color:#5c1a1a;box-shadow:0 0 14px rgba(255,77,77,0.15);}
-.card.revoked .a-name{color:#ff6b6b;text-decoration:line-through;}
+.card.revoked h2{color:#ff6b6b;text-decoration:line-through;}
 .agent{padding:14px 18px;border-bottom:1px solid #1c1c1f;}
 .agent:last-child{border-bottom:none;}
 .a-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
@@ -198,7 +198,6 @@ def render_cards(net: dict, *, scope: str) -> str:
     <div class="agent">
       <div class="a-top">
         <div>
-          <div class="a-name">{_html.escape(str(a["name"]))}</div>
           <div class="a-did">{_html.escape(str(a["did"]))}</div>
         </div>
         <span class="score">{trust_label}</span>
