@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (overnight hardening, 2026-09)
+- `atar graph` resolves known agent names (registry + keygen identities)
+  in the trust ranking, like the dashboard does, instead of raw DIDs only.
 - `atar identities`: list the local identities (name -> DID). A new user
   following the quickstart had no way to see the identities they created —
   `atar list` shows vouches, not identities, and the only record was inside

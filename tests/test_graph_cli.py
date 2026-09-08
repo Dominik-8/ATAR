@@ -37,3 +37,20 @@ def test_graph_cli_renders_trust_report(tmp_path, monkeypatch):
     # transitive trust must surface the 2-hop agent
     assert did_from_public(agents[2].public_key) in r.output  # b (via a)
     assert "0.72" in r.output  # 0.9 * 0.8
+
+
+def test_graph_resolves_known_agent_names(tmp_path, monkeypatch):
+    """The ranking names agents the operator knows (registry + keygen),
+    like the dashboard does — raw DIDs alone are unreadable."""
+    monkeypatch.setenv("ATAR_HOME", str(tmp_path))
+    runner = CliRunner()
+    r1 = runner.invoke(cli, ["keygen", "--name", "root"])
+    r2 = runner.invoke(cli, ["keygen", "--name", "leaf"])
+    root_did, leaf_did = r1.output.strip(), r2.output.strip()
+    vf = tmp_path / "v.json"
+    runner.invoke(cli, ["vouch", "--from", "root", "--for", leaf_did,
+                        "--score", "0.9", "--scope", "coding", "--out", str(vf)])
+    runner.invoke(cli, ["add", str(vf)])
+    r = runner.invoke(cli, ["graph", "--seed", root_did, "--scope", "coding"])
+    assert r.exit_code == 0
+    assert "root did:key:" in r.output and "leaf did:key:" in r.output

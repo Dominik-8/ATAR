@@ -440,9 +440,23 @@ def graph(seed: str | None, scope: str, home: str | None):
     click.echo(f"vouches loaded : {loaded}")
     click.echo(f"reachable agents: {len(ranked)}")
     click.echo("--- trust ranking ---")
+    # resolve names like the dashboard does (registry + keygen identities)
+    from .agent_bootstrap import known_agent_names
+    from .identity import normalize_did
+    name_by_did = {}
+    for n, d in known_agent_names().items():
+        try:
+            name_by_did[normalize_did(d)] = n
+        except ValueError:
+            continue
     for did, score in ranked:
         marker = " (seed)" if did == seed else ""
-        click.echo(f"  {did}  trust={score:.3f}{marker}")
+        try:
+            name = name_by_did.get(normalize_did(did))
+        except ValueError:
+            name = None
+        label = f"{name} " if name else ""
+        click.echo(f"  {label}{did}  trust={score:.3f}{marker}")
 
 
 @cli.command()
