@@ -142,6 +142,7 @@ See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 | `atar watch [--interval S] [--once]` | monitor health; alert on unhealthy transition |
 | `atar issue --from N --for DID --scope S --score X [--claim C]` | issue a signed capability claim (standalone file) |
 | `atar verify-claim FILE` | verify a signed capability claim (independent of store) |
+| `atar vc-export F --from N` / `atar vc-verify F` | export a vouch as a W3C Verifiable Credential / verify one offline |
 
 ## Visual identity (ATAR-style)
 

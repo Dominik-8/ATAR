@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (realignment B2)
+- Vouches export as W3C Verifiable Credentials (VC 2.0): `credentialSubject`
+  carries scope/score/claim, proofs are `eddsa-jcs-2022` Data Integrity proofs
+  (JCS / RFC 8785 + SHA-256 + Ed25519). New `atar vc-export` / `atar vc-verify`
+  commands; verification is fully offline. The native vouch format stays the
+  internal representation — the VC path is the interop bridge.
+
 ### Changed (realignment B1)
 - Identity is now W3C `did:key` (multicodec `ed25519-pub` + multibase
   base58btc) instead of ATAR's own `did:agent:` spelling. `atar keygen` prints

@@ -107,6 +107,64 @@ agent for a capability *scope* with a *score*.
   of `payload` (§4).
 - `issuer` MUST be the DID whose private key produced `signature`.
 
+### 3.1 Vouches as W3C Verifiable Credentials (interop bridge)
+
+The native vouch above stays ATAR's internal format. For interop, any vouch
+can be exported as a W3C Verifiable Credential (VC 2.0) — the bridge that lets
+standard VC tooling check an ATAR vouch.
+
+Field mapping:
+
+| Vouch payload | Verifiable Credential |
+|---|---|
+| `issuer` | `issuer` (canonical `did:key`, §2.1) |
+| `subject` | `credentialSubject.id` |
+| `scope` | `credentialSubject["atar:scope"]` |
+| `score` | `credentialSubject["atar:score"]` |
+| `claim` | `credentialSubject["atar:claim"]` (omitted when null) |
+| `ts` | `validFrom` (ISO 8601 UTC) |
+
+```json
+{
+  "@context": ["https://www.w3.org/ns/credentials/v2",
+               {"atar": "https://github.com/Dominik-8/ATAR/ns#"}],
+  "type": ["VerifiableCredential", "ATARVouch"],
+  "issuer": "did:key:z6Mk...",
+  "validFrom": "2026-09-08T10:00:00Z",
+  "credentialSubject": {
+    "id": "did:key:z6Mk...",
+    "atar:scope": "coding",
+    "atar:score": 0.95
+  },
+  "proof": {
+    "type": "DataIntegrityProof",
+    "cryptosuite": "eddsa-jcs-2022",
+    "created": "2026-09-08T10:00:00Z",
+    "verificationMethod": "did:key:z6Mk...#z6Mk...",
+    "proofPurpose": "assertionMethod",
+    "proofValue": "z<base58btc(ed25519 signature)>"
+  }
+}
+```
+
+**Rules**
+- Proof: Data Integrity `eddsa-jcs-2022` — JCS (RFC 8785) canonicalization,
+  SHA-256, Ed25519. Signing input: `sha256(jcs(proofOptions)) ||
+  sha256(jcs(credential))`; `proofValue` is the multibase (base58btc, `z`)
+  signature.
+- `verificationMethod` MUST belong to `issuer` (`<issuer>#<multibase>`);
+  verification is offline (the key comes from the `did:key`; contexts are
+  identifiers and are never fetched).
+- Export re-signs: the VC proof is a fresh signature by the issuer over the VC,
+  so exporting requires the issuer's key. Importing a VC into a native store
+  likewise goes through re-issuance — the native signature signs different
+  bytes, so there is no lossless VC→vouch conversion.
+- Revocation (§6) and TTL (§7) deliberately stay ATAR-side: the VC proves the
+  signed attestation; *current* trust state comes from the ATAR store.
+
+CLI: `atar vc-export VOUCH --from NAME` (issuer-signed export),
+`atar vc-verify VC` (offline proof verification).
+
 ---
 
 ## 4. Canonical serialization
@@ -373,6 +431,8 @@ via `atar verify` (exit code 2) and `atar verify-card`.
 | `atar watch [--interval S] [--once]` | monitor health; alert on unhealthy transition |
 | `atar issue --from N --for DID --scope S --score X [--claim C]` | issue a signed capability claim (standalone file) |
 | `atar verify-claim FILE` | verify a signed capability claim (independent of store) |
+| `atar vc-export F --from N` | export a vouch as a W3C Verifiable Credential (§3.1) |
+| `atar vc-verify FILE` | verify an exported VC offline (§3.1) |
 
 ---
 

@@ -279,6 +279,62 @@ def verify_claim(path: str):
         sys.exit(1)
 
 
+@cli.command(name="vc-export")
+@click.argument("path")
+@click.option("--from", "from_name", required=True,
+              help="issuer identity name (must own the vouch's issuer key)")
+@click.option("--out", default="vouch.vc.json", help="output file")
+def vc_export(path: str, from_name: str, out: str):
+    """Export a native vouch as a W3C Verifiable Credential (SPEC §3.1).
+
+    Re-signs the attestation as an eddsa-jcs-2022 Data Integrity proof, so the
+    issuer's private key is required. Identifiers are emitted in canonical
+    did:key form even for pre-realignment (did:agent:) vouches.
+    """
+    with open(path, "r", encoding="utf-8") as f:
+        blob = json.load(f)
+    if not verify_vouch(blob):
+        click.echo("INVALID vouch (signature does not verify)"); sys.exit(1)
+    keys = _load_keys()
+    if from_name not in keys:
+        click.echo(f"no identity '{from_name}'"); sys.exit(1)
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from .identity import Identity, normalize_did, did_from_public
+    from .vc import vouch_to_credential, sign_credential
+    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[from_name]["private"]))
+    issuer = Identity(private_key=priv, public_key=priv.public_key())
+    if normalize_did(blob["payload"]["issuer"]) != did_from_public(issuer.public_key):
+        click.echo("identity does not match the vouch's issuer"); sys.exit(1)
+    vc = sign_credential(vouch_to_credential(blob), issuer)
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(vc, f, indent=2)
+    click.echo(f"verifiable credential written to {out}")
+
+
+@cli.command(name="vc-verify")
+@click.argument("path")
+def vc_verify(path: str):
+    """Verify a vouch exported as a W3C Verifiable Credential (SPEC §3.1).
+
+    Offline: the issuer key comes from the did:key in the credential; contexts
+    are identifiers and are never fetched. Revocation/TTL stay ATAR-side —
+    this checks the signed attestation only.
+    """
+    with open(path, "r", encoding="utf-8") as f:
+        vc = json.load(f)
+    from .vc import verify_credential, credential_to_vouch_payload
+    if not verify_credential(vc):
+        click.echo("INVALID")
+        sys.exit(1)
+    payload = credential_to_vouch_payload(vc)
+    click.echo("VALID")
+    click.echo(f"  issuer  : {payload['issuer']}")
+    click.echo(f"  subject : {payload['subject']}")
+    click.echo(f"  scope   : {payload['scope']}  score={payload['score']}")
+    if payload.get("claim"):
+        click.echo(f"  claim   : {payload['claim']}")
+
+
 def _load_store_vouches() -> list[dict]:
     """Load all vouches from the persistent store (Phase 7)."""
     from .store import VouchStore
