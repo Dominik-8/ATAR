@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (overnight hardening, 2026-09)
+- Randomized invariant tests for the trust computation
+  (`tests/test_trust_invariants.py`, seeded stdlib random, no new deps):
+  non-negativity, seed baseline, self-vouch exclusion (SPEC §13),
+  revocation monotonicity, inert Sybil disputers (SPEC §8.2), and scope
+  isolation. Two further invariants are encoded as strict xfails that
+  document a known issue filed for the owner's decision: trust propagation
+  is currently order-dependent (identical edge sets yield different scores
+  depending on insertion order, and adding a vouch can lower a score),
+  because a node is propagated with its trust at first-visit time and never
+  re-queued when its trust later improves.
+
 - Public interoperability test vectors under `tests/vectors/` (documented in
   `docs/test-vectors.md`): golden, byte-exact vectors for `did:key`/`did:agent:`
   derivation, JCS canonicalization, the native vouch format + content address,
