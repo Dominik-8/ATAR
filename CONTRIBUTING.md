@@ -22,6 +22,14 @@ pytest tests/test_identity.py::test_x   # single test
 All code must be covered by tests. We follow TDD: write the failing test
 first, watch it fail, then implement.
 
+## Continuous integration
+
+Every push runs the pinned `ruff format` / `ruff check` gate and the full
+test suite on Python 3.11 and 3.12, then builds the sdist and wheel,
+installs both into clean environments, and smoke-tests the installed CLI
+(keygen -> vouch -> verify). A change that breaks the packaged
+distribution fails CI before it can reach a release.
+
 ## Branch & PR workflow
 
 1. Fork and create a feature branch (`feat/...`, `fix/...`).

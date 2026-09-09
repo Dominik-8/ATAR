@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Protocol Community Group intro post; and a click-by-click review and
   submission guide (`docs/standardization/`).
 
+- CI packaging gate: every push now builds the sdist and wheel, installs
+  both into clean environments, and smoke-tests the installed CLI
+  (`keygen` -> `vouch` -> `verify` roundtrip plus a version match against
+  `pyproject.toml`), so a broken distribution fails CI before a release.
+
 ### Changed
 - Applied the deferred repo-wide `ruff format` sweep (94 files). Purely
   cosmetic: every changed file is AST-identical to its previous revision and
