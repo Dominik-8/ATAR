@@ -34,19 +34,38 @@ def _build_home_a(tmp_path):
     _run(runner, ["keygen", "--name", "bob"], env)
     keys = json.load(open(os.path.join(home_a, "keys.json")))
     bob = keys["bob"]["did"]
-    _run(runner, ["vouch", "--from", "alice", "--for", bob, "--score", "0.9",
-                  "--scope", "coding", "--out", os.path.join(home_a, "v.json")], env)
+    _run(
+        runner,
+        [
+            "vouch",
+            "--from",
+            "alice",
+            "--for",
+            bob,
+            "--score",
+            "0.9",
+            "--scope",
+            "coding",
+            "--out",
+            os.path.join(home_a, "v.json"),
+        ],
+        env,
+    )
     _run(runner, ["add", os.path.join(home_a, "v.json")], env)
     # a foreign vouch (issuer not in keys.json) that alice disputes
     carol = generate_identity()
     dave = generate_identity()
-    foreign = create_vouch(carol, dave.public_key, score=0.4, scope="coding",
-                           ts=1_700_000_000)
+    foreign = create_vouch(
+        carol, dave.public_key, score=0.4, scope="coding", ts=1_700_000_000
+    )
     fpath = os.path.join(home_a, "foreign.json")
     json.dump(foreign, open(fpath, "w"))
     _run(runner, ["add", fpath], env)
-    _run(runner, ["dispute", fpath, "--from", "alice", "--reason",
-                  "score looks inflated"], env)
+    _run(
+        runner,
+        ["dispute", fpath, "--from", "alice", "--reason", "score looks inflated"],
+        env,
+    )
     return home_a, env
 
 
@@ -59,8 +78,9 @@ def test_roundtrip_carries_disputes_and_names(tmp_path):
     data = json.load(open(bundle))
     assert len(data["vouches"]) == 2
     assert len(data["disputes"]) == 1, "export must include disputes"
-    assert data["agents"]["alice"] and data["agents"]["bob"], \
+    assert data["agents"]["alice"] and data["agents"]["bob"], (
         "export must record keys.json names too, not only the registry"
+    )
 
     home_b = str(tmp_path / "b")
     os.makedirs(home_b)
@@ -73,6 +93,7 @@ def test_roundtrip_carries_disputes_and_names(tmp_path):
     assert len(dl.all()) == 1
 
     from atar.agent_bootstrap import known_agent_names
+
     os.environ["ATAR_HOME"] = home_b
     try:
         names = known_agent_names()
@@ -101,6 +122,7 @@ def test_import_names_never_clobber_local_identity(tmp_path):
     _run(runner, ["import", bundle], env_b)
 
     from atar.agent_bootstrap import known_agent_names
+
     os.environ["ATAR_HOME"] = home_b
     try:
         names = known_agent_names()

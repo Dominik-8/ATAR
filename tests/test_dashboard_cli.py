@@ -18,13 +18,23 @@ def test_dashboard_cli_writes_html(tmp_path, monkeypatch):
             json.dump(v, f)
         runner.invoke(cli, ["add", str(fn)])
     out = tmp_path / "dash.html"
-    r = runner.invoke(cli, ["dashboard", "--seed", net["seed_did"],
-                            "--scope", "intelligence", "--out", str(out)])
+    r = runner.invoke(
+        cli,
+        [
+            "dashboard",
+            "--seed",
+            net["seed_did"],
+            "--scope",
+            "intelligence",
+            "--out",
+            str(out),
+        ],
+    )
     assert r.exit_code == 0
     assert out.exists()
     html = out.read_text(encoding="utf-8")
-    assert "#0a0a0b" in html       # seed_agent dark design
-    assert "#39ff14" in html       # gift-green accent
+    assert "#0a0a0b" in html  # seed_agent dark design
+    assert "#39ff14" in html  # gift-green accent
     assert "Know Your Agent" in html
     # every agent DID present
     for did in net["agents"].values():

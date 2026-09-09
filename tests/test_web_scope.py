@@ -43,7 +43,9 @@ def test_server_serves_and_scope_query(tmp_path, monkeypatch):
     port = 8799
     srv = run_server(port=port, bind="127.0.0.1", _block=False)
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/?scope=coding", timeout=5) as r:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/?scope=coding", timeout=5
+        ) as r:
             body = r.read().decode("utf-8")
         assert "coding" in body
         # market has no coding vouch -> absent in coding scope

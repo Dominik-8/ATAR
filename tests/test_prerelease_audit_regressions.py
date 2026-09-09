@@ -29,12 +29,14 @@ from atar.store import VouchStore
 
 # --- self-vouches carry no transitive trust (SPEC §13) ----------------------
 
+
 def test_self_vouch_adds_no_transitive_trust():
     seed = generate_identity()
     agent = generate_identity()
     v = create_vouch(seed, agent.public_key, score=0.9, scope="s")
-    self_v = create_vouch(agent, agent.public_key, score=1.0, scope="s",
-                          claim="I am great")
+    self_v = create_vouch(
+        agent, agent.public_key, score=1.0, scope="s", claim="I am great"
+    )
     seed_did = did_from_public(seed.public_key)
     agent_did = did_from_public(agent.public_key)
     without = graph_from_vouches([v]).compute_trust(seed_did=seed_did, scope="s")
@@ -47,14 +49,17 @@ def test_seed_self_vouch_does_not_raise_seed_above_one():
     seed = generate_identity()
     self_v = create_vouch(seed, seed.public_key, score=1.0, scope="s", claim="x")
     trust = graph_from_vouches([self_v]).compute_trust(
-        seed_did=did_from_public(seed.public_key), scope="s")
+        seed_did=did_from_public(seed.public_key), scope="s"
+    )
     assert trust[did_from_public(seed.public_key)] == 1.0
 
 
 # --- dashboard scope is escaped (reflected XSS via ?scope=) -----------------
 
+
 def test_dashboard_escapes_scope_label():
     from atar.dashboard import render_dashboard_html
+
     net = {"agents": {}, "seed_did": "", "vouches": []}
     evil = "<script>alert('scope')</script>"
     out = render_dashboard_html(net, scope=evil)
@@ -78,6 +83,7 @@ def test_dashboard_paths_and_revoked_flag_work_with_legacy_did_spelling():
     v["payload"]["subject"] = subj_legacy
     # re-sign with the legacy subject in the payload
     from atar.vouch import _canonical
+
     v["signature"] = seed.sign(_canonical(v["payload"])).hex()
 
     seed_did = did_from_public(seed.public_key)
@@ -90,24 +96,40 @@ def test_dashboard_paths_and_revoked_flag_work_with_legacy_did_spelling():
 
 # --- import --force stores instead of only counting --------------------------
 
+
 def _mkhome_with_vouch(home, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", home)
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "a"])
     runner.invoke(cli, ["keygen", "--name", "b"])
     keys = json.load(open(os.path.join(home, "keys.json")))
-    runner.invoke(cli, ["vouch", "--from", "a", "--for", keys["b"]["did"],
-                        "--score", "0.9", "--scope", "s",
-                        "--out", os.path.join(home, "v.json")])
+    runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "a",
+            "--for",
+            keys["b"]["did"],
+            "--score",
+            "0.9",
+            "--scope",
+            "s",
+            "--out",
+            os.path.join(home, "v.json"),
+        ],
+    )
     runner.invoke(cli, ["add", os.path.join(home, "v.json")])
 
 
 def test_import_force_actually_stores(tmp_path, monkeypatch):
-    src = tmp_path / "src"; src.mkdir()
+    src = tmp_path / "src"
+    src.mkdir()
     _mkhome_with_vouch(str(src), monkeypatch)
     pkg = tmp_path / "net.atpkg"
     CliRunner().invoke(cli, ["export", "--out", str(pkg)])
-    dst = tmp_path / "dst"; dst.mkdir()
+    dst = tmp_path / "dst"
+    dst.mkdir()
     monkeypatch.setenv("ATAR_HOME", str(dst))
     r = CliRunner().invoke(cli, ["import", "--force", str(pkg)])
     assert r.exit_code == 0
@@ -115,6 +137,7 @@ def test_import_force_actually_stores(tmp_path, monkeypatch):
 
 
 # --- keygen overwrite guard --------------------------------------------------
+
 
 def test_keygen_refuses_overwrite_without_force(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
@@ -134,6 +157,7 @@ def test_keygen_refuses_overwrite_without_force(tmp_path, monkeypatch):
 
 # --- reissue requires a rotation ---------------------------------------------
 
+
 def test_reissue_without_rotation_fails_cleanly(tmp_path, monkeypatch):
     _mkhome_with_vouch(str(tmp_path), monkeypatch)
     r = CliRunner().invoke(cli, ["reissue", "--name", "a"])
@@ -143,6 +167,7 @@ def test_reissue_without_rotation_fails_cleanly(tmp_path, monkeypatch):
 
 # --- HTTP gossip: malformed remote data never crashes ------------------------
 
+
 def test_sync_with_url_skips_malformed_remote_entries(tmp_path, monkeypatch):
     import threading
     from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -151,11 +176,13 @@ def test_sync_with_url_skips_malformed_remote_entries(tmp_path, monkeypatch):
 
     class EvilHandler(BaseHTTPRequestHandler):
         def do_GET(self):
-            body = json.dumps({
-                "vouches": ["garbage", 42, None],
-                "revocations": [{"vid": "x"}, "junk", {"unexpected": 1}],
-                "disputes": [{"nope": True}, "junk"],
-            }).encode()
+            body = json.dumps(
+                {
+                    "vouches": ["garbage", 42, None],
+                    "revocations": [{"vid": "x"}, "junk", {"unexpected": 1}],
+                    "disputes": [{"nope": True}, "junk"],
+                }
+            ).encode()
             self.send_response(200)
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
@@ -177,8 +204,9 @@ def test_sync_with_url_skips_malformed_remote_entries(tmp_path, monkeypatch):
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
         store = VouchStore(os.path.join(str(tmp_path), "vouches.json"))
-        counts = sync_with_url(f"http://127.0.0.1:{server.server_address[1]}",
-                               store, RevocationList())
+        counts = sync_with_url(
+            f"http://127.0.0.1:{server.server_address[1]}", store, RevocationList()
+        )
         assert counts["vouches_in"] == 0
         assert counts["revocations_in"] == 0
         assert counts["disputes_in"] == 0
@@ -197,11 +225,15 @@ def test_sync_cli_unreachable_url_is_a_clean_skip(tmp_path, monkeypatch):
 
 # --- registry file permissions + atomic writes --------------------------------
 
+
 def test_registry_file_is_owner_only(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     from atar.agent_bootstrap import AgentRegistry
+
     AgentRegistry().register("a")
-    mode = stat.S_IMODE(os.stat(os.path.join(str(tmp_path), "agents", "registry.json")).st_mode)
+    mode = stat.S_IMODE(
+        os.stat(os.path.join(str(tmp_path), "agents", "registry.json")).st_mode
+    )
     assert mode == 0o600, oct(mode)
 
 
@@ -225,6 +257,7 @@ def test_store_survives_simulated_crash_mid_write(tmp_path):
 
 # --- score validation (SPEC §3) ------------------------------------------------
 
+
 def test_create_vouch_rejects_out_of_range_scores():
     a = generate_identity()
     b = generate_identity()
@@ -240,7 +273,8 @@ def test_bootstrap_skips_invalid_score_cleanly(tmp_path, monkeypatch):
         '[[agents]]\nname = "seed"\nseed = true\n'
         '[[agents]]\nname = "b"\n'
         '[[vouches]]\nissuer = "seed"\nsubject = "b"\nscore = 1.7\nscope = "s"\n'
-        '[[vouches]]\nissuer = "seed"\nsubject = "b"\nscore = 0.5\nscope = "s"\n')
+        '[[vouches]]\nissuer = "seed"\nsubject = "b"\nscore = 0.5\nscope = "s"\n'
+    )
     r = CliRunner().invoke(cli, ["bootstrap", "--config", str(cfg)])
     assert r.exit_code == 0
     assert "skipping invalid vouch entry" in r.output

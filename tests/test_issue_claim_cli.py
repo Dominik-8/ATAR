@@ -20,13 +20,24 @@ def test_issue_and_verify_claim(tmp_path, monkeypatch):
     runner.invoke(cli, ["keygen", "--name", "seed_agent"])
 
     # reporting_agent issues a signed claim about seed_agent's capability
-    r = runner.invoke(cli, [
-        "issue", "--from", "reporting_agent", "--for",
-        _id(str(tmp_path), "seed_agent"),
-        "--scope", "intelligence", "--score", "0.85",
-        "--claim", "operates the morning brief",
-        "--out", str(tmp_path / "claim.json"),
-    ])
+    r = runner.invoke(
+        cli,
+        [
+            "issue",
+            "--from",
+            "reporting_agent",
+            "--for",
+            _id(str(tmp_path), "seed_agent"),
+            "--scope",
+            "intelligence",
+            "--score",
+            "0.85",
+            "--claim",
+            "operates the morning brief",
+            "--out",
+            str(tmp_path / "claim.json"),
+        ],
+    )
     assert r.exit_code == 0, r.output
     assert os.path.exists(str(tmp_path / "claim.json"))
 
@@ -37,6 +48,7 @@ def test_issue_and_verify_claim(tmp_path, monkeypatch):
 
     # tamper with the claim -> verify must fail
     import json
+
     claim = json.load(open(str(tmp_path / "claim.json")))
     claim["payload"]["claim"] = "TAMPERED"
     json.dump(claim, open(str(tmp_path / "claim.json"), "w"))

@@ -21,12 +21,24 @@ def test_issue_claim_into_store_and_audit(tmp_path, monkeypatch):
     seed_agent_did = _did(str(tmp_path), "seed_agent")
 
     # issue a capability claim
-    r = runner.invoke(cli, [
-        "issue", "--from", "reporting_agent", "--for", seed_agent_did,
-        "--scope", "intelligence", "--score", "0.9",
-        "--claim", "produces the morning brief",
-        "--out", str(tmp_path / "c.json"),
-    ])
+    r = runner.invoke(
+        cli,
+        [
+            "issue",
+            "--from",
+            "reporting_agent",
+            "--for",
+            seed_agent_did,
+            "--scope",
+            "intelligence",
+            "--score",
+            "0.9",
+            "--claim",
+            "produces the morning brief",
+            "--out",
+            str(tmp_path / "c.json"),
+        ],
+    )
     assert r.exit_code == 0, r.output
 
     # verify the claim independently

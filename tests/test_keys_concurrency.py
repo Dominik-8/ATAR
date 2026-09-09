@@ -19,6 +19,7 @@ from atar.cli import cli
 
 def _keygen_worker(home: str, name: str) -> None:
     import os
+
     os.environ["ATAR_HOME"] = home
     r = CliRunner().invoke(cli, ["keygen", "--name", name])
     assert r.exit_code == 0, r.output
@@ -27,8 +28,9 @@ def _keygen_worker(home: str, name: str) -> None:
 def test_concurrent_keygens_lose_no_identities(tmp_path):
     home = str(tmp_path)
     names = [f"agent{k}" for k in range(6)]
-    procs = [multiprocessing.Process(target=_keygen_worker, args=(home, n))
-             for n in names]
+    procs = [
+        multiprocessing.Process(target=_keygen_worker, args=(home, n)) for n in names
+    ]
     for p in procs:
         p.start()
     for p in procs:
@@ -44,8 +46,10 @@ def test_concurrent_keygens_lose_no_identities(tmp_path):
 
 def _register_worker(home: str, name: str) -> None:
     import os
+
     os.environ["ATAR_HOME"] = home
     from atar.agent_bootstrap import AgentRegistry
+
     AgentRegistry().register(name)
 
 
@@ -53,10 +57,12 @@ def test_concurrent_registry_writes_lose_no_agents(tmp_path):
     """agents/registry.json holds private keys too — concurrent
     registrations must not drop each other."""
     import json as _json
+
     home = str(tmp_path)
     names = [f"reg{k}" for k in range(6)]
-    procs = [multiprocessing.Process(target=_register_worker, args=(home, n))
-             for n in names]
+    procs = [
+        multiprocessing.Process(target=_register_worker, args=(home, n)) for n in names
+    ]
     for p in procs:
         p.start()
     for p in procs:

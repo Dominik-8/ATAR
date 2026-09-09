@@ -29,21 +29,30 @@ def test_rotate_then_reissue_commit_revokes_old_vouch(tmp_path, monkeypatch):
     runner.invoke(cli, ["keygen", "--name", "bob"])
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     keys = json.load(open(os.path.join(tmp_path, "keys.json")))
-    alice = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys["alice"]["private"]))
+    alice = Ed25519PrivateKey.from_private_bytes(
+        bytes.fromhex(keys["alice"]["private"])
+    )
     bob = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys["bob"]["private"]))
 
     from atar.identity import Identity
     from atar.vouch import create_vouch
+
     blob = create_vouch(
         Identity(private_key=alice, public_key=alice.public_key()),
-        bob.public_key(), score=0.9, scope="core")
+        bob.public_key(),
+        score=0.9,
+        scope="core",
+    )
     vpath = tmp_path / "v.json"
     vpath.write_text(json.dumps(blob, indent=2))
     runner.invoke(cli, ["add", str(vpath)])
 
     # rotate alice's key
-    r = runner.invoke(cli, ["rotate", "--name", "alice", "--out", str(tmp_path / "rot.json")])
+    r = runner.invoke(
+        cli, ["rotate", "--name", "alice", "--out", str(tmp_path / "rot.json")]
+    )
     assert r.exit_code == 0, r.output
 
     # reissue + commit (revokes pre-rotation vouches)
@@ -67,21 +76,30 @@ def test_rotate_without_reissue_leaves_old_vouch_valid(tmp_path, monkeypatch):
     runner.invoke(cli, ["keygen", "--name", "bob"])
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     keys = json.load(open(os.path.join(tmp_path, "keys.json")))
-    alice = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys["alice"]["private"]))
+    alice = Ed25519PrivateKey.from_private_bytes(
+        bytes.fromhex(keys["alice"]["private"])
+    )
     bob = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys["bob"]["private"]))
 
     from atar.identity import Identity
     from atar.vouch import create_vouch
+
     blob = create_vouch(
         Identity(private_key=alice, public_key=alice.public_key()),
-        bob.public_key(), score=0.9, scope="core")
+        bob.public_key(),
+        score=0.9,
+        scope="core",
+    )
     vpath = tmp_path / "v.json"
     vpath.write_text(json.dumps(blob, indent=2))
     runner.invoke(cli, ["add", str(vpath)])
 
     # rotate only, no reissue
-    r = runner.invoke(cli, ["rotate", "--name", "alice", "--out", str(tmp_path / "rot.json")])
+    r = runner.invoke(
+        cli, ["rotate", "--name", "alice", "--out", str(tmp_path / "rot.json")]
+    )
     assert r.exit_code == 0, r.output
 
     # old vouch is still VALID (rotation alone doesn't revoke it)

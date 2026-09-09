@@ -17,15 +17,35 @@ def _seed_audit_home(home, monkeypatch):
     keys = json.load(open(os.path.join(home, "keys.json")))
     bob = keys["bob"]["did"]
     # a valid, fresh vouch
-    runner.invoke(cli, ["vouch", "--from", "seed_agent", "--for", bob,
-                        "--score", "0.9", "--scope", "intelligence",
-                        "--out", os.path.join(home, "v1.json")])
+    runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "seed_agent",
+            "--for",
+            bob,
+            "--score",
+            "0.9",
+            "--scope",
+            "intelligence",
+            "--out",
+            os.path.join(home, "v1.json"),
+        ],
+    )
     runner.invoke(cli, ["add", os.path.join(home, "v1.json")])
     # an EXPIRED vouch (ts far in past) — build directly + add to store
-    iss = generate_identity(); sub = generate_identity()
-    old = create_vouch(iss, sub.public_key, score=0.8, scope="intelligence",
-                       ts=int(time.time()) - 999999)
+    iss = generate_identity()
+    sub = generate_identity()
+    old = create_vouch(
+        iss,
+        sub.public_key,
+        score=0.8,
+        scope="intelligence",
+        ts=int(time.time()) - 999999,
+    )
     from atar.store import VouchStore
+
     VouchStore(os.path.join(home, "vouches.json")).add(old)
     return keys
 
@@ -61,9 +81,22 @@ def test_audit_clean_network_exits_zero(tmp_path, monkeypatch):
     runner.invoke(cli, ["keygen", "--name", "bob"])
     keys = json.load(open(os.path.join(home, "keys.json")))
     bob = keys["bob"]["did"]
-    runner.invoke(cli, ["vouch", "--from", "seed_agent", "--for", bob,
-                        "--score", "0.9", "--scope", "intelligence",
-                        "--out", os.path.join(home, "v.json")])
+    runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "seed_agent",
+            "--for",
+            bob,
+            "--score",
+            "0.9",
+            "--scope",
+            "intelligence",
+            "--out",
+            os.path.join(home, "v.json"),
+        ],
+    )
     runner.invoke(cli, ["add", os.path.join(home, "v.json")])
     r = runner.invoke(cli, ["audit"])
     assert r.exit_code == 0

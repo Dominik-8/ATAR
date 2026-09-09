@@ -12,16 +12,29 @@ import pytest
 from click.testing import CliRunner
 
 from atar.atc import (
-    ATAR_TRUST_EXT_URI, _trust_params, card_identity, make_agent_card,
-    new_pop_challenge, sign_agent_card, sign_pop_proof, verify_agent_card,
+    ATAR_TRUST_EXT_URI,
+    _trust_params,
+    card_identity,
+    make_agent_card,
+    new_pop_challenge,
+    sign_agent_card,
+    sign_pop_proof,
+    verify_agent_card,
     verify_card_signature,
 )
 from atar.identity import did_from_public, generate_identity
 from atar.vouch import create_vouch
 
-A2A_REQUIRED_FIELDS = ["name", "description", "url", "version",
-                       "capabilities", "defaultInputModes",
-                       "defaultOutputModes", "skills"]
+A2A_REQUIRED_FIELDS = [
+    "name",
+    "description",
+    "url",
+    "version",
+    "capabilities",
+    "defaultInputModes",
+    "defaultOutputModes",
+    "skills",
+]
 
 
 def _card(signer=None):
@@ -73,12 +86,17 @@ def test_signature_kid_must_match_presented_identity():
     signed = sign_agent_card(card, bob)
     other = generate_identity()
     other_did = did_from_public(other.public_key)
-    header = json.loads(__import__("base64").urlsafe_b64decode(
-        signed["signatures"][0]["protected"] + "=="))
+    header = json.loads(
+        __import__("base64").urlsafe_b64decode(
+            signed["signatures"][0]["protected"] + "=="
+        )
+    )
     header["kid"] = other_did + "#" + other_did.split(":")[2]
     import base64
-    signed["signatures"][0]["protected"] = base64.urlsafe_b64encode(
-        json.dumps(header).encode()).rstrip(b"=").decode()
+
+    signed["signatures"][0]["protected"] = (
+        base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=").decode()
+    )
     assert not verify_card_signature(signed)
 
 
@@ -92,8 +110,13 @@ def test_legacy_card_still_verifiable():
     bob = generate_identity()
     v = create_vouch(alice, bob.public_key, score=0.9, scope="coding")
     from atar.atc import vouch_to_token
-    legacy = {"schema": "atar-agent-card/1.0", "did": did_from_public(bob.public_key),
-              "name": "bob", "atar": {"vouches": [vouch_to_token(v)]}}
+
+    legacy = {
+        "schema": "atar-agent-card/1.0",
+        "did": did_from_public(bob.public_key),
+        "name": "bob",
+        "atar": {"vouches": [vouch_to_token(v)]},
+    }
     report = verify_agent_card(legacy)
     assert report["did"] == legacy["did"]
     assert len(report["valid_vouches"]) == 1
@@ -102,12 +125,15 @@ def test_legacy_card_still_verifiable():
 
 def test_pop_proof_lives_in_extension(tmp_path, monkeypatch):
     from atar.cli import cli
+
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "bob"])
     nonce = new_pop_challenge()
     card_path = str(tmp_path / "card.json")
-    r = runner.invoke(cli, ["card", "--name", "bob", "--challenge", nonce, "--out", card_path])
+    r = runner.invoke(
+        cli, ["card", "--name", "bob", "--challenge", nonce, "--out", card_path]
+    )
     assert r.exit_code == 0, r.output
     card = json.load(open(card_path))
     assert _trust_params(card)["proof"]["nonce"] == nonce

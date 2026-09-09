@@ -44,8 +44,13 @@ DEFAULT_TASK_SCORE = 0.8
 class AtarCrewTrust:
     """Bridges a CrewAI crew and the ATAR trust graph."""
 
-    def __init__(self, *, operator: str = "crew_operator",
-                 scope: str = "general", score: float = DEFAULT_TASK_SCORE) -> None:
+    def __init__(
+        self,
+        *,
+        operator: str = "crew_operator",
+        scope: str = "general",
+        score: float = DEFAULT_TASK_SCORE,
+    ) -> None:
         if not 0.0 < score <= 1.0:
             raise ValueError("score must be in (0.0, 1.0]")
         self.operator = operator
@@ -79,8 +84,9 @@ class AtarCrewTrust:
 
     # --- vouching -----------------------------------------------------------
 
-    def record_success(self, role: str, *, scope: str | None = None,
-                       score: float | None = None) -> bool:
+    def record_success(
+        self, role: str, *, scope: str | None = None, score: float | None = None
+    ) -> bool:
         """Vouch for ``role`` after a successfully completed task.
 
         The operator identity signs the vouch; it lands in the persistent
@@ -89,9 +95,12 @@ class AtarCrewTrust:
         canonical_vouch_id). Returns True when a new vouch was stored.
         """
         self.register(role)
-        return self._reg.vouch(self.operator, role,
-                               score=score if score is not None else self.score,
-                               scope=scope or self.scope)
+        return self._reg.vouch(
+            self.operator,
+            role,
+            score=score if score is not None else self.score,
+            scope=scope or self.scope,
+        )
 
     def task_callback_for(self, role: str, *, scope: str | None = None):
         """Return a CrewAI task callback: ``Task(..., callback=...)``.
@@ -100,14 +109,17 @@ class AtarCrewTrust:
         completes successfully, so the callback itself is the success signal.
         The output object is accepted (and ignored) for API compatibility.
         """
+
         def _callback(output=None) -> None:
             self.record_success(role, scope=scope)
+
         return _callback
 
     # --- presentation -------------------------------------------------------
 
-    def card(self, role: str, *, url: str | None = None,
-             description: str | None = None) -> dict:
+    def card(
+        self, role: str, *, url: str | None = None, description: str | None = None
+    ) -> dict:
         """Build + sign an A2A-compatible agent card for ``role`` (SPEC §11.2).
 
         The card carries the agent's DID and every vouch the local store holds
@@ -117,9 +129,11 @@ class AtarCrewTrust:
         """
         did = self.register(role)
         subject_vouches = [
-            v for v in self._reg._store.all()
+            v
+            for v in self._reg._store.all()
             if v.get("payload", {}).get("subject") == did
         ]
-        card = make_agent_card(did, role, subject_vouches,
-                               url=url, description=description)
+        card = make_agent_card(
+            did, role, subject_vouches, url=url, description=description
+        )
         return sign_agent_card(card, self._reg.identity_of(role))

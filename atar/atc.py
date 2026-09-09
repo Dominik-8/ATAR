@@ -28,6 +28,7 @@ from .vouch import verify_vouch
 def _public_key_from_did(did: str) -> Ed25519PublicKey:
     """Reconstruct the Ed25519 public key embedded in a DID (did:key or legacy)."""
     from .identity import public_key_from_did
+
     return public_key_from_did(did)
 
 
@@ -93,9 +94,15 @@ def card_identity(card: dict) -> str | None:
     return did if isinstance(did, str) else None
 
 
-def make_agent_card(did: str, name: str, vouches: list[dict], *,
-                    url: str | None = None, description: str | None = None,
-                    extra: dict | None = None) -> dict:
+def make_agent_card(
+    did: str,
+    name: str,
+    vouches: list[dict],
+    *,
+    url: str | None = None,
+    description: str | None = None,
+    extra: dict | None = None,
+) -> dict:
     """Build an A2A-compatible agent card carrying ATAR trust data.
 
     ``vouches`` is a list of vouch *blobs* (dicts); they are encoded to tokens
@@ -105,23 +112,27 @@ def make_agent_card(did: str, name: str, vouches: list[dict], *,
     """
     card = {
         "name": name,
-        "description": description or (
+        "description": description
+        or (
             f"ATAR agent '{name}' - identity and vouches carried in the ATAR "
-            f"trust extension ({ATAR_TRUST_EXT_URI})"),
+            f"trust extension ({ATAR_TRUST_EXT_URI})"
+        ),
         "url": url or f"urn:atar:agent:{did}",
         "version": "1.0.0",
         "capabilities": {
-            "extensions": [{
-                "uri": ATAR_TRUST_EXT_URI,
-                "description": "ATAR trust data: presented identity, vouch "
-                               "tokens (SPEC §11.1) and an optional "
-                               "proof-of-possession (§11.3)",
-                "required": False,
-                "params": {
-                    "identity": did,
-                    "vouches": [vouch_to_token(v) for v in vouches],
-                },
-            }],
+            "extensions": [
+                {
+                    "uri": ATAR_TRUST_EXT_URI,
+                    "description": "ATAR trust data: presented identity, vouch "
+                    "tokens (SPEC §11.1) and an optional "
+                    "proof-of-possession (§11.3)",
+                    "required": False,
+                    "params": {
+                        "identity": did,
+                        "vouches": [vouch_to_token(v) for v in vouches],
+                    },
+                }
+            ],
         },
         "defaultInputModes": ["application/json"],
         "defaultOutputModes": ["application/json"],
@@ -142,21 +153,35 @@ def sign_agent_card(card: dict, identity) -> dict:
     identity DID (alias-aware, §2.1).
     """
     from .identity import did_from_public, normalize_did
-    pub = identity.public_key() if callable(getattr(identity, "public_key", None)) else identity.public_key
+
+    pub = (
+        identity.public_key()
+        if callable(getattr(identity, "public_key", None))
+        else identity.public_key
+    )
     did = did_from_public(pub)
     presented = card_identity(card)
     if presented is None:
         raise ValueError("card carries no ATAR identity to sign for")
     if normalize_did(presented) != did:
         raise ValueError("signing key does not match the card's presented identity")
-    protected = _b64url_encode(json.dumps(
-        {"alg": "EdDSA", "kid": did + "#" + did.split(":")[2], "typ": "JWS"},
-        sort_keys=True, separators=(",", ":")).encode("utf-8"))
-    payload = json.dumps({k: v for k, v in card.items() if k != "signatures"},
-                         sort_keys=True, separators=(",", ":")).encode("utf-8")
+    protected = _b64url_encode(
+        json.dumps(
+            {"alg": "EdDSA", "kid": did + "#" + did.split(":")[2], "typ": "JWS"},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    )
+    payload = json.dumps(
+        {k: v for k, v in card.items() if k != "signatures"},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
     signing_input = (protected + "." + _b64url_encode(payload)).encode("ascii")
-    entry = {"protected": protected,
-             "signature": _b64url_encode(identity.sign(signing_input))}
+    entry = {
+        "protected": protected,
+        "signature": _b64url_encode(identity.sign(signing_input)),
+    }
     out = dict(card)
     out["signatures"] = list(card.get("signatures", [])) + [entry]
     return out
@@ -167,14 +192,18 @@ def verify_card_signature(card: dict) -> bool:
     against the card's presented identity (kid must match it, alias-aware)."""
     try:
         from .identity import normalize_did
+
         presented = card_identity(card)
         if presented is None:
             return False
         entries = card.get("signatures") or []
         if not entries:
             return False
-        payload = json.dumps({k: v for k, v in card.items() if k != "signatures"},
-                             sort_keys=True, separators=(",", ":")).encode("utf-8")
+        payload = json.dumps(
+            {k: v for k, v in card.items() if k != "signatures"},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
         for entry in entries:
             header = json.loads(_b64url_decode(entry["protected"]))
             if header.get("alg") != "EdDSA":
@@ -184,7 +213,9 @@ def verify_card_signature(card: dict) -> bool:
             if normalize_did(kid_did) != normalize_did(presented):
                 continue
             pub = _public_key_from_did(kid_did)
-            signing_input = (entry["protected"] + "." + _b64url_encode(payload)).encode("ascii")
+            signing_input = (entry["protected"] + "." + _b64url_encode(payload)).encode(
+                "ascii"
+            )
             pub.verify(_b64url_decode(entry["signature"]), signing_input)
             return True
         return False
@@ -218,8 +249,9 @@ def verify_agent_card(card: dict) -> dict:
         "name": card.get("name"),
         "valid_vouches": valid,
         "invalid_vouches": invalid,
-        "signature_valid": (None if legacy and "signatures" not in card
-                            else verify_card_signature(card)),
+        "signature_valid": (
+            None if legacy and "signatures" not in card else verify_card_signature(card)
+        ),
     }
 
 

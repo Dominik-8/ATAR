@@ -10,8 +10,9 @@ import os
 import tomllib
 
 
-_CONFIG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                       "agents.toml")
+_CONFIG = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agents.toml"
+)
 
 
 def _load():
@@ -25,7 +26,9 @@ def test_agents_toml_has_no_demo_agents():
         name = agent.get("name", "")
         note = str(agent.get("note", ""))
         assert "(demo)" not in note, f"agents.toml must not contain demo agents: {name}"
-        assert "demo" not in name.lower(), f"agents.toml must not contain demo agents: {name}"
+        assert "demo" not in name.lower(), (
+            f"agents.toml must not contain demo agents: {name}"
+        )
 
 
 def test_agents_toml_contains_real_agents():

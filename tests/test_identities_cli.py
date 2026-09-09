@@ -23,6 +23,7 @@ def test_identities_lists_names_and_dids_without_keys(tmp_path, monkeypatch):
     assert r.output.count("did:key:") == 2
     # private keys must never appear
     import json
+
     keys = json.loads((tmp_path / "keys.json").read_text())
     for rec in keys.values():
         assert rec["private"] not in r.output

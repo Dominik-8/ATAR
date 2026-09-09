@@ -19,8 +19,13 @@ from atar.vouch import create_vouch
 SCOPES = ["coding", "research", "ops"]
 
 
-def _random_graph(rng: random.Random, n_nodes: int = 8, n_edges: int = 20,
-                  scope: str = "coding", self_vouches: bool = True):
+def _random_graph(
+    rng: random.Random,
+    n_nodes: int = 8,
+    n_edges: int = 20,
+    scope: str = "coding",
+    self_vouches: bool = True,
+):
     """A random signed graph: cycles, duplicate paths, self-vouches, and
     edges in other scopes (which must never leak into ``scope``)."""
     idents = [generate_identity() for _ in range(n_nodes)]
@@ -32,9 +37,13 @@ def _random_graph(rng: random.Random, n_nodes: int = 8, n_edges: int = 20,
         if not self_vouches and j >= i:
             j += 1
         sc = rng.choice([scope, scope, rng.choice(SCOPES)])
-        v = create_vouch(idents[i], idents[j].public_key,
-                         score=round(rng.uniform(0.05, 1.0), 3), scope=sc,
-                         ts=1_700_000_000 + rng.randrange(10_000))
+        v = create_vouch(
+            idents[i],
+            idents[j].public_key,
+            score=round(rng.uniform(0.05, 1.0), 3),
+            scope=sc,
+            ts=1_700_000_000 + rng.randrange(10_000),
+        )
         g.add(v)
         vouches.append(v)
     return g, idents, vouches
@@ -42,6 +51,7 @@ def _random_graph(rng: random.Random, n_nodes: int = 8, n_edges: int = 20,
 
 def _did(ident) -> str:
     from atar.identity import did_from_public
+
     return did_from_public(ident.public_key)
 
 
@@ -65,8 +75,16 @@ def test_self_vouches_never_change_any_score():
         # pile on self-vouches (SPEC §13: claims, not endorsements)
         for k in range(rng.randrange(1, 5)):
             who = idents[rng.randrange(len(idents))]
-            g.add(create_vouch(who, who.public_key, score=1.0, scope="coding",
-                               claim="I am great", ts=1_700_100_000 + k))
+            g.add(
+                create_vouch(
+                    who,
+                    who.public_key,
+                    score=1.0,
+                    scope="coding",
+                    claim="I am great",
+                    ts=1_700_100_000 + k,
+                )
+            )
         after = g.compute_trust(seed_did=_did(idents[0]), scope="coding")
         assert before == after
 
@@ -83,9 +101,15 @@ def test_adding_vouches_never_decreases_trust_without_disputes():
         before = g.compute_trust(seed_did=_did(idents[0]), scope="coding")
         for _ in range(rng.randrange(1, 6)):
             i, j = rng.sample(range(len(idents)), 2)
-            g.add(create_vouch(idents[i], idents[j].public_key,
-                               score=round(rng.uniform(0.05, 1.0), 3),
-                               scope="coding", ts=1_700_200_000 + rng.randrange(10_000)))
+            g.add(
+                create_vouch(
+                    idents[i],
+                    idents[j].public_key,
+                    score=round(rng.uniform(0.05, 1.0), 3),
+                    scope="coding",
+                    ts=1_700_200_000 + rng.randrange(10_000),
+                )
+            )
         after = g.compute_trust(seed_did=_did(idents[0]), scope="coding")
         for node, score in before.items():
             assert after.get(node, 0.0) >= score - 1e-9, node
@@ -99,8 +123,9 @@ def test_revoking_a_vouch_never_increases_trust():
         before = g.compute_trust(seed_did=seed, scope="coding")
         # an issuer revokes one of its own vouches
         rl = RevocationList()
-        own = [v for v in vouches
-               if any(_did(i) == v["payload"]["issuer"] for i in idents)]
+        own = [
+            v for v in vouches if any(_did(i) == v["payload"]["issuer"] for i in idents)
+        ]
         if own:
             v = rng.choice(own)
             issuer = next(i for i in idents if _did(i) == v["payload"]["issuer"])
@@ -126,8 +151,7 @@ def test_untrusted_disputer_is_inert():
         outsider = generate_identity()  # no vouches point at them -> trust 0
         targets = [v for v in vouches if v["payload"]["scope"] == scope]
         for v in rng.sample(targets, k=min(len(targets), rng.randrange(1, 4))):
-            dl.add(create_dispute(outsider, v, reason="sybil smear",
-                                  ts=1_700_300_000))
+            dl.add(create_dispute(outsider, v, reason="sybil smear", ts=1_700_300_000))
         after = g.compute_trust(seed_did=seed, scope=scope, disputes=dl)
         assert before == after
 
@@ -144,8 +168,7 @@ def test_other_scopes_never_leak_into_scope():
         for v in g.all_vouches():
             if v["payload"]["scope"] == "coding":
                 coding_only.add(v)
-        assert trust_coding == coding_only.compute_trust(seed_did=seed,
-                                                         scope="coding")
+        assert trust_coding == coding_only.compute_trust(seed_did=seed, scope="coding")
 
 
 def test_trust_propagation_order_independent():
@@ -160,14 +183,14 @@ def test_trust_propagation_order_independent():
     def graph(order):
         g = TrustGraph()
         edges = {
-            "seed->b weak": create_vouch(seed, b.public_key, score=0.1,
-                                         scope="coding", ts=3),
-            "b->a": create_vouch(b, a.public_key, score=0.5,
-                                 scope="coding", ts=4),
-            "seed->a strong": create_vouch(seed, a.public_key, score=1.0,
-                                           scope="coding", ts=1),
-            "a->b": create_vouch(a, b.public_key, score=1.0,
-                                 scope="coding", ts=2),
+            "seed->b weak": create_vouch(
+                seed, b.public_key, score=0.1, scope="coding", ts=3
+            ),
+            "b->a": create_vouch(b, a.public_key, score=0.5, scope="coding", ts=4),
+            "seed->a strong": create_vouch(
+                seed, a.public_key, score=1.0, scope="coding", ts=1
+            ),
+            "a->b": create_vouch(a, b.public_key, score=1.0, scope="coding", ts=2),
         }
         for name in order:
             g.add(edges[name])
@@ -190,8 +213,11 @@ def test_disconnected_components_never_gain_trust():
         for s in sybils:
             for t in sybils:
                 if s is not t:
-                    g.add(create_vouch(s, t.public_key, score=1.0,
-                                       scope="coding", ts=1_700_000_000))
+                    g.add(
+                        create_vouch(
+                            s, t.public_key, score=1.0, scope="coding", ts=1_700_000_000
+                        )
+                    )
         trust = g.compute_trust(seed_did=_did(idents[0]), scope="coding")
         for s in sybils:
             assert _did(s) not in trust
@@ -206,16 +232,17 @@ def test_reissued_vouch_does_not_double_count():
 
     def graph(with_reissue: bool) -> float:
         g = TrustGraph()
-        v1 = create_vouch(seed, bob.public_key, score=0.8, scope="coding",
-                          ts=1_700_000_000)
+        v1 = create_vouch(
+            seed, bob.public_key, score=0.8, scope="coding", ts=1_700_000_000
+        )
         g.add(v1)
         if with_reissue:
-            v2 = create_vouch(seed, bob.public_key, score=0.8, scope="coding",
-                              ts=1_700_100_000)  # same claim, fresh ts
+            v2 = create_vouch(
+                seed, bob.public_key, score=0.8, scope="coding", ts=1_700_100_000
+            )  # same claim, fresh ts
             g.add(v2)
             assert len(g.all_vouches()) == 1, "re-issue must dedup by claim"
-        return g.compute_trust(seed_did=seed_did, scope="coding")[
-            _did(bob)]
+        return g.compute_trust(seed_did=seed_did, scope="coding")[_did(bob)]
 
     assert graph(with_reissue=False) == graph(with_reissue=True)
 
@@ -229,8 +256,11 @@ def test_cycle_propagation_is_bounded_and_exact():
     seed, a, b = generate_identity(), generate_identity(), generate_identity()
     g = TrustGraph()
     for issuer, subj in ((seed, a), (a, b), (b, seed)):
-        g.add(create_vouch(issuer, subj.public_key, score=1.0, scope="coding",
-                           ts=1_700_000_000))
+        g.add(
+            create_vouch(
+                issuer, subj.public_key, score=1.0, scope="coding", ts=1_700_000_000
+            )
+        )
     trust = g.compute_trust(seed_did=_did(seed), scope="coding")
     assert trust[_did(seed)] == 3.0
     assert trust[_did(a)] == 3.0
@@ -248,11 +278,18 @@ def test_propagation_respects_depth_cap():
     idents = [generate_identity() for _ in range(10)]
     g = TrustGraph()
     for k in range(9):
-        g.add(create_vouch(idents[k], idents[k + 1].public_key, score=1.0,
-                           scope="coding", ts=1_700_000_000))
+        g.add(
+            create_vouch(
+                idents[k],
+                idents[k + 1].public_key,
+                score=1.0,
+                scope="coding",
+                ts=1_700_000_000,
+            )
+        )
     trust = g.compute_trust(seed_did=_did(idents[0]), scope="coding")
     assert trust[_did(idents[8])] == 1.0  # depth 8: last counted hop
-    assert _did(idents[9]) not in trust   # depth 9: beyond the cap
+    assert _did(idents[9]) not in trust  # depth 9: beyond the cap
 
 
 def test_all_insertion_orders_are_bit_identical():
@@ -269,5 +306,7 @@ def test_all_insertion_orders_are_bit_identical():
             shuffled = TrustGraph()
             for v in perm:
                 shuffled.add(v)
-            assert shuffled.compute_trust(seed_did=_did(idents[0]),
-                                          scope="coding") == expected
+            assert (
+                shuffled.compute_trust(seed_did=_did(idents[0]), scope="coding")
+                == expected
+            )

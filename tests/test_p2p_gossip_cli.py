@@ -25,6 +25,7 @@ def _cli(home, *args):
     """Run an atar command in-process (synchronous, no race)."""
     from click.testing import CliRunner
     from atar.cli import cli
+
     env = {**os.environ, "ATAR_HOME": home}
     old = os.environ.get("ATAR_HOME")
     os.environ["ATAR_HOME"] = home
@@ -41,8 +42,9 @@ def _cli(home, *args):
 def _sync_subprocess(home, peer):
     """Run `atar sync` as a REAL subprocess (the CLI command under test)."""
     env = {**os.environ, "ATAR_HOME": home}
-    r = subprocess.run(_atar() + ["sync", "--with", peer],
-                        capture_output=True, text=True, env=env)
+    r = subprocess.run(
+        _atar() + ["sync", "--with", peer], capture_output=True, text=True, env=env
+    )
     return r.returncode, r.stdout + r.stderr
 
 
@@ -70,12 +72,36 @@ def test_p2p_gossip_between_two_peers(tmp_path):
     b_did = _did(b, "beta")
 
     # A creates + stores a vouch for B
-    _cli(a, "vouch", "--from", "alpha", "--for", b_did,
-         "--score", "0.8", "--scope", "core", "--out", os.path.join(a, "v_a.json"))
+    _cli(
+        a,
+        "vouch",
+        "--from",
+        "alpha",
+        "--for",
+        b_did,
+        "--score",
+        "0.8",
+        "--scope",
+        "core",
+        "--out",
+        os.path.join(a, "v_a.json"),
+    )
     _cli(a, "add", os.path.join(a, "v_a.json"))
     # B creates + stores a self-vouch
-    _cli(b, "vouch", "--from", "beta", "--for", b_did,
-         "--score", "0.5", "--scope", "core", "--out", os.path.join(b, "v_b.json"))
+    _cli(
+        b,
+        "vouch",
+        "--from",
+        "beta",
+        "--for",
+        b_did,
+        "--score",
+        "0.5",
+        "--scope",
+        "core",
+        "--out",
+        os.path.join(b, "v_b.json"),
+    )
     _cli(b, "add", os.path.join(b, "v_b.json"))
 
     assert _count(a) == 1
@@ -106,8 +132,20 @@ def test_p2p_revocation_gossip(tmp_path):
     b_did = _did(b, "beta")
 
     # A vouches for B, syncs to B
-    _cli(a, "vouch", "--from", "alpha", "--for", b_did,
-         "--score", "0.8", "--scope", "core", "--out", os.path.join(a, "v.json"))
+    _cli(
+        a,
+        "vouch",
+        "--from",
+        "alpha",
+        "--for",
+        b_did,
+        "--score",
+        "0.8",
+        "--scope",
+        "core",
+        "--out",
+        os.path.join(a, "v.json"),
+    )
     _cli(a, "add", os.path.join(a, "v.json"))
     _sync_subprocess(a, b)
 

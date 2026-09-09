@@ -10,10 +10,18 @@ def test_dashboard_escapes_agent_name_xss():
         "agents": {evil_name: "did:agent:AAAA", "bob": "did:agent:BBBB"},
         "seed_did": "did:agent:AAAA",
         "vouches": [
-            {"payload": {"type": "vouch", "issuer": "did:agent:AAAA",
-                         "subject": "did:agent:BBBB", "score": 0.9,
-                         "scope": "intelligence", "claim": None, "ts": 1},
-             "signature": "deadbeef"},
+            {
+                "payload": {
+                    "type": "vouch",
+                    "issuer": "did:agent:AAAA",
+                    "subject": "did:agent:BBBB",
+                    "score": 0.9,
+                    "scope": "intelligence",
+                    "claim": None,
+                    "ts": 1,
+                },
+                "signature": "deadbeef",
+            },
         ],
     }
     out = render_dashboard_html(net, scope="intelligence")
@@ -33,5 +41,5 @@ def test_dashboard_escapes_did_field():
         "vouches": [],
     }
     out = render_dashboard_html(net, scope="intelligence")
-    assert '<img src=x onerror=alert(1)>' not in out
+    assert "<img src=x onerror=alert(1)>" not in out
     assert "&lt;img" in out

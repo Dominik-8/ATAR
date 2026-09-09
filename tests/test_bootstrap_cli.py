@@ -11,7 +11,7 @@ def test_bootstrap_from_config_idempotent(tmp_path, monkeypatch):
     runner = CliRunner()
     cfg = tmp_path / "agents.toml"
     cfg.write_text(
-        '''
+        """
 [[agents]]
 name = "seed_agent"
 seed = true
@@ -33,7 +33,7 @@ issuer = "seed_agent"
 subject = "market"
 score = 0.8
 scope = "intelligence"
-''',
+""",
         encoding="utf-8",
     )
     # first run: builds the network
@@ -43,6 +43,7 @@ scope = "intelligence"
     assert "seed of trust" in r1.output
     # verify store has the vouches
     from atar.store import VouchStore
+
     store = VouchStore(os.path.join(tmp_path, "vouches.json"))
     assert store.count() == 2
     # second run: idempotent (no duplicates, no errors)
@@ -57,14 +58,14 @@ def test_bootstrap_creates_agent_identities(tmp_path, monkeypatch):
     runner = CliRunner()
     cfg = tmp_path / "a.toml"
     cfg.write_text(
-        '''
+        """
 [[agents]]
 name = "seed_agent"
 seed = true
 
 [[agents]]
 name = "scout"
-''',
+""",
         encoding="utf-8",
     )
     r = runner.invoke(cli, ["bootstrap", "--config", str(cfg)])
@@ -72,6 +73,7 @@ name = "scout"
     # identities persisted
     reg_file = os.path.join(tmp_path, "agents", "registry.json")
     import json
+
     reg = json.load(open(reg_file))
     assert "seed_agent" in reg and "scout" in reg
     assert reg.get("_seed") == reg["seed_agent"]["did"]

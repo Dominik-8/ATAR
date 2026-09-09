@@ -17,6 +17,7 @@ def _agent_home(base, name):
 def _make_vouch(home, issuer_name, subject_did, score, scope):
     # create a vouch in `home` by registering issuer + subject identities there
     from atar.agent_bootstrap import AgentRegistry
+
     reg = AgentRegistry()
     reg.register(issuer_name)
     # subject may live in another home; we just need a DID string to vouch for
@@ -34,6 +35,7 @@ def test_sync_exchanges_vouches_between_stores(tmp_path, monkeypatch):
 
     # alice creates a vouch for some DID
     from atar.identity import generate_identity, did_from_public
+
     subj = generate_identity()
     subj_did = did_from_public(subj.public_key)
     _make_vouch(alice, "alice_agent", subj_did, 0.9, "intelligence")
@@ -57,6 +59,7 @@ def test_sync_is_idempotent(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", alice)
     runner = CliRunner()
     from atar.identity import generate_identity, did_from_public
+
     subj = generate_identity()
     subj_did = did_from_public(subj.public_key)
     _make_vouch(alice, "alice_agent", subj_did, 0.9, "intelligence")
@@ -77,7 +80,9 @@ def test_sync_bidirectional(tmp_path, monkeypatch):
     # alice has a vouch
     monkeypatch.setenv("ATAR_HOME", alice)
     s1 = generate_identity()
-    _make_vouch(alice, "alice_agent", did_from_public(s1.public_key), 0.9, "intelligence")
+    _make_vouch(
+        alice, "alice_agent", did_from_public(s1.public_key), 0.9, "intelligence"
+    )
     # bob has a different vouch
     monkeypatch.setenv("ATAR_HOME", bob)
     s2 = generate_identity()

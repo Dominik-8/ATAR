@@ -19,9 +19,9 @@ def test_dashboard_html_uses_seed_agent_design():
     net = build_demo_network()
     html = render_dashboard_html(net, scope="intelligence")
     # seed_agent design tokens must appear
-    assert "#0a0a0b" in html          # near-black bg
-    assert "#39ff14" in html          # gift-green accent
-    assert "Segoe UI" in html         # system font stack
+    assert "#0a0a0b" in html  # near-black bg
+    assert "#39ff14" in html  # gift-green accent
+    assert "Segoe UI" in html  # system font stack
     assert "Know Your Agent" in html  # title
     # every agent DID rendered
     for did in net["agents"].values():

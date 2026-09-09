@@ -13,6 +13,7 @@ def test_web_server_escapes_xss(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", home)
 
     import json as _json
+
     os.makedirs(os.path.join(home, "agents"), exist_ok=True)
 
     # seed + subject identities (real keys)
@@ -32,8 +33,14 @@ def test_web_server_escapes_xss(tmp_path, monkeypatch):
     _json.dump(keys, open(os.path.join(home, "keys.json"), "w"))
     # registry so web._build_net resolves names + seed
     reg = AgentRegistry()
-    reg._agents[evil_name] = {"did": did_from_public(seed.public_key), "private": seed.private_key.private_bytes_raw().hex()}
-    reg._agents["bob"] = {"did": did_from_public(subj.public_key), "private": subj.private_key.private_bytes_raw().hex()}
+    reg._agents[evil_name] = {
+        "did": did_from_public(seed.public_key),
+        "private": seed.private_key.private_bytes_raw().hex(),
+    }
+    reg._agents["bob"] = {
+        "did": did_from_public(subj.public_key),
+        "private": subj.private_key.private_bytes_raw().hex(),
+    }
     reg._agents["_seed"] = did_from_public(seed.public_key)
     reg._save()
 

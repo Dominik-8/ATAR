@@ -17,5 +17,6 @@ def test_sign_and_verify():
     # and a tampered message must raise
     import pytest
     from cryptography.exceptions import InvalidSignature
+
     with pytest.raises(InvalidSignature):
         ident.public_key.verify(sig, b"tampered")

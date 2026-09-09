@@ -4,8 +4,9 @@ from click.testing import CliRunner
 
 from atar.cli import cli
 
-_CFG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                    "agents.toml")
+_CFG = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agents.toml"
+)
 
 
 def test_dashboard_without_seed_uses_registry_seed(tmp_path, monkeypatch):

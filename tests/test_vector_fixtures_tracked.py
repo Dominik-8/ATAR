@@ -21,11 +21,11 @@ def test_no_vector_fixture_is_gitignored():
     proc = subprocess.run(
         ["git", "check-ignore", "--no-index", "--stdin"],
         input="\n".join(str(f) for f in fixtures),
-        capture_output=True, text=True, cwd=VECTORS.parent.parent,
+        capture_output=True,
+        text=True,
+        cwd=VECTORS.parent.parent,
     )
     # exit 1 means "nothing is ignored" - the only acceptable outcome.
     # --no-index: check ignore rules even for already-tracked files, so
     # staging a fixture with git add -f cannot mask the problem.
-    assert proc.returncode == 1, (
-        f"git-ignored test vectors: {proc.stdout.strip()}"
-    )
+    assert proc.returncode == 1, f"git-ignored test vectors: {proc.stdout.strip()}"

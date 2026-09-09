@@ -3,7 +3,9 @@ import json
 import tempfile
 
 from atar.rotation import (
-    rotate_identity, verify_rotation, reissue_vouch,
+    rotate_identity,
+    verify_rotation,
+    reissue_vouch,
 )
 from atar.identity import generate_identity, did_from_public
 from atar.vouch import create_vouch, verify_vouch
@@ -17,9 +19,12 @@ def test_rotation_statement_verifies():
     # a rotation forged by the new key (not old) must fail
     forged = rotate_identity(new, old)  # signs with 'new' claiming old->new
     # forge: swap so it claims old_did->new_did but signed by new
-    bad = type(forged)(old_did=did_from_public(old.public_key),
-                       new_did=did_from_public(new.public_key),
-                       ts=forged.ts, signature=forged.signature)
+    bad = type(forged)(
+        old_did=did_from_public(old.public_key),
+        new_did=did_from_public(new.public_key),
+        ts=forged.ts,
+        signature=forged.signature,
+    )
     assert verify_rotation(bad) is False
 
 
@@ -41,6 +46,7 @@ def test_reissue_vouch_re_signs_under_new_key():
     assert r["payload"]["scope"] == "coding"
     # the re-issued vouch is NOT identical to the old (different issuer + ts)
     from atar.transparency import canonical_vouch_id
+
     assert canonical_vouch_id(r) != canonical_vouch_id(v)
 
 

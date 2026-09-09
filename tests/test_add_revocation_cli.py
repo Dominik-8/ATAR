@@ -15,8 +15,22 @@ def _make_vouch_file(home, monkeypatch):
     r2 = runner.invoke(cli, ["keygen", "--name", "bob"])
     bob_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
     out = os.path.join(home, "v.json")
-    runner.invoke(cli, ["vouch", "--from", "alice", "--for", bob_did,
-                        "--score", "0.9", "--scope", "coding", "--out", out])
+    runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "alice",
+            "--for",
+            bob_did,
+            "--score",
+            "0.9",
+            "--scope",
+            "coding",
+            "--out",
+            out,
+        ],
+    )
     return out
 
 
@@ -38,4 +52,5 @@ def test_add_rejects_revoked_vouch(tmp_path, monkeypatch):
     assert "revoked" in r.output.lower()
     # store must still be empty
     from atar.store import VouchStore
+
     assert VouchStore(os.path.join(str(tmp_path), "vouches.json")).count() == 0

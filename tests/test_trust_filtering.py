@@ -33,14 +33,16 @@ def test_revoked_vouch_propagates_no_trust():
     g, seed, alice, bob, v_sa, v_ab = _chain()
     rl = RevocationList()
     assert revoke_vouch(rl, seed, revoke_payload_id(v_sa))
-    trust = g.compute_trust(seed_did=did_from_public(seed.public_key),
-                            scope="coding", revocations=rl)
+    trust = g.compute_trust(
+        seed_did=did_from_public(seed.public_key), scope="coding", revocations=rl
+    )
     # alice's only inbound vouch is revoked: no trust for her or downstream bob
     assert trust.get(did_from_public(alice.public_key), 0.0) == 0.0
     assert trust.get(did_from_public(bob.public_key), 0.0) == 0.0
     # sanity: without the revocation list the same graph trusts both
-    unfiltered = g.compute_trust(seed_did=did_from_public(seed.public_key),
-                                 scope="coding")
+    unfiltered = g.compute_trust(
+        seed_did=did_from_public(seed.public_key), scope="coding"
+    )
     assert unfiltered[did_from_public(bob.public_key)] > 0.0
 
 
@@ -52,23 +54,30 @@ def test_revocation_by_non_issuer_does_not_apply():
     # mallory "revokes" alice's vouch - entry verifies against her own key
     # but is not issuer-bound, so it must not apply
     assert revoke_vouch(rl, mallory, revoke_payload_id(v_sa))
-    trust = g.compute_trust(seed_did=did_from_public(seed.public_key),
-                            scope="coding", revocations=rl)
+    trust = g.compute_trust(
+        seed_did=did_from_public(seed.public_key), scope="coding", revocations=rl
+    )
     assert trust[did_from_public(alice.public_key)] > 0.0
 
 
 def test_expired_vouch_propagates_no_trust():
     seed, alice = generate_identity(), generate_identity()
-    stale = create_vouch(seed, alice.public_key, score=0.9, scope="coding",
-                         ts=NOW - 200 * 24 * 3600)  # 200 days old
+    stale = create_vouch(
+        seed, alice.public_key, score=0.9, scope="coding", ts=NOW - 200 * 24 * 3600
+    )  # 200 days old
     g = TrustGraph()
     g.add(stale)
-    trust = g.compute_trust(seed_did=did_from_public(seed.public_key),
-                            scope="coding", ttl=180 * 24 * 3600, now=NOW)
+    trust = g.compute_trust(
+        seed_did=did_from_public(seed.public_key),
+        scope="coding",
+        ttl=180 * 24 * 3600,
+        now=NOW,
+    )
     assert trust.get(did_from_public(alice.public_key), 0.0) == 0.0
     # same vouch, no TTL given: library default stays unfiltered
-    unfiltered = g.compute_trust(seed_did=did_from_public(seed.public_key),
-                                 scope="coding")
+    unfiltered = g.compute_trust(
+        seed_did=did_from_public(seed.public_key), scope="coding"
+    )
     assert unfiltered[did_from_public(alice.public_key)] > 0.0
 
 
@@ -82,8 +91,12 @@ def test_dispute_and_revocation_compose():
     assert revoke_vouch(rl, seed, revoke_payload_id(v_sc))  # carol defrocked
     dl = DisputeList()
     dl.add(create_dispute(carol, v_ab, reason="sour grapes", ts=NOW))
-    trust = g.compute_trust(seed_did=did_from_public(seed.public_key),
-                            scope="coding", revocations=rl, disputes=dl)
+    trust = g.compute_trust(
+        seed_did=did_from_public(seed.public_key),
+        scope="coding",
+        revocations=rl,
+        disputes=dl,
+    )
     # carol's pass-1 trust is 0 (her vouch is revoked), so her dispute must
     # NOT discount alice->bob
     assert trust[did_from_public(bob.public_key)] > 0.0
@@ -99,9 +112,25 @@ def test_graph_cli_filters_revoked_and_expired(tmp_path, monkeypatch):
     seed_did, alice_did = keys["seed"]["did"], keys["alice"]["did"]
 
     vouch_path = tmp_path / "v.json"
-    assert runner.invoke(cli, ["vouch", "--from", "seed", "--for", alice_did,
-                               "--score", "0.9", "--scope", "coding",
-                               "--out", str(vouch_path)]).exit_code == 0
+    assert (
+        runner.invoke(
+            cli,
+            [
+                "vouch",
+                "--from",
+                "seed",
+                "--for",
+                alice_did,
+                "--score",
+                "0.9",
+                "--scope",
+                "coding",
+                "--out",
+                str(vouch_path),
+            ],
+        ).exit_code
+        == 0
+    )
     assert runner.invoke(cli, ["add", str(vouch_path)]).exit_code == 0
 
     r = runner.invoke(cli, ["graph", "--seed", seed_did, "--scope", "coding"])

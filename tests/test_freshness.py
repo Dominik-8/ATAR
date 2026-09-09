@@ -18,6 +18,7 @@ def _make_vouch():
 def test_vouch_expires_after_ttl():
     """A vouch past its TTL is treated as not-trusted (freshness enforcement)."""
     from atar.freshness import is_fresh, VOUCH_TTL_DEFAULT
+
     issuer, v = _make_vouch()
     # freshly created vouch (ts near now) is fresh
     assert is_fresh(v, ttl=VOUCH_TTL_DEFAULT) is True
@@ -32,6 +33,7 @@ def test_revoked_vs_expired_distinct():
     """Expiry is independent of revocation: a vouch can be fresh-but-revoked
     or valid-but-expired. Both must be rejected by a trust-aware check."""
     from atar.freshness import is_fresh, VOUCH_TTL_DEFAULT, trust_valid
+
     issuer, v = _make_vouch()
     # valid + fresh
     assert trust_valid(v, ttl=VOUCH_TTL_DEFAULT) is True
@@ -52,12 +54,14 @@ def test_freshness_cli_flag(tmp_path, monkeypatch):
     from atar.cli import cli
     from atar.identity import generate_identity, did_from_public
     from atar.vouch import create_vouch
+
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     issuer = generate_identity()
     subj = generate_identity()
     # build a validly-signed vouch whose ts is far in the past
-    old_v = create_vouch(issuer, subj.public_key, score=0.9, scope="coding",
-                         ts=int(time.time()) - 999999)
+    old_v = create_vouch(
+        issuer, subj.public_key, score=0.9, scope="coding", ts=int(time.time()) - 999999
+    )
     out = tmp_path / "v.json"
     out.write_text(json.dumps(old_v), encoding="utf-8")
     r = CliRunner().invoke(cli, ["verify", "--max-age", "86400", str(out)])

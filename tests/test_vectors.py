@@ -55,21 +55,30 @@ def test_identity_derivation_matches_vectors():
     data = _load("identity.json")
     for vec in data["vectors"]:
         priv = Ed25519PrivateKey.from_private_bytes(
-            bytes.fromhex(vec["private_key_seed_hex"]))
+            bytes.fromhex(vec["private_key_seed_hex"])
+        )
         pub = priv.public_key()
         assert pub.public_bytes_raw().hex() == vec["public_key_raw_hex"]
         assert did_key_from_public(pub) == vec["did_key"]
         assert legacy_did_agent_from_public(pub) == vec["legacy_did_agent"]
         # round-trips and aliasing
-        assert public_key_from_did(vec["did_key"]).public_bytes_raw() == pub.public_bytes_raw()
-        assert public_key_from_did(vec["legacy_did_agent"]).public_bytes_raw() == pub.public_bytes_raw()
+        assert (
+            public_key_from_did(vec["did_key"]).public_bytes_raw()
+            == pub.public_bytes_raw()
+        )
+        assert (
+            public_key_from_did(vec["legacy_did_agent"]).public_bytes_raw()
+            == pub.public_bytes_raw()
+        )
         assert normalize_did(vec["legacy_did_agent"]) == vec["did_key"]
 
 
 def test_jcs_canonicalization_matches_vectors():
     data = _load("jcs.json")
     for vec in data["vectors"]:
-        assert canonicalize(vec["input"]).decode("utf-8") == vec["canonical"], vec["note"]
+        assert canonicalize(vec["input"]).decode("utf-8") == vec["canonical"], vec[
+            "note"
+        ]
 
 
 def test_vouch_vector_matches_and_verifies():
@@ -83,13 +92,19 @@ def test_vouch_vector_matches_and_verifies():
     # and the implementation still produces byte-identical vouches
     identity_vec = {v["name"]: v for v in _load("identity.json")["vectors"]}
     issuer_priv = Ed25519PrivateKey.from_private_bytes(
-        bytes.fromhex(identity_vec["issuer"]["private_key_seed_hex"]))
+        bytes.fromhex(identity_vec["issuer"]["private_key_seed_hex"])
+    )
     issuer = Identity(private_key=issuer_priv, public_key=issuer_priv.public_key())
     subject_pub = public_key_from_did(data["subject_did"])
     reproduced = create_vouch(
-        issuer, subject_pub, score=vouch["payload"]["score"],
-        scope=vouch["payload"]["scope"], claim=vouch["payload"]["claim"],
-        evidence=vouch["payload"].get("evidence"), ts=vouch["payload"]["ts"])
+        issuer,
+        subject_pub,
+        score=vouch["payload"]["score"],
+        scope=vouch["payload"]["scope"],
+        claim=vouch["payload"]["claim"],
+        evidence=vouch["payload"].get("evidence"),
+        ts=vouch["payload"]["ts"],
+    )
     assert reproduced == vouch  # Ed25519 is deterministic
 
 
@@ -115,14 +130,18 @@ def test_agent_card_vector_matches_and_verifies():
     vouch = _load("native-vouch.json")["vouch"]
     subject_vec = {v["name"]: v for v in _load("identity.json")["vectors"]}["subject"]
     subject_priv = Ed25519PrivateKey.from_private_bytes(
-        bytes.fromhex(subject_vec["private_key_seed_hex"]))
-    subject = Identity(private_key=subject_priv,
-                       public_key=subject_priv.public_key())
+        bytes.fromhex(subject_vec["private_key_seed_hex"])
+    )
+    subject = Identity(private_key=subject_priv, public_key=subject_priv.public_key())
 
     card = data["unsigned_card"]
-    reproduced = make_agent_card(subject_vec["did_key"], "subject-agent", [vouch],
-                                 url="https://agent.example.org/a2a",
-                                 description="Test subject agent")
+    reproduced = make_agent_card(
+        subject_vec["did_key"],
+        "subject-agent",
+        [vouch],
+        url="https://agent.example.org/a2a",
+        description="Test subject agent",
+    )
     assert reproduced == card  # card construction is deterministic
     signed = sign_agent_card(card, subject)
     assert signed == data["signed_card"]  # Ed25519 is deterministic

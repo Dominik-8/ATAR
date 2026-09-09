@@ -40,8 +40,22 @@ def test_full_trust_lifecycle_e2e(tmp_path, monkeypatch):
     bob = _did(home, "bob")
 
     # 2. Vouch (Phase 1-3) + add to store
-    _run(runner, ["vouch", "--from", "alice", "--for", bob, "--score", "0.9",
-                  "--scope", "coding", "--out", os.path.join(home, "v.json")])
+    _run(
+        runner,
+        [
+            "vouch",
+            "--from",
+            "alice",
+            "--for",
+            bob,
+            "--score",
+            "0.9",
+            "--scope",
+            "coding",
+            "--out",
+            os.path.join(home, "v.json"),
+        ],
+    )
     _run(runner, ["add", os.path.join(home, "v.json")])
     assert VouchStore(os.path.join(home, "vouches.json")).count() == 1
 

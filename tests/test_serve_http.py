@@ -17,13 +17,15 @@ def test_serve_http_smoke(tmp_path, monkeypatch):
     # bootstrap a tiny real network first
     from click.testing import CliRunner
     from atar.cli import cli
+
     r = CliRunner().invoke(cli, ["keygen", "--name", "seed"])
     assert r.exit_code == 0, r.output
 
     port = 8799
     proc = subprocess.Popen(
         [sys.executable, "-m", "atar.cli", "serve", "--port", str(port)],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         env={**os.environ, "ATAR_HOME": str(tmp_path)},
     )
     try:

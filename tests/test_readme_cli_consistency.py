@@ -19,6 +19,7 @@ def _normalize(name: str) -> str:
 
 def test_readme_commands_exist_in_cli():
     from atar.cli import cli
+
     actual = {_normalize(c) for c in cli.commands.keys()}
 
     readme = open(os.path.join(ROOT, "README.md"), encoding="utf-8").read()
@@ -31,6 +32,7 @@ def test_readme_commands_exist_in_cli():
 
 def test_cli_commands_documented_in_readme():
     from atar.cli import cli
+
     actual = {_normalize(c) for c in cli.commands.keys()}
 
     readme = open(os.path.join(ROOT, "README.md"), encoding="utf-8").read()
@@ -40,4 +42,6 @@ def test_cli_commands_documented_in_readme():
     undocumented = actual - documented
     # 'import-cmd' is registered as 'import' by Click; allow that alias
     undocumented = {c for c in undocumented if c not in ("import-cmd",)}
-    assert not undocumented, f"CLI commands not documented in README: {sorted(undocumented)}"
+    assert not undocumented, (
+        f"CLI commands not documented in README: {sorted(undocumented)}"
+    )

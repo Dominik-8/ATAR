@@ -26,12 +26,18 @@ def test_concurrent_http_gossip_posts_all_land(tmp_path):
         batches = []
         for k in range(4):
             issuer = generate_identity()
-            batches.append([
-                create_vouch(issuer, subject.public_key,
-                             score=round(0.5 + 0.01 * (k * 4 + j), 3),
-                             scope="coding", ts=1_700_000_000 + k * 100 + j)
-                for j in range(4)
-            ])
+            batches.append(
+                [
+                    create_vouch(
+                        issuer,
+                        subject.public_key,
+                        score=round(0.5 + 0.01 * (k * 4 + j), 3),
+                        scope="coding",
+                        ts=1_700_000_000 + k * 100 + j,
+                    )
+                    for j in range(4)
+                ]
+            )
 
         errors = []
 
@@ -39,8 +45,10 @@ def test_concurrent_http_gossip_posts_all_land(tmp_path):
             try:
                 data = json.dumps({"vouches": batch}).encode()
                 req = urlrequest.Request(
-                    f"http://127.0.0.1:{port}/vouches", data=data,
-                    headers={"Content-Type": "application/json"})
+                    f"http://127.0.0.1:{port}/vouches",
+                    data=data,
+                    headers={"Content-Type": "application/json"},
+                )
                 with urlrequest.urlopen(req, timeout=15) as resp:
                     counts = json.loads(resp.read())
                 assert counts["added"] == len(batch), counts

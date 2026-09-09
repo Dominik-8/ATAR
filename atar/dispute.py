@@ -54,8 +54,9 @@ def _signing_message(vid: str, disputed_by: str, reason: str, ts: int) -> bytes:
     return f"{vid}|{disputed_by}|{reason}|{ts}".encode("utf-8")
 
 
-def create_dispute(disputer: Identity, vouch: dict, *, reason: str,
-                   ts: int | None = None) -> dict:
+def create_dispute(
+    disputer: Identity, vouch: dict, *, reason: str, ts: int | None = None
+) -> dict:
     """Create a signed dispute against ``vouch``. The disputer MUST NOT be the
     vouch's issuer — the issuer's negative signal is revocation (§6)."""
     issuer = vouch.get("payload", {}).get("issuer")
@@ -83,8 +84,10 @@ def verify_dispute_entry(entry: dict) -> bool:
         reason = entry["reason"]
         ts = entry["ts"]
         key = public_key_from_did(disputed_by)
-        key.verify(b64decode(entry["signature"]),
-                   _signing_message(vid, disputed_by, reason, ts))
+        key.verify(
+            b64decode(entry["signature"]),
+            _signing_message(vid, disputed_by, reason, ts),
+        )
         return True
     except (InvalidSignature, ValueError, KeyError, TypeError):
         return False
@@ -112,7 +115,8 @@ class DisputeList:
         if eid in self.entries:
             return False
         if vouch is not None and _same_did(
-                vouch.get("payload", {}).get("issuer"), entry.get("disputed_by")):
+            vouch.get("payload", {}).get("issuer"), entry.get("disputed_by")
+        ):
             return False
         if not verify_dispute_entry(entry):
             return False
@@ -134,6 +138,7 @@ class DisputeList:
         written by other processes since this list was loaded (disputes are
         an append-only, deduplicated set, so union is the correct merge)."""
         from .store import atomic_save_json, file_lock
+
         with file_lock(path):
             merged = DisputeList.load(path)
             merged.entries.update(self.entries)

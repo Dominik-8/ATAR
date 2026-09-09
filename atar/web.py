@@ -47,8 +47,9 @@ def _all_scopes() -> list[str]:
         vouches = VouchStore(_store_path()).all()
     except Exception:
         return ["intelligence"]
-    scopes = sorted({v["payload"].get("scope") for v in vouches
-                     if v["payload"].get("scope")})
+    scopes = sorted(
+        {v["payload"].get("scope") for v in vouches if v["payload"].get("scope")}
+    )
     return scopes or ["intelligence"]
 
 
@@ -59,6 +60,7 @@ def _build_net() -> dict:
         seed = reg.seed_did or ""
         vouches = reg._store.all()
         from .agent_bootstrap import known_agent_names
+
         agents = known_agent_names()  # registry + plain keygen identities
     except Exception:
         seed = ""
@@ -72,18 +74,21 @@ def build_dashboard_response(*, scope: str | None = None) -> str:
     net = _build_net()
     if not net["seed_did"]:
         from .dashboard import render_no_seed_html
+
         return render_no_seed_html()
     sc = scope or "intelligence"
     return render_dashboard_html(net, scope=sc)
 
 
-def build_dashboard_response_multi(*, scopes: list[str] | None = None,
-                                   focus: str | None = None) -> str:
+def build_dashboard_response_multi(
+    *, scopes: list[str] | None = None, focus: str | None = None
+) -> str:
     """Multi-scope render (one section per scope). If `focus` is set, that
     scope is shown as a single full view (alias for build_dashboard_response)."""
     net = _build_net()
     if not net["seed_did"]:
         from .dashboard import render_no_seed_html
+
         return render_no_seed_html()
     if focus:
         return render_dashboard_html(net, scope=focus)
@@ -110,6 +115,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 body = build_dashboard_response_multi()
         except Exception as exc:  # pragma: no cover - defensive
             import html as _html
+
             body = f"<h1>ATAR dashboard error</h1><pre>{_html.escape(str(exc))}</pre>"
         payload = body.encode("utf-8")
         self.send_response(200)

@@ -1,6 +1,11 @@
 from atar.identity import generate_identity, did_from_public
 from atar.vouch import create_vouch
-from atar.transparency import TrustGraph, canonical_vouch_id, add_vouch, graph_from_vouches
+from atar.transparency import (
+    TrustGraph,
+    canonical_vouch_id,
+    add_vouch,
+    graph_from_vouches,
+)
 
 
 def _make_vouch(issuer, subject_pub, score, scope):
@@ -59,7 +64,9 @@ def test_invalid_vouch_excluded_from_graph():
     carol = generate_identity()
     v_ab = _make_vouch(alice, bob.public_key, 0.9, "coding")
     # a forged vouch claiming alice vouched for carol (wrong signature)
-    forged = _make_vouch(bob, carol.public_key, 1.0, "coding")  # signed by bob, not alice
+    forged = _make_vouch(
+        bob, carol.public_key, 1.0, "coding"
+    )  # signed by bob, not alice
     forged["payload"]["issuer"] = did_from_public(alice.public_key)
     g = graph_from_vouches([v_ab, forged])
     trust = g.compute_trust(seed_did=did_from_public(alice.public_key), scope="coding")

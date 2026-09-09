@@ -35,9 +35,16 @@ def _canonical(payload: dict) -> bytes:
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
-def create_vouch(issuer, subject_public_key, *, score: float, scope: str,
-                 claim: str | None = None, evidence: list[str] | None = None,
-                 ts: int | None = None) -> dict:
+def create_vouch(
+    issuer,
+    subject_public_key,
+    *,
+    score: float,
+    scope: str,
+    claim: str | None = None,
+    evidence: list[str] | None = None,
+    ts: int | None = None,
+) -> dict:
     """Create a signed vouch from ``issuer`` for ``subject_public_key``.
 
     ``issuer`` may be an ``Identity`` or a bare ``Ed25519PrivateKey`` (as used
@@ -48,9 +55,16 @@ def create_vouch(issuer, subject_public_key, *, score: float, scope: str,
     """
     score = float(score)
     import math
+
     if not math.isfinite(score) or not 0.0 <= score <= 1.0:
-        raise ValueError(f"score must be a finite number in [0.0, 1.0] (SPEC §3), got {score!r}")
-    issuer_pub = issuer.public_key() if hasattr(issuer, "public_key") and callable(getattr(issuer, "public_key")) else issuer.public_key
+        raise ValueError(
+            f"score must be a finite number in [0.0, 1.0] (SPEC §3), got {score!r}"
+        )
+    issuer_pub = (
+        issuer.public_key()
+        if hasattr(issuer, "public_key") and callable(getattr(issuer, "public_key"))
+        else issuer.public_key
+    )
     payload = {
         "type": "vouch",
         "issuer": did_from_public(issuer_pub),
@@ -89,6 +103,7 @@ def verify_vouch(vouch: dict) -> bool:
         sig_hex = vouch["signature"]
         # Recover the issuer public key from its DID (did:key or did:agent:).
         from .identity import public_key_from_did
+
         pub = public_key_from_did(payload["issuer"])
         pub.verify(bytes.fromhex(sig_hex), _canonical(payload))
         return True

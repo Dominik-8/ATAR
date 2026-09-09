@@ -97,5 +97,6 @@ def test_vouch_survives_gossip(tmp_path, monkeypatch):
 
 def test_score_bounds_enforced(tmp_path, monkeypatch):
     import pytest
+
     with pytest.raises(ValueError):
         _trust(tmp_path, monkeypatch, score=1.5)

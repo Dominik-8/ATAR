@@ -4,6 +4,7 @@ Without PoP, anyone who copies Bob's agent card can present it as their own -
 the card carries Bob's DID and vouches but nothing binds the presenter to the
 card's key. These tests pin the challenge-response fix.
 """
+
 import json
 import os
 
@@ -69,10 +70,14 @@ def test_copied_card_without_pop_fails_verification():
     bob = generate_identity()
     did = did_from_public(bob.public_key)
     from atar.atc import card_identity, _trust_params
+
     card = make_agent_card(did=did, name="bob", vouches=[])  # what Mallory copies
     nonce = new_pop_challenge()  # recipient's fresh challenge
     # Mallory cannot produce a proof - she does not hold Bob's key
-    assert verify_pop_proof(card_identity(card), nonce, _trust_params(card).get("proof")) is False
+    assert (
+        verify_pop_proof(card_identity(card), nonce, _trust_params(card).get("proof"))
+        is False
+    )
 
 
 def _keygen(runner, name):
@@ -86,22 +91,27 @@ def test_cli_card_challenge_and_verify(tmp_path, monkeypatch):
     _keygen(runner, "bob")
     nonce = new_pop_challenge()
     card_path = os.path.join(str(tmp_path), "card.json")
-    r = runner.invoke(cli, ["card", "--name", "bob", "--challenge", nonce,
-                            "--out", card_path])
+    r = runner.invoke(
+        cli, ["card", "--name", "bob", "--challenge", nonce, "--out", card_path]
+    )
     assert r.exit_code == 0, r.output
     card = json.load(open(card_path))
     from atar.atc import _trust_params
+
     proof = _trust_params(card).get("proof")
     assert proof and proof["nonce"] == nonce
     # A2A signed agent card: the CLI-signed card carries a valid signature
     from atar.atc import verify_card_signature
+
     assert verify_card_signature(card)
     # the real verifier's nonce passes
     r = runner.invoke(cli, ["verify-card", card_path, "--challenge", nonce])
     assert r.exit_code == 0, r.output
     assert "proof-of-possession : VALID" in r.output
     # any other nonce (replay attempt) fails
-    r = runner.invoke(cli, ["verify-card", card_path, "--challenge", new_pop_challenge()])
+    r = runner.invoke(
+        cli, ["verify-card", card_path, "--challenge", new_pop_challenge()]
+    )
     assert r.exit_code == 1
     assert "proof-of-possession : INVALID" in r.output
 
@@ -113,7 +123,9 @@ def test_cli_verify_card_challenge_without_proof_fails(tmp_path, monkeypatch):
     _keygen(runner, "bob")
     card_path = os.path.join(str(tmp_path), "card.json")
     runner.invoke(cli, ["card", "--name", "bob", "--out", card_path])  # no challenge
-    r = runner.invoke(cli, ["verify-card", card_path, "--challenge", new_pop_challenge()])
+    r = runner.invoke(
+        cli, ["verify-card", card_path, "--challenge", new_pop_challenge()]
+    )
     assert r.exit_code == 1
     assert "proof-of-possession : INVALID" in r.output
 

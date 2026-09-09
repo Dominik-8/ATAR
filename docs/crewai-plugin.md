@@ -44,7 +44,7 @@ researcher = Agent(role="researcher", goal="Find facts", backstory="...")
 writer = Agent(role="writer", goal="Write reports", backstory="...")
 
 crew = Crew(agents=[researcher, writer], tasks=[])
-trust.register_crew(crew)   # every agent gets a did:key identity
+trust.register_crew(crew)  # every agent gets a did:key identity
 
 task = Task(
     description="Research agent trust protocols",
@@ -54,7 +54,7 @@ task = Task(
 
 # ... run the crew ...
 
-card = trust.card("researcher")     # signed A2A-compatible agent card
+card = trust.card("researcher")  # signed A2A-compatible agent card
 ```
 
 ## Working example

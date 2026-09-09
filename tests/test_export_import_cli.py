@@ -14,9 +14,22 @@ def _seed(home, monkeypatch):
     runner.invoke(cli, ["keygen", "--name", "bob"])
     keys = json.load(open(os.path.join(home, "keys.json")))
     bob = keys["bob"]["did"]
-    runner.invoke(cli, ["vouch", "--from", "seed_agent", "--for", bob,
-                        "--score", "0.9", "--scope", "intelligence",
-                        "--out", os.path.join(home, "v.json")])
+    runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "seed_agent",
+            "--for",
+            bob,
+            "--score",
+            "0.9",
+            "--scope",
+            "intelligence",
+            "--out",
+            os.path.join(home, "v.json"),
+        ],
+    )
     runner.invoke(cli, ["add", os.path.join(home, "v.json")])
 
 

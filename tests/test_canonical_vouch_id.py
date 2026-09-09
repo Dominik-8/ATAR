@@ -8,10 +8,18 @@ from atar.transparency import canonical_vouch_id
 
 
 def _vouch(ts):
-    return {"payload": {"type": "vouch", "issuer": "did:agent:A",
-                         "subject": "did:agent:B", "score": 0.9,
-                         "scope": "core", "claim": None, "ts": ts},
-            "signature": "deadbeef"}
+    return {
+        "payload": {
+            "type": "vouch",
+            "issuer": "did:agent:A",
+            "subject": "did:agent:B",
+            "score": 0.9,
+            "scope": "core",
+            "claim": None,
+            "ts": ts,
+        },
+        "signature": "deadbeef",
+    }
 
 
 def test_canonical_vouch_id_ignores_ts():

@@ -17,13 +17,29 @@ def test_card_and_verify_card(tmp_path, monkeypatch):
     # alice vouches for bob
     out = tmp_path / "sub" / "v.json"
     out.parent.mkdir()
-    r3 = runner.invoke(cli, ["vouch", "--from", "alice", "--for", bob_did,
-                             "--score", "0.9", "--scope", "coding", "--out", str(out)])
+    r3 = runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "alice",
+            "--for",
+            bob_did,
+            "--score",
+            "0.9",
+            "--scope",
+            "coding",
+            "--out",
+            str(out),
+        ],
+    )
     assert r3.exit_code == 0
     # bob builds his agent card (collects stored vouches where he is subject)
     r_add = runner.invoke(cli, ["add", str(out)])
     assert r_add.exit_code == 0
-    r4 = runner.invoke(cli, ["card", "--name", "bob", "--out", str(tmp_path / "card.json")])
+    r4 = runner.invoke(
+        cli, ["card", "--name", "bob", "--out", str(tmp_path / "card.json")]
+    )
     assert r4.exit_code == 0
     assert "1 vouch" in r4.output
     # verify the card

@@ -49,7 +49,11 @@ def did_key_from_public(public_key: Ed25519PublicKey) -> str:
     multicodec(``ed25519-pub`` = 0xed 0x01) || raw 32-byte public key.
     """
     raw = public_key.public_bytes_raw()
-    return DID_KEY_PREFIX + "z" + base58.b58encode(ED25519_MULTICODEC_PREFIX + raw).decode()
+    return (
+        DID_KEY_PREFIX
+        + "z"
+        + base58.b58encode(ED25519_MULTICODEC_PREFIX + raw).decode()
+    )
 
 
 def legacy_did_agent_from_public(public_key: Ed25519PublicKey) -> str:
@@ -77,19 +81,27 @@ def public_key_from_did(did: str) -> Ed25519PublicKey:
     if not isinstance(did, str):
         raise ValueError(f"not a DID string: {did!r}")
     if did.startswith(DID_KEY_PREFIX):
-        multibase_value = did[len(DID_KEY_PREFIX):]
+        multibase_value = did[len(DID_KEY_PREFIX) :]
         if not multibase_value.startswith("z"):
-            raise ValueError(f"did:key with unsupported multibase (need 'z'/base58btc): {did!r}")
+            raise ValueError(
+                f"did:key with unsupported multibase (need 'z'/base58btc): {did!r}"
+            )
         data = base58.b58decode(multibase_value[1:])
         if not data.startswith(ED25519_MULTICODEC_PREFIX):
-            raise ValueError(f"did:key with unsupported multicodec (need ed25519-pub): {did!r}")
-        raw = data[len(ED25519_MULTICODEC_PREFIX):]
+            raise ValueError(
+                f"did:key with unsupported multicodec (need ed25519-pub): {did!r}"
+            )
+        raw = data[len(ED25519_MULTICODEC_PREFIX) :]
     elif did.startswith(LEGACY_DID_AGENT_PREFIX):
-        raw = base58.b58decode(did[len(LEGACY_DID_AGENT_PREFIX):])
+        raw = base58.b58decode(did[len(LEGACY_DID_AGENT_PREFIX) :])
     else:
-        raise ValueError(f"unsupported DID method (need did:key or legacy did:agent): {did!r}")
+        raise ValueError(
+            f"unsupported DID method (need did:key or legacy did:agent): {did!r}"
+        )
     if len(raw) != 32:
-        raise ValueError(f"DID embeds a non-Ed25519 key length ({len(raw)} bytes): {did!r}")
+        raise ValueError(
+            f"DID embeds a non-Ed25519 key length ({len(raw)} bytes): {did!r}"
+        )
     return Ed25519PublicKey.from_public_bytes(raw)
 
 

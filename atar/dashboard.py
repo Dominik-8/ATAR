@@ -61,6 +61,7 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
     revoked_by = {}
     try:
         from atar.revocation import RevocationList
+
         rl = RevocationList.load(_revocations_path_for(net))
         for e in rl.all():
             revoked_by[e["vid"]] = e["revoked_by"]
@@ -72,12 +73,17 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
     # dashboard must show the same numbers `atar graph` computes.
     from atar.dispute import DisputeList
     from atar.freshness import VOUCH_TTL_DEFAULT
+
     g = graph_from_vouches(net["vouches"])
-    trust = g.compute_trust(seed_did=net["seed_did"], scope=scope,
-                            revocations=rl,
-                            disputes=DisputeList.load(_disputes_path_for(net)),
-                            ttl=VOUCH_TTL_DEFAULT)
+    trust = g.compute_trust(
+        seed_did=net["seed_did"],
+        scope=scope,
+        revocations=rl,
+        disputes=DisputeList.load(_disputes_path_for(net)),
+        ttl=VOUCH_TTL_DEFAULT,
+    )
     from atar.transparency import TrustGraph as _TG
+
     name_by_did = {_TG._alias(v): k for k, v in net["agents"].items()}
 
     # build incoming-edge map: subject -> list of (issuer_name, score)
@@ -104,20 +110,23 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
             if _TG._alias(p["subject"]) != did:
                 continue
             from atar.revocation import revoke_payload_id as _rid
+
             # issuer-bound (SPEC §6): only a revocation by the vouch's issuer applies
             if rl is not None and rl.is_revoked_for(v):
                 agent_revoked = True
                 revoker = name_by_did.get(revoked_by.get(_rid(v), ""), "?")
                 break
-        agents.append({
-            "name": name_by_did.get(did, "?"),
-            "did": did,
-            "trust": 0.0 if agent_revoked else round(score, 3),
-            "is_seed": did == net["seed_did"],
-            "paths": [{"via": n, "score": s} for n, s in paths],
-            "revoked": agent_revoked,
-            "revoked_by": revoker,
-        })
+        agents.append(
+            {
+                "name": name_by_did.get(did, "?"),
+                "did": did,
+                "trust": 0.0 if agent_revoked else round(score, 3),
+                "is_seed": did == net["seed_did"],
+                "paths": [{"via": n, "score": s} for n, s in paths],
+                "revoked": agent_revoked,
+                "revoked_by": revoker,
+            }
+        )
         listed.add(did)
 
     # Revoked vouches no longer propagate trust (SPEC §8.1), so an agent
@@ -134,15 +143,18 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
         if rl is None or not rl.is_revoked_for(v):
             continue
         from atar.revocation import revoke_payload_id as _rid
-        agents.append({
-            "name": name_by_did.get(did, name_by_did.get(p["subject"], "?")),
-            "did": did,
-            "trust": 0.0,
-            "is_seed": did == net["seed_did"],
-            "paths": [],
-            "revoked": True,
-            "revoked_by": name_by_did.get(revoked_by.get(_rid(v), ""), "?"),
-        })
+
+        agents.append(
+            {
+                "name": name_by_did.get(did, name_by_did.get(p["subject"], "?")),
+                "did": did,
+                "trust": 0.0,
+                "is_seed": did == net["seed_did"],
+                "paths": [],
+                "revoked": True,
+                "revoked_by": name_by_did.get(revoked_by.get(_rid(v), ""), "?"),
+            }
+        )
         listed.add(did)
     return {"seed_did": net["seed_did"], "scope": scope, "agents": agents}
 
@@ -150,20 +162,20 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
 def _revocations_path_for(net: dict) -> str:
     """Resolve the revocations.json path (net may carry an override)."""
     import os
+
     if net.get("_revocations_path"):
         return net["_revocations_path"]
-    home = os.environ.get("ATAR_HOME",
-                          os.path.join(os.path.expanduser("~"), ".atar"))
+    home = os.environ.get("ATAR_HOME", os.path.join(os.path.expanduser("~"), ".atar"))
     return os.path.join(home, "revocations.json")
 
 
 def _disputes_path_for(net: dict) -> str:
     """Resolve the disputes.json path (net may carry an override)."""
     import os
+
     if net.get("_disputes_path"):
         return net["_disputes_path"]
-    home = os.environ.get("ATAR_HOME",
-                          os.path.join(os.path.expanduser("~"), ".atar"))
+    home = os.environ.get("ATAR_HOME", os.path.join(os.path.expanduser("~"), ".atar"))
     return os.path.join(home, "disputes.json")
 
 
@@ -171,6 +183,7 @@ def render_cards(net: dict, *, scope: str) -> str:
     """Render only the agent cards (no HTML page wrapper). Shared by the
     single-scope and multi-scope renderers."""
     import html as _html
+
     data = dashboard_data(net, scope=scope)
     cards = []
     for a in data["agents"]:
@@ -182,12 +195,17 @@ def render_cards(net: dict, *, scope: str) -> str:
             badge = "REVOKED"
         path_txt = ""
         if a["paths"]:
-            parts = [f"via {_html.escape(str(p['via']))} ({p['score']:.2f})" for p in a["paths"]]
+            parts = [
+                f"via {_html.escape(str(p['via']))} ({p['score']:.2f})"
+                for p in a["paths"]
+            ]
             path_txt = f'<div class="paths">trust path: {", ".join(parts)}</div>'
         rev_txt = ""
         if a["revoked"]:
-            rev_txt = (f'<div class="paths" style="color:#ff6b6b;">'
-                       f'revoked by {_html.escape(str(a["revoked_by"]))}</div>')
+            rev_txt = (
+                f'<div class="paths" style="color:#ff6b6b;">'
+                f"revoked by {_html.escape(str(a['revoked_by']))}</div>"
+            )
         trust_label = "REVOKED" if a["revoked"] else f"trust={a['trust']:.3f}"
         cards.append(f'''
   <div class="{cls}">
@@ -212,6 +230,7 @@ def render_cards(net: dict, *, scope: str) -> str:
 def render_dashboard_html(net: dict, *, scope: str) -> str:
     """Render the Know-Your-Agent dashboard as a standalone HTML page."""
     import html as _html
+
     data = dashboard_data(net, scope=scope)
     cards = render_cards(net, scope=scope)
     return f"""<!doctype html>
@@ -227,7 +246,7 @@ def render_dashboard_html(net: dict, *, scope: str) -> str:
     <div class="hero">
       <div class="brand">ATAR</div>
       <h1>Know Your Agent</h1>
-      <div class="sub">trust network &middot; scope: {_html.escape(str(data['scope']))}</div>
+      <div class="sub">trust network &middot; scope: {_html.escape(str(data["scope"]))}</div>
     </div>
     {cards if cards else '<div class="empty">No agents in this scope yet.</div>'}
   </div>
@@ -274,15 +293,20 @@ def render_no_seed_html() -> str:
 def render_multi_scope_html(net: dict, *, scopes: list[str]) -> str:
     """Render the dashboard with one section per scope (tabs in the hero)."""
     import html as _html
+
     sections = []
     for scope in scopes:
         data = dashboard_data(net, scope=scope)
         cards = render_cards(net, scope=scope)
-        sections.append(f'<section class="scope-sec">\n'
-                        f'<div class="scope-title">scope: {_html.escape(scope)}'
-                        f' &middot; {len(data["agents"])} agents</div>\n'
-                        f'{cards}\n</section>')
-    tabs = " &middot; ".join(f'<span class="tab">{_html.escape(s)}</span>' for s in scopes)
+        sections.append(
+            f'<section class="scope-sec">\n'
+            f'<div class="scope-title">scope: {_html.escape(scope)}'
+            f" &middot; {len(data['agents'])} agents</div>\n"
+            f"{cards}\n</section>"
+        )
+    tabs = " &middot; ".join(
+        f'<span class="tab">{_html.escape(s)}</span>' for s in scopes
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -298,7 +322,7 @@ def render_multi_scope_html(net: dict, *, scopes: list[str]) -> str:
       <h1>Know Your Agent</h1>
       <div class="sub">trust network &middot; scopes: {tabs}</div>
     </div>
-    {''.join(sections)}
+    {"".join(sections)}
   </div>
 </body>
 </html>"""

@@ -20,6 +20,7 @@ def test_revoke_makes_vouch_invalid():
     rlist = RevocationList()
     assert revoke_vouch(rlist, issuer, revoke_payload_id(v)) is True
     from atar.revocation import verify_vouch_revocation_aware
+
     assert verify_vouch_revocation_aware(v, rlist) is False
 
 
@@ -27,6 +28,7 @@ def test_unrevoked_vouch_still_valid():
     issuer, subject, v = _make_vouch()
     rlist = RevocationList()
     from atar.revocation import verify_vouch_revocation_aware
+
     assert verify_vouch_revocation_aware(v, rlist) is True
 
 
@@ -35,11 +37,12 @@ def test_revocation_persists_and_is_dedup():
     revoked_by = did_from_public(issuer.public_key)
     vid = revoke_payload_id(v)
     rlist = RevocationList()
-    assert revoke_vouch(rlist, issuer, vid) is True     # first add
-    assert revoke_vouch(rlist, issuer, vid) is False    # duplicate rejected
+    assert revoke_vouch(rlist, issuer, vid) is True  # first add
+    assert revoke_vouch(rlist, issuer, vid) is False  # duplicate rejected
     assert len(rlist.entries) == 1
     # simulate reload from disk
     import json
+
     path = os.path.join(tempfile.mkdtemp(), "revocations.json")
     rlist.save(path)
     r2 = RevocationList.load(path)
@@ -53,7 +56,7 @@ def test_only_issuer_can_revoke():
     vid = revoke_payload_id(v)
     rlist = RevocationList()
     # revocation must be signed by the issuer (or a designated revoker)
-    ok = revoke_vouch(rlist, issuer, vid)   # issuer signs -> valid
+    ok = revoke_vouch(rlist, issuer, vid)  # issuer signs -> valid
     assert ok is True
     ok2 = revoke_vouch(rlist, attacker, vid)  # attacker cannot re-add (dup) anyway
     assert ok2 is False

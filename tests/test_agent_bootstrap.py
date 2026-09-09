@@ -59,6 +59,7 @@ def test_network_visible_in_dashboard(tmp_path, monkeypatch):
     net = reg2.build_network(scope="intelligence")
     assert len(net["agents"]) == 3
     from atar.dashboard import dashboard_data
+
     data = dashboard_data(net, scope="intelligence")
     # all 3 reachable from seed
     assert len(data["agents"]) == 3

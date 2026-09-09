@@ -11,12 +11,18 @@ import pytest
 from click.testing import CliRunner
 
 from atar.identity import (
-    generate_identity, legacy_did_agent_from_public, normalize_did,
+    generate_identity,
+    legacy_did_agent_from_public,
+    normalize_did,
 )
 from atar.jcs import canonicalize
 from atar.vc import (
-    CRYPTOSUITE, VC_CONTEXT_V2, VC_TYPE_VOUCH,
-    credential_to_vouch_payload, sign_credential, verify_credential,
+    CRYPTOSUITE,
+    VC_CONTEXT_V2,
+    VC_TYPE_VOUCH,
+    credential_to_vouch_payload,
+    sign_credential,
+    verify_credential,
     vouch_to_credential,
 )
 from atar.vouch import _canonical, create_vouch
@@ -26,18 +32,22 @@ from atar.vouch import _canonical, create_vouch
 # implementation (rfc8785) during development, hardcoded here so the repo
 # carries no extra dependency.
 
-@pytest.mark.parametrize("obj,expected", [
-    ({"b": 1, "a": 2}, b'{"a":2,"b":1}'),
-    ({"num": 0.1}, b'{"num":0.1}'),
-    ({"num": 1e-7}, b'{"num":1e-7}'),
-    ({"num": 333333333.33333329}, b'{"num":333333333.3333333}'),
-    ({"num": 4.50}, b'{"num":4.5}'),
-    ({"num": 1e21}, b'{"num":1e+21}'),
-    ({"num": -0.0}, b'{"num":0}'),
-    ({"s": '\t\n"\\'}, b'{"s":"\\t\\n\\"\\\\"}'),
-    ({"uni": "héllo €"}, '{"uni":"héllo €"}'.encode("utf-8")),
-    ({"z": [1, 2.5, None, True, False]}, b'{"z":[1,2.5,null,true,false]}'),
-])
+
+@pytest.mark.parametrize(
+    "obj,expected",
+    [
+        ({"b": 1, "a": 2}, b'{"a":2,"b":1}'),
+        ({"num": 0.1}, b'{"num":0.1}'),
+        ({"num": 1e-7}, b'{"num":1e-7}'),
+        ({"num": 333333333.33333329}, b'{"num":333333333.3333333}'),
+        ({"num": 4.50}, b'{"num":4.5}'),
+        ({"num": 1e21}, b'{"num":1e+21}'),
+        ({"num": -0.0}, b'{"num":0}'),
+        ({"s": '\t\n"\\'}, b'{"s":"\\t\\n\\"\\\\"}'),
+        ({"uni": "héllo €"}, '{"uni":"héllo €"}'.encode("utf-8")),
+        ({"z": [1, 2.5, None, True, False]}, b'{"z":[1,2.5,null,true,false]}'),
+    ],
+)
 def test_jcs_vectors(obj, expected):
     assert canonicalize(obj) == expected
 
@@ -49,12 +59,17 @@ def test_jcs_rejects_unsafe_integer():
 
 # --- VC mapping ------------------------------------------------------------
 
+
 def _vouch(**kw):
     issuer = kw.pop("issuer", None) or generate_identity()
     subject = generate_identity()
-    v = create_vouch(issuer, subject.public_key,
-                     score=kw.pop("score", 0.95), scope=kw.pop("scope", "coding"),
-                     **kw)
+    v = create_vouch(
+        issuer,
+        subject.public_key,
+        score=kw.pop("score", 0.95),
+        scope=kw.pop("scope", "coding"),
+        **kw,
+    )
     return issuer, v
 
 
@@ -73,8 +88,13 @@ def test_vouch_to_credential_mapping():
 
 def test_claim_carried_into_credential():
     issuer = generate_identity()
-    v = create_vouch(issuer, issuer.public_key, score=1.0, scope="coding",
-                     claim="does solid code reviews")
+    v = create_vouch(
+        issuer,
+        issuer.public_key,
+        score=1.0,
+        scope="coding",
+        claim="does solid code reviews",
+    )
     cred = vouch_to_credential(v)
     assert cred["credentialSubject"]["atar:claim"] == "does solid code reviews"
 
@@ -102,8 +122,12 @@ def test_wrong_verification_method_fails():
     vc = sign_credential(vouch_to_credential(v), issuer)
     other = generate_identity()
     from atar.identity import did_from_public
+
     vc["proof"]["verificationMethod"] = (
-        did_from_public(other.public_key) + "#" + did_from_public(other.public_key).split(":")[2])
+        did_from_public(other.public_key)
+        + "#"
+        + did_from_public(other.public_key).split(":")[2]
+    )
     assert not verify_credential(vc)
 
 
@@ -112,9 +136,11 @@ def test_malformed_credentials_fail():
     good = sign_credential(vouch_to_credential(v), issuer)
     assert not verify_credential({})
     assert not verify_credential("not a vc")
-    no_ctx = json.loads(json.dumps(good)); no_ctx["@context"] = []
+    no_ctx = json.loads(json.dumps(good))
+    no_ctx["@context"] = []
     assert not verify_credential(no_ctx)
-    wrong_suite = json.loads(json.dumps(good)); wrong_suite["proof"]["cryptosuite"] = "eddsa-rdfc-2022"
+    wrong_suite = json.loads(json.dumps(good))
+    wrong_suite["proof"]["cryptosuite"] = "eddsa-rdfc-2022"
     assert not verify_credential(wrong_suite)
 
 
@@ -154,19 +180,43 @@ def test_sign_credential_rejects_non_issuer_key():
 
 # --- CLI --------------------------------------------------------------------
 
+
 def test_vc_export_and_verify_cli(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     from atar.cli import cli
+
     runner = CliRunner()
     r = runner.invoke(cli, ["keygen", "--name", "alice"])
     assert r.exit_code == 0
     alice_did = r.output.strip()
-    r = runner.invoke(cli, ["vouch", "--from", "alice", "--for", alice_did,
-                            "--score", "0.9", "--scope", "coding",
-                            "--out", str(tmp_path / "v.json")])
+    r = runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "alice",
+            "--for",
+            alice_did,
+            "--score",
+            "0.9",
+            "--scope",
+            "coding",
+            "--out",
+            str(tmp_path / "v.json"),
+        ],
+    )
     assert r.exit_code == 0, r.output
-    r = runner.invoke(cli, ["vc-export", str(tmp_path / "v.json"), "--from", "alice",
-                            "--out", str(tmp_path / "v.vc.json")])
+    r = runner.invoke(
+        cli,
+        [
+            "vc-export",
+            str(tmp_path / "v.json"),
+            "--from",
+            "alice",
+            "--out",
+            str(tmp_path / "v.vc.json"),
+        ],
+    )
     assert r.exit_code == 0, r.output
     vc = json.loads((tmp_path / "v.vc.json").read_text())
     assert verify_credential(vc)
@@ -182,12 +232,26 @@ def test_vc_export_and_verify_cli(tmp_path, monkeypatch):
 def test_vc_export_rejects_non_issuer(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     from atar.cli import cli
+
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "alice"])
     runner.invoke(cli, ["keygen", "--name", "mallory"])
     alice_did = json.loads((tmp_path / "keys.json").read_text())["alice"]["did"]
-    runner.invoke(cli, ["vouch", "--from", "alice", "--for", alice_did,
-                        "--score", "0.9", "--scope", "coding",
-                        "--out", str(tmp_path / "v.json")])
+    runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "alice",
+            "--for",
+            alice_did,
+            "--score",
+            "0.9",
+            "--scope",
+            "coding",
+            "--out",
+            str(tmp_path / "v.json"),
+        ],
+    )
     r = runner.invoke(cli, ["vc-export", str(tmp_path / "v.json"), "--from", "mallory"])
     assert r.exit_code == 1

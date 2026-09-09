@@ -87,8 +87,13 @@ class _PeerState:
             return "duplicates"
         if not verify_revocation_entry(entry):
             return "rejected"
-        ok = rl.add(entry["revoked_by"], vid, entry["ts"], entry["signature"],
-                    vouch=self.store().get(vid))
+        ok = rl.add(
+            entry["revoked_by"],
+            vid,
+            entry["ts"],
+            entry["signature"],
+            vouch=self.store().get(vid),
+        )
         if not ok:
             return "rejected"
         rl.save(self.revocations_path)
@@ -98,6 +103,7 @@ class _PeerState:
         """'added' | 'duplicates' | 'rejected' — signature always verified;
         issuer-disputes rejected at intake when the vouch is known (§8.2)."""
         from .dispute import _entry_id, verify_dispute_entry
+
         try:
             eid = _entry_id(entry)
         except (KeyError, TypeError):
@@ -137,12 +143,14 @@ def make_peer_handler(state: _PeerState):
 
         def _route_GET(self) -> None:
             if self.path == "/" or self.path.startswith("/?"):
-                self._send_json({
-                    "protocol": PROTOCOL,
-                    "vouches": state.store().count(),
-                    "revocations": len(state.revocations().all()),
-                    "disputes": len(state.disputes().all()),
-                })
+                self._send_json(
+                    {
+                        "protocol": PROTOCOL,
+                        "vouches": state.store().count(),
+                        "revocations": len(state.revocations().all()),
+                        "disputes": len(state.disputes().all()),
+                    }
+                )
             elif self.path == "/vouches":
                 self._send_json({"vouches": state.store().all()})
             elif self.path == "/revocations":
@@ -189,8 +197,7 @@ def make_peer_handler(state: _PeerState):
             key, admit = route
             items = self._batch(body, key)
             if items is None:
-                self._send_json(
-                    {"error": f"'{key}' must be a list"}, status=400)
+                self._send_json({"error": f"'{key}' must be a list"}, status=400)
                 return
             counts = {"added": 0, "duplicates": 0, "rejected": 0}
             for item in items:
@@ -203,8 +210,12 @@ def make_peer_handler(state: _PeerState):
     return PeerHandler
 
 
-def run_peer(port: int = 8790, bind: str = "127.0.0.1", home: str | None = None,
-             _block: bool = True):
+def run_peer(
+    port: int = 8790,
+    bind: str = "127.0.0.1",
+    home: str | None = None,
+    _block: bool = True,
+):
     """Serve the local store over HTTP. ``_block=False`` returns the server
     (used by tests; the caller must ``shutdown()`` it)."""
     state = _PeerState(home or _default_home())
@@ -229,6 +240,7 @@ def run_peer(port: int = 8790, bind: str = "127.0.0.1", home: str | None = None,
 
 # --- client side ------------------------------------------------------------
 
+
 def _get_json(url: str, timeout: float = 10.0) -> dict:
     with urlrequest.urlopen(url, timeout=timeout) as resp:
         data = json.loads(resp.read().decode("utf-8"))
@@ -238,14 +250,16 @@ def _get_json(url: str, timeout: float = 10.0) -> dict:
 
 def _post_json(url: str, obj: dict, timeout: float = 10.0) -> dict:
     data = json.dumps(obj).encode("utf-8")
-    req = urlrequest.Request(url, data=data,
-                             headers={"Content-Type": "application/json"})
+    req = urlrequest.Request(
+        url, data=data, headers={"Content-Type": "application/json"}
+    )
     with urlrequest.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 
-def sync_with_url(url: str, store: VouchStore, rlist: RevocationList,
-                  disputes_path: str | None = None) -> dict:
+def sync_with_url(
+    url: str, store: VouchStore, rlist: RevocationList, disputes_path: str | None = None
+) -> dict:
     """Exchange vouches + revocations (+ disputes) with a remote peer over HTTP.
 
     Pull: take everything valid + new from the peer (skipping vouches revoked
@@ -253,9 +267,15 @@ def sync_with_url(url: str, store: VouchStore, rlist: RevocationList,
     dedups content-addressed and reports how much it accepted. Returns counts.
     """
     base = url.rstrip("/")
-    counts = {"vouches_in": 0, "vouches_out": 0, "revocations_in": 0,
-              "revocations_out": 0, "disputes_in": 0, "disputes_out": 0,
-              "rejected_by_peer": 0}
+    counts = {
+        "vouches_in": 0,
+        "vouches_out": 0,
+        "revocations_in": 0,
+        "revocations_out": 0,
+        "disputes_in": 0,
+        "disputes_out": 0,
+        "rejected_by_peer": 0,
+    }
 
     remote_vouches = _get_json(f"{base}/vouches").get("vouches", [])
     for v in remote_vouches:
@@ -275,8 +295,13 @@ def sync_with_url(url: str, store: VouchStore, rlist: RevocationList,
     for e in remote_revs:
         # remote data is untrusted: a malformed entry is skipped, never fatal
         try:
-            if rlist.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
-                         vouch=store.get(e.get("vid"))):
+            if rlist.add(
+                e["revoked_by"],
+                e["vid"],
+                e["ts"],
+                e["signature"],
+                vouch=store.get(e.get("vid")),
+            ):
                 counts["revocations_in"] += 1
         except (KeyError, TypeError):
             continue

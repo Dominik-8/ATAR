@@ -43,13 +43,17 @@ def main() -> None:
 
     # CrewAI: Task(..., agent=researcher, callback=trust.task_callback_for("researcher"))
     for role in ("researcher", "writer"):
-        output = run_task(role)                      # task runs...
-        trust.task_callback_for(role)(output)        # ...and on success, vouch
+        output = run_task(role)  # task runs...
+        trust.task_callback_for(role)(output)  # ...and on success, vouch
 
     card = trust.card("researcher")
     report = verify_agent_card(card)
-    print("researcher card valid:", report["signature_valid"],
-          "| vouches presented:", len(report["valid_vouches"]))
+    print(
+        "researcher card valid:",
+        report["signature_valid"],
+        "| vouches presented:",
+        len(report["valid_vouches"]),
+    )
     print("researcher DID:", report["did"])
 
 

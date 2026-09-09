@@ -25,8 +25,11 @@ def peer(tmp_path):
 
 def _post(port: int, path: str, payload) -> tuple[int, dict]:
     data = json.dumps(payload).encode()
-    req = urlrequest.Request(f"http://127.0.0.1:{port}{path}", data=data,
-                             headers={"Content-Type": "application/json"})
+    req = urlrequest.Request(
+        f"http://127.0.0.1:{port}{path}",
+        data=data,
+        headers={"Content-Type": "application/json"},
+    )
     try:
         with urlrequest.urlopen(req, timeout=10) as resp:
             return resp.status, json.loads(resp.read())
@@ -52,8 +55,9 @@ def test_unexpected_intake_error_gets_500_json(peer, monkeypatch):
 
     monkeypatch.setattr(atar.peer._PeerState, "admit_vouch", boom)
     issuer, subject = generate_identity(), generate_identity()
-    vouch = create_vouch(issuer, subject.public_key, score=0.9,
-                         scope="coding", ts=1_700_000_000)
+    vouch = create_vouch(
+        issuer, subject.public_key, score=0.9, scope="coding", ts=1_700_000_000
+    )
     status, body = _post(peer, "/vouches", vouch)
     assert status == 500
     assert body == {"error": "internal error"}

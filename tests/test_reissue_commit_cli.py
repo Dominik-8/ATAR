@@ -16,9 +16,22 @@ def _seed_seed_agent_with_vouch(home, monkeypatch):
     runner.invoke(cli, ["keygen", "--name", "bob"])
     keys = json.load(open(os.path.join(home, "keys.json")))
     bob = keys["bob"]["did"]
-    r = runner.invoke(cli, ["vouch", "--from", "seed_agent", "--for", bob,
-                            "--score", "0.9", "--scope", "intelligence",
-                            "--out", os.path.join(home, "v.json")])
+    r = runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "seed_agent",
+            "--for",
+            bob,
+            "--score",
+            "0.9",
+            "--scope",
+            "intelligence",
+            "--out",
+            os.path.join(home, "v.json"),
+        ],
+    )
     assert r.exit_code == 0
     runner.invoke(cli, ["add", os.path.join(home, "v.json")])
 

@@ -21,8 +21,9 @@ from .revocation import RevocationList
 VOUCH_TTL_DEFAULT = 180 * 24 * 3600
 
 
-def is_fresh(vouch: dict, *, ttl: int = VOUCH_TTL_DEFAULT,
-             now: int | None = None) -> bool:
+def is_fresh(
+    vouch: dict, *, ttl: int = VOUCH_TTL_DEFAULT, now: int | None = None
+) -> bool:
     """True if the vouch's timestamp is within `ttl` seconds of `now`."""
     now = now if now is not None else int(time.time())
     ts = vouch.get("payload", {}).get("ts")
@@ -31,10 +32,13 @@ def is_fresh(vouch: dict, *, ttl: int = VOUCH_TTL_DEFAULT,
     return (now - ts) <= ttl
 
 
-def trust_valid(vouch: dict, *,
-                revocation_list: RevocationList | None = None,
-                ttl: int = VOUCH_TTL_DEFAULT,
-                now: int | None = None) -> bool:
+def trust_valid(
+    vouch: dict,
+    *,
+    revocation_list: RevocationList | None = None,
+    ttl: int = VOUCH_TTL_DEFAULT,
+    now: int | None = None,
+) -> bool:
     """Full trust check: valid signature + not revoked + not expired."""
     if not verify_vouch(vouch):
         return False

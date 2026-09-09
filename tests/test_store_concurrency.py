@@ -56,8 +56,10 @@ def test_concurrent_processes_lose_no_vouches(tmp_path):
     issuers = [generate_identity() for _ in range(procs_n)]
     subject = generate_identity()
     batches = [
-        [_make_vouch(issuers[p], subject, score=0.5 + 0.01 * (p * per + j))
-         for j in range(per)]
+        [
+            _make_vouch(issuers[p], subject, score=0.5 + 0.01 * (p * per + j))
+            for j in range(per)
+        ]
         for p in range(procs_n)
     ]
     procs = [
@@ -116,4 +118,5 @@ def test_dispute_list_merge_on_save(tmp_path):
 
 def _vid_of(vouch: dict) -> str:
     from atar.transparency import canonical_vouch_id
+
     return canonical_vouch_id(vouch)

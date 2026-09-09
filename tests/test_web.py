@@ -20,6 +20,7 @@ def _seed_real_net(home: str, monkeypatch):
     market_did = [l for l in r3.output.splitlines() if l.startswith("did:key:")][0]
     # seed root + vouches into store
     from atar.agent_bootstrap import AgentRegistry, seed_trust_root
+
     reg = AgentRegistry()
     seed_trust_root("seed_agent")
     reg = AgentRegistry()  # reload (seed_trust_root makes a fresh instance)
@@ -33,9 +34,9 @@ def test_web_builds_html_response(tmp_path, monkeypatch):
     seed = _seed_real_net(home, monkeypatch)
     body = build_dashboard_response(scope="intelligence")
     assert isinstance(body, str)
-    assert "#0a0a0b" in body           # seed_agent dark design
+    assert "#0a0a0b" in body  # seed_agent dark design
     assert "Know Your Agent" in body
-    assert seed in body                # seed DID rendered
+    assert seed in body  # seed DID rendered
 
 
 def test_web_handler_serves_dashboard(tmp_path, monkeypatch):

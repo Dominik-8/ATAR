@@ -29,7 +29,7 @@ def build_demo_network() -> dict:
     So founder_intel is reachable transitively two ways, research is directly
     trusted by seed, etc. Demonstrates multi-path transitive trust.
     """
-    seed = generate_identity()    # primary agent (the trusted root)
+    seed = generate_identity()  # primary agent (the trusted root)
     reporting = generate_identity()
     research = generate_identity()
     market = generate_identity()
@@ -66,8 +66,12 @@ def demo_trust_report(net: dict, *, scope: str) -> str:
     # map DIDs back to friendly names
     name_by_did = {v: k for k, v in net["agents"].items()}
     ranked = sorted(trust.items(), key=lambda kv: kv[1], reverse=True)
-    lines = ["ATAR demo trust report", f"seed : {net['seed_did']} (seed)",
-             f"scope: {scope}", "--- trust ranking ---"]
+    lines = [
+        "ATAR demo trust report",
+        f"seed : {net['seed_did']} (seed)",
+        f"scope: {scope}",
+        "--- trust ranking ---",
+    ]
     for did, score in ranked:
         name = name_by_did.get(did, "?")
         marker = " (seed)" if did == net["seed_did"] else ""

@@ -42,11 +42,17 @@ CRYPTOSUITE = "eddsa-jcs-2022"
 
 
 def _iso(ts: int) -> str:
-    return datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
 
 
 def _from_iso(text: str) -> int:
-    return int(datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp())
+    return int(
+        datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ")
+        .replace(tzinfo=timezone.utc)
+        .timestamp()
+    )
 
 
 def vouch_to_credential(vouch: dict) -> dict:
@@ -81,7 +87,12 @@ def sign_credential(credential: dict, identity) -> dict:
     public key must match ``credential["issuer"]`` (alias-aware).
     """
     from .identity import did_from_public
-    pub = identity.public_key() if callable(getattr(identity, "public_key", None)) else identity.public_key
+
+    pub = (
+        identity.public_key()
+        if callable(getattr(identity, "public_key", None))
+        else identity.public_key
+    )
     if normalize_did(credential["issuer"]) != did_from_public(pub):
         raise ValueError("signing key does not match credential issuer")
     vm = credential["issuer"] + "#" + credential["issuer"].split(":")[2]
@@ -92,7 +103,10 @@ def sign_credential(credential: dict, identity) -> dict:
         "verificationMethod": vm,
         "proofPurpose": "assertionMethod",
     }
-    data = hashlib.sha256(canonicalize(proof)).digest() + hashlib.sha256(canonicalize(credential)).digest()
+    data = (
+        hashlib.sha256(canonicalize(proof)).digest()
+        + hashlib.sha256(canonicalize(credential)).digest()
+    )
     proof["proofValue"] = "z" + base58.b58encode(identity.sign(data)).decode()
     out = dict(credential)
     out["proof"] = proof
@@ -115,18 +129,28 @@ def verify_credential(vc: dict) -> bool:
             return False
         issuer = vc["issuer"]
         proof = vc["proof"]
-        if proof.get("type") != "DataIntegrityProof" or proof.get("cryptosuite") != CRYPTOSUITE:
+        if (
+            proof.get("type") != "DataIntegrityProof"
+            or proof.get("cryptosuite") != CRYPTOSUITE
+        ):
             return False
         vm = proof["verificationMethod"]
         if not isinstance(vm, str) or not vm.startswith(issuer + "#"):
             return False  # proof must bind to the issuer's own key
         pub = public_key_from_did(issuer)
-        sig = base58.b58decode(proof["proofValue"][1:]) if proof["proofValue"].startswith("z") else None
+        sig = (
+            base58.b58decode(proof["proofValue"][1:])
+            if proof["proofValue"].startswith("z")
+            else None
+        )
         if sig is None:
             return False
         proof_options = {k: v for k, v in proof.items() if k != "proofValue"}
         credential = {k: v for k, v in vc.items() if k != "proof"}
-        data = hashlib.sha256(canonicalize(proof_options)).digest() + hashlib.sha256(canonicalize(credential)).digest()
+        data = (
+            hashlib.sha256(canonicalize(proof_options)).digest()
+            + hashlib.sha256(canonicalize(credential)).digest()
+        )
         pub.verify(sig, data)
         return True
     except (InvalidSignature, ValueError, KeyError, TypeError, AttributeError):

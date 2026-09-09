@@ -18,10 +18,22 @@ def _seed_seed_agent_with_vouch(home, monkeypatch):
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "seed_agent"])
     runner.invoke(cli, ["keygen", "--name", "bob"])
-    r = runner.invoke(cli, ["vouch", "--from", "seed_agent", "--for",
-                            _bob_did(home), "--score", "0.9",
-                            "--scope", "intelligence", "--out",
-                            os.path.join(home, "v.json")])
+    r = runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "seed_agent",
+            "--for",
+            _bob_did(home),
+            "--score",
+            "0.9",
+            "--scope",
+            "intelligence",
+            "--out",
+            os.path.join(home, "v.json"),
+        ],
+    )
     assert r.exit_code == 0
     runner.invoke(cli, ["add", os.path.join(home, "v.json")])
 

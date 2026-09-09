@@ -1,6 +1,12 @@
 from atar.identity import generate_identity, did_from_public
 from atar.vouch import create_vouch
-from atar.atc import vouch_to_token, vouch_from_token, verify_token, make_agent_card, verify_agent_card
+from atar.atc import (
+    vouch_to_token,
+    vouch_from_token,
+    verify_token,
+    make_agent_card,
+    verify_agent_card,
+)
 
 
 def test_vouch_token_roundtrip():
@@ -50,6 +56,7 @@ def test_agent_card_detects_invalid_vouch():
     card = make_agent_card(did_from_public(bob.public_key), "bob", [v])
     # tamper the stored vouch token inside the card's trust extension
     from atar.atc import _trust_params
+
     params = _trust_params(card)
     tok = params["vouches"][0]
     bad = tok[:-4] + ("ZZZZ" if tok[-4:] != "ZZZZ" else "YYYY")

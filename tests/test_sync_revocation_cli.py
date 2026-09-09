@@ -18,8 +18,22 @@ def _seed_alice_with_vouch(home, monkeypatch):
     r2 = runner.invoke(cli, ["keygen", "--name", "bob"])
     bob_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
     out = os.path.join(home, "v.json")
-    runner.invoke(cli, ["vouch", "--from", "alice", "--for", bob_did,
-                        "--score", "0.9", "--scope", "intelligence", "--out", out])
+    runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "alice",
+            "--for",
+            bob_did,
+            "--score",
+            "0.9",
+            "--scope",
+            "intelligence",
+            "--out",
+            out,
+        ],
+    )
     # add the vouch into the persistent store (like the real flow: vouch -> add)
     runner.invoke(cli, ["add", out])
     return bob_did, out
@@ -37,13 +51,15 @@ def test_sync_propagates_revocation(tmp_path, monkeypatch):
     runner = CliRunner()
     # write the vouch to a file, then revoke it
     from atar.store import VouchStore
+
     v = VouchStore(os.path.join(alice, "vouches.json")).all()[0]
     vf = os.path.join(alice, "v.json")
     json.dump(v, open(vf, "w"))
     r = runner.invoke(cli, ["revoke", vf])
     assert r.exit_code == 0
     assert RevocationList.load(os.path.join(alice, "revocations.json")).is_revoked(
-        revoke_payload_id(v))
+        revoke_payload_id(v)
+    )
 
     # sync alice -> bob should carry the revocation too
     runner.invoke(cli, ["sync", "--with", bob])
@@ -61,6 +77,7 @@ def test_revoked_vouch_rejected_after_sync(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", alice)
     runner = CliRunner()
     from atar.store import VouchStore
+
     v = VouchStore(os.path.join(alice, "vouches.json")).all()[0]
     vf = os.path.join(alice, "v.json")
     json.dump(v, open(vf, "w"))
@@ -70,5 +87,6 @@ def test_revoked_vouch_rejected_after_sync(tmp_path, monkeypatch):
     # bob now has the vouch (via prior sync) AND the revocation
     # a revocation-aware verify on bob must reject it
     from atar.revocation import verify_vouch_revocation_aware
+
     bob_rl = RevocationList.load(os.path.join(bob, "revocations.json"))
     assert verify_vouch_revocation_aware(v, bob_rl) is False

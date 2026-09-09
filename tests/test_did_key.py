@@ -50,7 +50,10 @@ def test_did_key_shape_and_roundtrip():
     did = did_from_public(ident.public_key)
     # every ed25519 did:key starts with z6Mk (multibase 'z' + multicodec ed25519-pub)
     assert did.startswith("did:key:z6Mk")
-    assert public_key_from_did(did).public_bytes_raw() == ident.public_key.public_bytes_raw()
+    assert (
+        public_key_from_did(did).public_bytes_raw()
+        == ident.public_key.public_bytes_raw()
+    )
 
 
 def test_legacy_did_agent_still_decodes():
@@ -67,13 +70,14 @@ def test_normalize_did_aliases_legacy_to_did_key():
 
 
 def test_malformed_dids_rejected():
-    assert not is_supported_did("did:web:example.com")          # unknown method
-    assert not is_supported_did("did:key:uQ3h2xr...")           # wrong multibase
-    assert not is_supported_did("did:key:z6Mktooshort")         # wrong key length
-    assert not is_supported_did("did:agent:!!")                 # bad base58
+    assert not is_supported_did("did:web:example.com")  # unknown method
+    assert not is_supported_did("did:key:uQ3h2xr...")  # wrong multibase
+    assert not is_supported_did("did:key:z6Mktooshort")  # wrong key length
+    assert not is_supported_did("did:agent:!!")  # bad base58
     assert not is_supported_did("not-a-did")
     assert not is_supported_did(None)
     import pytest
+
     with pytest.raises(ValueError):
         public_key_from_did("did:web:example.com")
 
@@ -101,6 +105,7 @@ def test_legacy_did_agent_vouch_still_verifies():
     v["payload"]["issuer"] = legacy_issuer
     v["payload"]["subject"] = legacy_subject
     from atar.vouch import _canonical
+
     v["signature"] = issuer.sign(_canonical(v["payload"])).hex()
     assert verify_vouch(v)
 
@@ -111,6 +116,7 @@ def test_revocation_matches_across_spellings():
     the match is alias-aware (SPEC §6 + §2) — no trust escapes the migration."""
     from atar.revocation import revoke_payload_id
     from atar.vouch import _canonical
+
     issuer = generate_identity()
     subject = generate_identity()
     v = create_vouch(issuer, subject.public_key, score=0.9, scope="coding")
@@ -135,6 +141,7 @@ def test_trust_graph_unifies_spellings():
     legacy_v["payload"]["issuer"] = legacy_did_agent_from_public(seed.public_key)
     legacy_v["payload"]["subject"] = legacy_did_agent_from_public(other.public_key)
     from atar.vouch import _canonical
+
     legacy_v["signature"] = seed.sign(_canonical(legacy_v["payload"])).hex()
     g = TrustGraph()
     assert g.add(legacy_v)
@@ -145,6 +152,7 @@ def test_trust_graph_unifies_spellings():
 def test_keygen_cli_outputs_did_key(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     from atar.cli import cli
+
     r = CliRunner().invoke(cli, ["keygen", "--name", "alice"])
     assert r.exit_code == 0
     did = r.output.strip()
@@ -157,18 +165,39 @@ def test_legacy_keyfile_identity_still_usable(tmp_path, monkeypatch):
     keys.json) still signs vouches, and vouching FOR a legacy DID works."""
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     from atar.cli import cli
+
     runner = CliRunner()
     # hand-craft a pre-realignment keys.json entry
     ident = generate_identity()
     legacy_did = legacy_did_agent_from_public(ident.public_key)
-    (tmp_path / "keys.json").write_text(json.dumps({
-        "old": {"private": ident.private_key.private_bytes_raw().hex(), "did": legacy_did}
-    }))
+    (tmp_path / "keys.json").write_text(
+        json.dumps(
+            {
+                "old": {
+                    "private": ident.private_key.private_bytes_raw().hex(),
+                    "did": legacy_did,
+                }
+            }
+        )
+    )
     subject = generate_identity()
     legacy_subject = legacy_did_agent_from_public(subject.public_key)
-    r = runner.invoke(cli, ["vouch", "--from", "old", "--for", legacy_subject,
-                            "--score", "0.9", "--scope", "coding",
-                            "--out", str(tmp_path / "v.json")])
+    r = runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "old",
+            "--for",
+            legacy_subject,
+            "--score",
+            "0.9",
+            "--scope",
+            "coding",
+            "--out",
+            str(tmp_path / "v.json"),
+        ],
+    )
     assert r.exit_code == 0, r.output
     blob = json.loads((tmp_path / "v.json").read_text())
     assert verify_vouch(blob)

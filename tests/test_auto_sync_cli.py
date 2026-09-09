@@ -12,6 +12,7 @@ def _seed_seed_agent_home(home, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", home)
     # create a vouch so there is something to gossip
     from atar.agent_bootstrap import AgentRegistry, seed_trust_root
+
     seed_trust_root("seed_agent")
     reg = AgentRegistry()
     # a peer DID to vouch for (stand-in for a real peer)

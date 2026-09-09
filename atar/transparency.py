@@ -61,13 +61,22 @@ class TrustGraph:
         (they can never verify, so they never enter the graph anyway)."""
         try:
             from .identity import normalize_did
+
             return normalize_did(did)
         except ValueError:
             return did
 
-    def compute_trust(self, *, seed_did: str, scope: str, decay: float = 1.0,
-                      disputes=None, revocations=None, ttl: int | None = None,
-                      now: int | None = None) -> dict[str, float]:
+    def compute_trust(
+        self,
+        *,
+        seed_did: str,
+        scope: str,
+        decay: float = 1.0,
+        disputes=None,
+        revocations=None,
+        ttl: int | None = None,
+        now: int | None = None,
+    ) -> dict[str, float]:
         """Compute transitive trust scores from a trusted seed DID.
 
         Score of a node = sum over incoming valid vouches of
@@ -101,6 +110,7 @@ class TrustGraph:
         excluded: set[str] = set()
         if revocations is not None or ttl is not None:
             from .freshness import is_fresh
+
             for vid, v in self._vouches.items():
                 if revocations is not None and revocations.is_revoked_for(v):
                     excluded.add(vid)
@@ -110,9 +120,15 @@ class TrustGraph:
         discounted: set[str] = set()
         if disputes is not None:
             from .dispute import DISPUTE_TRUST_THRESHOLD
-            baseline = self.compute_trust(seed_did=seed_did, scope=scope,
-                                          decay=decay, revocations=revocations,
-                                          ttl=ttl, now=now)
+
+            baseline = self.compute_trust(
+                seed_did=seed_did,
+                scope=scope,
+                decay=decay,
+                revocations=revocations,
+                ttl=ttl,
+                now=now,
+            )
             for v in self._vouches.values():
                 if v["payload"].get("scope") != scope:
                     continue
@@ -152,8 +168,7 @@ class TrustGraph:
         # Iterating edges in canonical (sorted) order keeps floating-point
         # summation order — and thus the exact scores — independent of the
         # order vouches were inserted into the store.
-        canonical = {issuer: sorted(out) for issuer, out in
-                     sorted(edges.items())}
+        canonical = {issuer: sorted(out) for issuer, out in sorted(edges.items())}
         level: dict[str, float] = {seed_did: 1.0}
         for _depth in range(1, 9):
             nxt: dict[str, float] = {}

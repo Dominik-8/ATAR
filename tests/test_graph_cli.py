@@ -26,6 +26,7 @@ def test_graph_cli_renders_trust_report(tmp_path, monkeypatch):
     root_did = did_from_public(root.public_key)
     # add vouches into the persistent store so `graph` can load them
     import json
+
     for v in g.all_vouches():
         fn = tmp_path / "v.json"
         with open(fn, "w", encoding="utf-8") as f:
@@ -48,8 +49,22 @@ def test_graph_resolves_known_agent_names(tmp_path, monkeypatch):
     r2 = runner.invoke(cli, ["keygen", "--name", "leaf"])
     root_did, leaf_did = r1.output.strip(), r2.output.strip()
     vf = tmp_path / "v.json"
-    runner.invoke(cli, ["vouch", "--from", "root", "--for", leaf_did,
-                        "--score", "0.9", "--scope", "coding", "--out", str(vf)])
+    runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "root",
+            "--for",
+            leaf_did,
+            "--score",
+            "0.9",
+            "--scope",
+            "coding",
+            "--out",
+            str(vf),
+        ],
+    )
     runner.invoke(cli, ["add", str(vf)])
     r = runner.invoke(cli, ["graph", "--seed", root_did, "--scope", "coding"])
     assert r.exit_code == 0

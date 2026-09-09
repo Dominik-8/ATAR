@@ -5,6 +5,7 @@ import and load paths accepted entries without ever checking the signature
 against ``revoked_by`` — a peer could gossip forged revocations and kill
 other agents' vouches. These tests pin the fix.
 """
+
 import json
 import os
 
@@ -50,7 +51,10 @@ def test_signature_checked_against_revoked_by_not_just_any_key():
     entry = _entry_for(vid, attacker, revoked_by=did_from_public(issuer.public_key))
     assert verify_revocation_entry(entry) is False
     rl = RevocationList()
-    assert rl.add(entry["revoked_by"], entry["vid"], entry["ts"], entry["signature"]) is False
+    assert (
+        rl.add(entry["revoked_by"], entry["vid"], entry["ts"], entry["signature"])
+        is False
+    )
     assert rl.all() == []
 
 
@@ -62,13 +66,20 @@ def test_attacker_self_signed_entry_never_revokes():
     entry = _entry_for(vid, attacker)
     assert verify_revocation_entry(entry) is True
     rl = RevocationList()
-    assert rl.add(entry["revoked_by"], entry["vid"], entry["ts"], entry["signature"]) is True
+    assert (
+        rl.add(entry["revoked_by"], entry["vid"], entry["ts"], entry["signature"])
+        is True
+    )
     # ...but it is inert: only the issuer's revocation applies (SPEC §6)
     assert verify_vouch_revocation_aware(v, rl) is True
     # and when the vouch is known at intake, the entry is rejected outright
     rl2 = RevocationList()
-    assert rl2.add(entry["revoked_by"], entry["vid"], entry["ts"], entry["signature"],
-                   vouch=v) is False
+    assert (
+        rl2.add(
+            entry["revoked_by"], entry["vid"], entry["ts"], entry["signature"], vouch=v
+        )
+        is False
+    )
 
 
 def test_legit_revocation_still_applies():
@@ -112,8 +123,22 @@ def test_sync_does_not_import_forged_revocation(tmp_path, monkeypatch):
     r = runner.invoke(cli, ["keygen", "--name", "bob"])
     bob_did = [l for l in r.output.splitlines() if l.startswith("did:key:")][0]
     vf = os.path.join(alice_home, "v.json")
-    runner.invoke(cli, ["vouch", "--from", "alice", "--for", bob_did,
-                        "--score", "0.9", "--scope", "coding", "--out", vf])
+    runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "alice",
+            "--for",
+            bob_did,
+            "--score",
+            "0.9",
+            "--scope",
+            "coding",
+            "--out",
+            vf,
+        ],
+    )
     runner.invoke(cli, ["add", vf])
     with open(vf, "r", encoding="utf-8") as f:
         v = json.load(f)
@@ -123,7 +148,9 @@ def test_sync_does_not_import_forged_revocation(tmp_path, monkeypatch):
     runner.invoke(cli, ["sync", "--with", alice_home])
     mallory = generate_identity()
     forged = _entry_for(vid, mallory)  # well-formed, but not from the issuer
-    with open(os.path.join(mallory_home, "revocations.json"), "w", encoding="utf-8") as f:
+    with open(
+        os.path.join(mallory_home, "revocations.json"), "w", encoding="utf-8"
+    ) as f:
         json.dump({"revocations": [forged]}, f)
     # alice syncs with mallory: the forged entry must not enter alice's list
     monkeypatch.setenv("ATAR_HOME", alice_home)
@@ -134,7 +161,9 @@ def test_sync_does_not_import_forged_revocation(tmp_path, monkeypatch):
     assert verify_vouch_revocation_aware(v, alice_rl) is True
 
 
-def test_reissue_commit_revocation_verifiable_and_old_key_retired(tmp_path, monkeypatch):
+def test_reissue_commit_revocation_verifiable_and_old_key_retired(
+    tmp_path, monkeypatch
+):
     """Rotation: the retirement revocation is signed by the OLD key (SPEC §6),
     and the locally retained old key is deleted after commit."""
     home = str(tmp_path)
@@ -144,8 +173,22 @@ def test_reissue_commit_revocation_verifiable_and_old_key_retired(tmp_path, monk
     r = runner.invoke(cli, ["keygen", "--name", "b"])
     b_did = [l for l in r.output.splitlines() if l.startswith("did:key:")][0]
     vf = os.path.join(home, "v.json")
-    runner.invoke(cli, ["vouch", "--from", "a", "--for", b_did,
-                        "--score", "0.9", "--scope", "coding", "--out", vf])
+    runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "a",
+            "--for",
+            b_did,
+            "--score",
+            "0.9",
+            "--scope",
+            "coding",
+            "--out",
+            vf,
+        ],
+    )
     runner.invoke(cli, ["add", vf])
     with open(vf, "r", encoding="utf-8") as f:
         v = json.load(f)

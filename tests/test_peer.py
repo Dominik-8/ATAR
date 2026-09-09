@@ -23,7 +23,9 @@ def _get(url):
 
 def _post(url, obj):
     data = json.dumps(obj).encode()
-    req = urlrequest.Request(url, data=data, headers={"Content-Type": "application/json"})
+    req = urlrequest.Request(
+        url, data=data, headers={"Content-Type": "application/json"}
+    )
     with urlrequest.urlopen(req, timeout=5) as r:
         return json.loads(r.read().decode())
 
@@ -42,7 +44,11 @@ def server(tmp_path):
 def _make_vouch(score=0.9, scope="coding"):
     issuer = generate_identity()
     subject = generate_identity()
-    return create_vouch(issuer, subject.public_key, score=score, scope=scope), issuer, subject
+    return (
+        create_vouch(issuer, subject.public_key, score=score, scope=scope),
+        issuer,
+        subject,
+    )
 
 
 def test_is_url():
@@ -132,8 +138,7 @@ def test_sync_with_url_both_directions(server, tmp_path):
     assert counts["vouches_in"] == 1
     assert counts["vouches_out"] == 1
     assert local_store.get(canonical_vouch_id(vouch_remote))
-    peer_vids = {canonical_vouch_id(v)
-                 for v in _get(url + "/vouches")["vouches"]}
+    peer_vids = {canonical_vouch_id(v) for v in _get(url + "/vouches")["vouches"]}
     assert canonical_vouch_id(vouch_local) in peer_vids
 
 
@@ -170,8 +175,10 @@ def test_auto_sync_unreachable_url_is_skipped(tmp_path, monkeypatch):
     my_home = str(tmp_path / "me")
     os.makedirs(my_home)
     monkeypatch.setenv("ATAR_HOME", my_home)
-    json.dump({"peers": ["http://127.0.0.1:1"]},
-              open(os.path.join(my_home, "atar_peers.json"), "w"))
+    json.dump(
+        {"peers": ["http://127.0.0.1:1"]},
+        open(os.path.join(my_home, "atar_peers.json"), "w"),
+    )
     runner = CliRunner()
     r = runner.invoke(cli, ["auto-sync"])
     assert r.exit_code == 0, r.output

@@ -106,6 +106,7 @@ class AgentRegistry:
 
     def _save(self) -> None:
         from .store import atomic_save_json
+
         atomic_save_json(self._agents, self._agents_file)
         # the registry holds private keys: owner-read/write only
         os.chmod(self._agents_file, 0o600)
@@ -118,6 +119,7 @@ class AgentRegistry:
         writer) never lose each other's private keys.
         """
         from .store import file_lock
+
         with file_lock(self._agents_file):
             self._agents = self._load()
             self.seed_did = self._agents.get("_seed")
@@ -164,6 +166,7 @@ class AgentRegistry:
 def seed_trust_root(name: str) -> str:
     """Designate an agent as the trusted seed (root of the web-of-trust)."""
     from .store import file_lock
+
     reg = AgentRegistry()
     did = reg.register(name)
     with file_lock(reg._agents_file):

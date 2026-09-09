@@ -20,9 +20,22 @@ def _alice_vouches_bob(tmp_path):
     assert runner.invoke(cli, ["keygen", "--name", "bob"]).exit_code == 0
     keys = json.loads((tmp_path / "keys.json").read_text())
     vouch_path = tmp_path / "vouch.json"
-    r = runner.invoke(cli, ["vouch", "--from", "alice", "--for",
-                            keys["bob"]["did"], "--score", "0.9",
-                            "--scope", "coding", "--out", str(vouch_path)])
+    r = runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "alice",
+            "--for",
+            keys["bob"]["did"],
+            "--score",
+            "0.9",
+            "--scope",
+            "coding",
+            "--out",
+            str(vouch_path),
+        ],
+    )
     assert r.exit_code == 0, r.output
     return vouch_path
 

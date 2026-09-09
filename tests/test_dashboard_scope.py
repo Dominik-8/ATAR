@@ -1,7 +1,11 @@
 import os
 import tempfile
 
-from atar.dashboard import dashboard_data, render_dashboard_html, render_multi_scope_html
+from atar.dashboard import (
+    dashboard_data,
+    render_dashboard_html,
+    render_multi_scope_html,
+)
 from atar.agent_bootstrap import AgentRegistry, seed_trust_root
 
 
@@ -38,8 +42,9 @@ def test_dashboard_filters_by_scope(tmp_path):
 
 def test_multi_scope_html_has_both_sections(tmp_path):
     reg = _build_multi_scope(str(tmp_path))
-    html = render_multi_scope_html(reg.build_network(scope="intelligence"),
-                                  scopes=["intelligence", "coding"])
+    html = render_multi_scope_html(
+        reg.build_network(scope="intelligence"), scopes=["intelligence", "coding"]
+    )
     assert "intelligence" in html
     assert "coding" in html
     assert "scope-sec" in html  # sections rendered

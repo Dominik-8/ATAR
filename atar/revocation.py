@@ -54,6 +54,7 @@ def revoke_payload_id(vouch: dict) -> str:
 
 def _sign_revocation(issuer: Identity, vid: str, revoked_by: str, ts: int) -> str:
     from base64 import b64encode
+
     msg = f"{vid}|{revoked_by}|{ts}".encode("utf-8")
     sig = issuer.private_key.sign(msg)
     return b64encode(sig).decode("ascii")
@@ -75,6 +76,7 @@ def verify_revocation_entry(entry: dict, verify_key=None) -> bool:
     entry can always be checked standalone — no trusted source needed.
     """
     from base64 import b64decode
+
     try:
         vid = entry["vid"]
         revoked_by = entry["revoked_by"]
@@ -97,8 +99,15 @@ class RevocationList:
         # vid -> entry dict
         self.entries: dict[str, dict] = {}
 
-    def add(self, revoked_by: str, vid: str, ts: int, signature: str,
-            verify_key=None, vouch: dict | None = None) -> bool:
+    def add(
+        self,
+        revoked_by: str,
+        vid: str,
+        ts: int,
+        signature: str,
+        verify_key=None,
+        vouch: dict | None = None,
+    ) -> bool:
         """Add a revocation entry. The signature is ALWAYS verified against
         the ``revoked_by`` key (reconstructed from the DID when ``verify_key``
         is not given) — an unverifiable entry never enters the list.
@@ -109,7 +118,9 @@ class RevocationList:
         """
         if vid in self.entries:
             return False
-        if vouch is not None and not _same_did(vouch.get("payload", {}).get("issuer"), revoked_by):
+        if vouch is not None and not _same_did(
+            vouch.get("payload", {}).get("issuer"), revoked_by
+        ):
             return False
         entry = {
             "vid": vid,
@@ -130,7 +141,9 @@ class RevocationList:
         vouch's issuer (SPEC §6). An entry signed by anyone else verifies
         fine against its own ``revoked_by`` key but never applies here."""
         entry = self.entries.get(revoke_payload_id(vouch))
-        return entry is not None and _same_did(entry.get("revoked_by"), vouch.get("payload", {}).get("issuer"))
+        return entry is not None and _same_did(
+            entry.get("revoked_by"), vouch.get("payload", {}).get("issuer")
+        )
 
     def all(self) -> list[dict]:
         return list(self.entries.values())
@@ -141,6 +154,7 @@ class RevocationList:
         are an append-only, content-addressed set, so union is the correct
         merge and no entry is ever lost)."""
         from .store import atomic_save_json, file_lock
+
         with file_lock(path):
             merged = RevocationList.load(path)
             merged.entries.update(self.entries)

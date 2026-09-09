@@ -46,8 +46,12 @@ class RotationStatement:
 
     @classmethod
     def from_dict(cls, d: dict) -> "RotationStatement":
-        return cls(old_did=d["old_did"], new_did=d["new_did"],
-                   ts=d["ts"], signature=d["signature"])
+        return cls(
+            old_did=d["old_did"],
+            new_did=d["new_did"],
+            ts=d["ts"],
+            signature=d["signature"],
+        )
 
 
 def rotate_identity(old, new) -> RotationStatement:
@@ -56,8 +60,16 @@ def rotate_identity(old, new) -> RotationStatement:
     Accepts ``Ed25519PrivateKey`` objects (as returned by the CLI loader) or
     ``Identity`` objects interchangeably.
     """
-    old_pub = old.public_key() if hasattr(old, "public_key") and callable(old.public_key) else old.public_key
-    new_pub = new.public_key() if hasattr(new, "public_key") and callable(new.public_key) else new.public_key
+    old_pub = (
+        old.public_key()
+        if hasattr(old, "public_key") and callable(old.public_key)
+        else old.public_key
+    )
+    new_pub = (
+        new.public_key()
+        if hasattr(new, "public_key") and callable(new.public_key)
+        else new.public_key
+    )
     payload = {
         "type": "rotation",
         "old_did": did_from_public(old_pub),
@@ -77,6 +89,7 @@ def verify_rotation(stmt: RotationStatement) -> bool:
     """True iff the rotation is genuinely signed by the OLD key."""
     try:
         from .identity import public_key_from_did
+
         pub = public_key_from_did(stmt.old_did)
         payload = {
             "type": "rotation",
@@ -90,8 +103,14 @@ def verify_rotation(stmt: RotationStatement) -> bool:
         return False
 
 
-def reissue_vouch(old_issuer, new_issuer, vouch: dict, *, scope: str | None = None,
-                  score: float | None = None) -> dict:
+def reissue_vouch(
+    old_issuer,
+    new_issuer,
+    vouch: dict,
+    *,
+    scope: str | None = None,
+    score: float | None = None,
+) -> dict:
     """Re-sign an out-going vouch under the NEW key, fresh ts (Phase 24).
 
     Preserves subject/score/scope/claim/evidence; only the issuer key +
@@ -103,6 +122,7 @@ def reissue_vouch(old_issuer, new_issuer, vouch: dict, *, scope: str | None = No
     subject_did = p["subject"]
     # recover the subject public key from its DID (did:key or legacy)
     from .identity import public_key_from_did
+
     subj_pub = public_key_from_did(subject_did)
     out = create_vouch(
         new_issuer,

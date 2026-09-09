@@ -22,9 +22,11 @@ def _lock_fd(f) -> None:
     """Best-effort blocking exclusive lock on an open file (POSIX + Windows)."""
     if os.name == "posix":
         import fcntl
+
         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
     elif os.name == "nt":  # pragma: no cover - windows only
         import msvcrt
+
         f.seek(0)
         msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
 
@@ -32,9 +34,11 @@ def _lock_fd(f) -> None:
 def _unlock_fd(f) -> None:
     if os.name == "posix":
         import fcntl
+
         fcntl.flock(f.fileno(), fcntl.LOCK_UN)
     elif os.name == "nt":  # pragma: no cover - windows only
         import msvcrt
+
         f.seek(0)
         msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
 

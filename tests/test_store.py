@@ -27,8 +27,15 @@ def test_store_rejects_invalid_vouch():
     d = tempfile.mkdtemp()
     s = VouchStore(os.path.join(d, "vouches.json"))
     # a forged blob (no signature) must be rejected
-    forged = {"payload": {"issuer": "did:agent:x", "subject": "did:agent:y",
-                          "score": 1.0, "scope": "coding"}, "signature": "deadbeef"}
+    forged = {
+        "payload": {
+            "issuer": "did:agent:x",
+            "subject": "did:agent:y",
+            "score": 1.0,
+            "scope": "coding",
+        },
+        "signature": "deadbeef",
+    }
     assert s.add(forged) is False
     assert len(s.all()) == 0
 

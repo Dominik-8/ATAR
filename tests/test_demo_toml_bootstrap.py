@@ -12,8 +12,9 @@ from click.testing import CliRunner
 from atar.cli import cli
 
 
-_CFG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                    "demo.toml")
+_CFG = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "demo.toml"
+)
 
 
 def test_demo_toml_bootstraps_multi_agent_graph(tmp_path, monkeypatch):
@@ -24,13 +25,20 @@ def test_demo_toml_bootstraps_multi_agent_graph(tmp_path, monkeypatch):
 
     # 5 agents seeded, edges vouched
     from atar.agent_bootstrap import AgentRegistry
+
     reg = AgentRegistry()
     names = set(reg._agents.keys()) - {"_seed"}
-    assert {"seed_agent", "reporting_agent", "research", "market", "founder_intel"} <= names, \
-        f"missing agents: {names}"
+    assert {
+        "seed_agent",
+        "reporting_agent",
+        "research",
+        "market",
+        "founder_intel",
+    } <= names, f"missing agents: {names}"
 
     from atar.store import VouchStore
     from atar.cli import _home
+
     store = VouchStore(os.path.join(_home(), "vouches.json"))
     assert len(store.all()) >= 5, "demo should produce multiple vouches"
 

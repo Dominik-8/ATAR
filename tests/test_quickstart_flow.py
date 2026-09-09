@@ -27,9 +27,22 @@ def test_readme_quickstart_end_to_end(tmp_path, monkeypatch):
     bob_did = [l for l in r_bob.output.splitlines() if l.startswith("did:key:")][0]
 
     vouch_file = tmp_path / "bob-vouch.json"
-    r = runner.invoke(cli, ["vouch", "--from", "alice", "--for", bob_did,
-                            "--score", "0.95", "--scope", "coding",
-                            "--out", str(vouch_file)])
+    r = runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "alice",
+            "--for",
+            bob_did,
+            "--score",
+            "0.95",
+            "--scope",
+            "coding",
+            "--out",
+            str(vouch_file),
+        ],
+    )
     assert r.exit_code == 0
     # the hint that closes the discoverability gap
     assert "NOT in your local store" in r.output
@@ -52,8 +65,10 @@ def test_readme_quickstart_end_to_end(tmp_path, monkeypatch):
     assert card  # non-empty card
 
     dash_file = tmp_path / "dash.html"
-    r = runner.invoke(cli, ["dashboard", "--seed", bob_did, "--scope", "coding",
-                            "--out", str(dash_file)])
+    r = runner.invoke(
+        cli,
+        ["dashboard", "--seed", bob_did, "--scope", "coding", "--out", str(dash_file)],
+    )
     assert r.exit_code == 0
     assert "1 vouches" in r.output
     html = dash_file.read_text()
@@ -64,8 +79,11 @@ def test_readme_quickstart_lists_the_add_step():
     """The README quickstart must keep the `atar add` step between verify and
     card — without it the documented flow visibly produces empty output."""
     from pathlib import Path
+
     readme = Path(__file__).parent.parent / "README.md"
-    quickstart = re.search(r"## Quickstart\n\n```bash\n(.*?)```", readme.read_text(), re.S)
+    quickstart = re.search(
+        r"## Quickstart\n\n```bash\n(.*?)```", readme.read_text(), re.S
+    )
     assert quickstart, "README quickstart block not found"
     body = quickstart.group(1)
     i_verify = body.index("atar verify")

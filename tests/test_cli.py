@@ -27,8 +27,22 @@ def test_vouch_and_verify_cli(tmp_path, monkeypatch):
     subject_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
     # issuer vouches for subject
     out_file = tmp_path / "vouch.json"
-    r3 = runner.invoke(cli, ["vouch", "--from", "issuer", "--for", subject_did,
-                             "--score", "0.8", "--scope", "coding", "--out", str(out_file)])
+    r3 = runner.invoke(
+        cli,
+        [
+            "vouch",
+            "--from",
+            "issuer",
+            "--for",
+            subject_did,
+            "--score",
+            "0.8",
+            "--scope",
+            "coding",
+            "--out",
+            str(out_file),
+        ],
+    )
     assert r3.exit_code == 0
     vouch_file = out_file
     assert vouch_file.exists()

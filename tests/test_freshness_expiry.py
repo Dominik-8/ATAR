@@ -18,8 +18,11 @@ from atar.vouch import create_vouch
 def _fresh_vouch(issuer_priv, subject_pub, age_seconds):
     return create_vouch(
         Identity(private_key=issuer_priv, public_key=issuer_priv.public_key()),
-        subject_pub, score=0.9, scope="core",
-        ts=int(time.time()) - age_seconds)
+        subject_pub,
+        score=0.9,
+        scope="core",
+        ts=int(time.time()) - age_seconds,
+    )
 
 
 def test_verify_reports_expired_with_max_age(tmp_path, monkeypatch):
@@ -29,8 +32,11 @@ def test_verify_reports_expired_with_max_age(tmp_path, monkeypatch):
     runner.invoke(cli, ["keygen", "--name", "bob"])
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     keys = json.load(open(os.path.join(tmp_path, "keys.json")))
-    alice = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys["alice"]["private"]))
+    alice = Ed25519PrivateKey.from_private_bytes(
+        bytes.fromhex(keys["alice"]["private"])
+    )
     bob = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys["bob"]["private"]))
 
     # vouch from 1 year ago
@@ -56,8 +62,11 @@ def test_audit_flags_expired_vouch(tmp_path, monkeypatch):
     runner.invoke(cli, ["keygen", "--name", "bob"])
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     keys = json.load(open(os.path.join(tmp_path, "keys.json")))
-    alice = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys["alice"]["private"]))
+    alice = Ed25519PrivateKey.from_private_bytes(
+        bytes.fromhex(keys["alice"]["private"])
+    )
     bob = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys["bob"]["private"]))
 
     old_blob = _fresh_vouch(alice, bob.public_key(), age_seconds=365 * 24 * 3600)
@@ -78,8 +87,11 @@ def test_watch_once_flags_expired(tmp_path, monkeypatch):
     runner.invoke(cli, ["keygen", "--name", "bob"])
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     keys = json.load(open(os.path.join(tmp_path, "keys.json")))
-    alice = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys["alice"]["private"]))
+    alice = Ed25519PrivateKey.from_private_bytes(
+        bytes.fromhex(keys["alice"]["private"])
+    )
     bob = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys["bob"]["private"]))
 
     old_blob = _fresh_vouch(alice, bob.public_key(), age_seconds=365 * 24 * 3600)

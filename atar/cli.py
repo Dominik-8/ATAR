@@ -36,6 +36,7 @@ def _load_keys() -> dict:
 
 def _save_keys(keys: dict) -> None:
     from .store import atomic_save_json
+
     atomic_save_json(keys, _keys_path())
     os.chmod(_keys_path(), 0o600)  # private keys: owner-read/write only
 
@@ -43,9 +44,12 @@ def _save_keys(keys: dict) -> None:
 def _identity_from_name(name: str):
     keys = _load_keys()
     if name not in keys:
-        click.echo(f"no identity named '{name}'. Create one with: atar keygen --name {name}")
+        click.echo(
+            f"no identity named '{name}'. Create one with: atar keygen --name {name}"
+        )
         sys.exit(1)
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[name]["private"]))
     return priv
 
@@ -57,9 +61,12 @@ def cli():
 
 @cli.command()
 @click.option("--name", default="default", help="label for this identity")
-@click.option("--force", is_flag=True,
-              help="overwrite an existing identity with this name "
-                   "(WARNING: the old key is destroyed; its DID is orphaned)")
+@click.option(
+    "--force",
+    is_flag=True,
+    help="overwrite an existing identity with this name "
+    "(WARNING: the old key is destroyed; its DID is orphaned)",
+)
 def keygen(name: str, force: bool):
     """Generate a new agent identity and print its DID.
 
@@ -68,14 +75,20 @@ def keygen(name: str, force: bool):
     and received, with no way back.
     """
     from .store import file_lock
+
     # load -> mutate -> save under a cross-process lock: two concurrent CLI
     # commands (keygen/rotate/reissue/import) must not lose each other's keys
     with file_lock(_keys_path()):
         keys = _load_keys()
         if name in keys and not force:
-            click.echo(f"identity '{name}' already exists ({keys[name]['did']}).", err=True)
-            click.echo("refusing to overwrite: a new key orphans the old DID. "
-                       "Use --force if you really mean it.", err=True)
+            click.echo(
+                f"identity '{name}' already exists ({keys[name]['did']}).", err=True
+            )
+            click.echo(
+                "refusing to overwrite: a new key orphans the old DID. "
+                "Use --force if you really mean it.",
+                err=True,
+            )
             sys.exit(1)
         ident = generate_identity()
         priv_hex = ident.private_key.private_bytes_raw().hex()
@@ -98,30 +111,40 @@ def identities():
 
 @cli.command()
 @click.option("--from", "from_name", required=True, help="issuer identity name")
-@click.option("--for", "for_did", required=True, help="subject agent DID or local identity name")
+@click.option(
+    "--for", "for_did", required=True, help="subject agent DID or local identity name"
+)
 @click.option("--score", type=float, required=True, help="trust score 0..1")
 @click.option("--scope", required=True, help="capability scope, e.g. coding")
 @click.option("--out", default="vouch.json", help="output file")
 def vouch(from_name: str, for_did: str, score: float, scope: str, out: str):
     """Create a signed vouch from one identity for a subject DID."""
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     resolved = _resolve_did(for_did)
     if resolved is None:
-        click.echo(f"unknown subject (not a DID and no local identity with "
-                   f"that name): {for_did.strip()!r}")
+        click.echo(
+            f"unknown subject (not a DID and no local identity with "
+            f"that name): {for_did.strip()!r}"
+        )
         sys.exit(2)
     if resolved != for_did.strip():
         click.echo(f"resolved '{for_did.strip()}' -> {resolved}")
     for_did = resolved
     from .identity import public_key_from_did
+
     if not 0.0 <= score <= 1.0:
         click.echo(f"score must be within [0, 1] (SPEC §3.2), got {score}")
         sys.exit(2)
     keys = _load_keys()
     if from_name not in keys:
-        click.echo(f"no identity '{from_name}'"); sys.exit(1)
-    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[from_name]["private"]))
+        click.echo(f"no identity '{from_name}'")
+        sys.exit(1)
+    priv = Ed25519PrivateKey.from_private_bytes(
+        bytes.fromhex(keys[from_name]["private"])
+    )
     from .identity import Identity
+
     issuer = Identity(private_key=priv, public_key=priv.public_key())
     # reconstruct subject public key from DID (did:key or legacy did:agent:)
     subject_pub = public_key_from_did(for_did)
@@ -129,15 +152,22 @@ def vouch(from_name: str, for_did: str, score: float, scope: str, out: str):
     with open(out, "w", encoding="utf-8") as f:
         json.dump(blob, f, indent=2)
     click.echo(f"vouch written to {out}")
-    click.echo(f"note: {out} is a portable blob — it is NOT in your local store, so "
-               f"card/dashboard/graph cannot see it yet. Run `atar add {out}` to store it.")
+    click.echo(
+        f"note: {out} is a portable blob — it is NOT in your local store, so "
+        f"card/dashboard/graph cannot see it yet. Run `atar add {out}` to store it."
+    )
 
 
 @cli.command()
 @click.argument("path")
-@click.option("--max-age", "max_age", default=None, type=int,
-              help="reject vouches older than N seconds (freshness/TTL). "
-                   "Default: trust never expires unless revoked.")
+@click.option(
+    "--max-age",
+    "max_age",
+    default=None,
+    type=int,
+    help="reject vouches older than N seconds (freshness/TTL). "
+    "Default: trust never expires unless revoked.",
+)
 def verify(path: str, max_age):
     """Verify a vouch blob file. Prints VALID, REVOKED, EXPIRED, or INVALID.
 
@@ -147,6 +177,7 @@ def verify(path: str, max_age):
     actively; freshness lets stale trust decay so the graph stays alive.
     """
     from .freshness import is_fresh
+
     with open(path, "r", encoding="utf-8") as f:
         blob = json.load(f)
     if not verify_vouch(blob):
@@ -155,6 +186,7 @@ def verify(path: str, max_age):
     # revocation awareness (Phase 16/17/22)
     try:
         from .revocation import RevocationList
+
         rl = RevocationList.load(_revocations_path())
         if rl.is_revoked_for(blob):
             click.echo("REVOKED")
@@ -170,27 +202,36 @@ def verify(path: str, max_age):
     # DisputeList.load verifies every entry and drops corrupt files, so a
     # broken disputes.json simply yields no warnings - nothing to catch here.
     from .dispute import DisputeList
+
     n = len(DisputeList.load(_disputes_path()).disputes_for(blob))
     if n:
-        click.echo(f"note: {n} signed dispute(s) on record against this "
-                   f"vouch - see `atar disputes`", err=True)
+        click.echo(
+            f"note: {n} signed dispute(s) on record against this "
+            f"vouch - see `atar disputes`",
+            err=True,
+        )
     click.echo("VALID")
 
 
 @cli.command()
 @click.option("--name", required=True, help="identity name to build the card for")
 @click.option("--out", default="agent-card.json", help="output file")
-@click.option("--challenge", default=None,
-              help="nonce from the verifier - signs a proof-of-possession into the card (SPEC §11.3)")
+@click.option(
+    "--challenge",
+    default=None,
+    help="nonce from the verifier - signs a proof-of-possession into the card (SPEC §11.3)",
+)
 def card(name: str, out: str, challenge: str | None):
     """Build an agent card (DID + name + all stored vouches for this DID)."""
     keys = _load_keys()
     if name not in keys:
-        click.echo(f"no identity '{name}'"); sys.exit(1)
+        click.echo(f"no identity '{name}'")
+        sys.exit(1)
     did = keys[name]["did"]
     # collect vouches stored locally where subject == this DID, across both
     # spellings of the same key (SPEC §2 aliasing: did:agent: <-> did:key)
     from .identity import normalize_did
+
     try:
         my_canonical = normalize_did(did)
     except ValueError:
@@ -207,6 +248,7 @@ def card(name: str, out: str, challenge: str | None):
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from .identity import Identity
     from .atc import sign_pop_proof, sign_agent_card, ATAR_TRUST_EXT_URI
+
     card_doc = make_agent_card(did=did, name=name, vouches=vouches)
     priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[name]["private"]))
     ident = Identity(private_key=priv, public_key=priv.public_key())
@@ -226,13 +268,17 @@ def card(name: str, out: str, challenge: str | None):
 
 @cli.command()
 @click.argument("path")
-@click.option("--challenge", default=None,
-              help="nonce you sent the presenter - verifies the card's proof-of-possession (SPEC §11.3)")
+@click.option(
+    "--challenge",
+    default=None,
+    help="nonce you sent the presenter - verifies the card's proof-of-possession (SPEC §11.3)",
+)
 def verify_card(path: str, challenge: str | None):
     """Verify every vouch inside an agent card. Prints a report (flags revoked)."""
     with open(path, "r", encoding="utf-8") as f:
         card_doc = json.load(f)
     from .atc import _trust_params
+
     report = verify_agent_card(card_doc)
     params = _trust_params(card_doc)
     if report["signature_valid"] is True:
@@ -244,10 +290,15 @@ def verify_card(path: str, challenge: str | None):
         click.echo("card signature    : absent (legacy card)")
     if challenge is not None:
         from .atc import verify_pop_proof
-        if verify_pop_proof(report["did"], challenge, params.get("proof") or card_doc.get("proof")):
+
+        if verify_pop_proof(
+            report["did"], challenge, params.get("proof") or card_doc.get("proof")
+        ):
             click.echo("proof-of-possession : VALID")
         else:
-            click.echo("proof-of-possession : INVALID (missing, replayed, or wrong key)")
+            click.echo(
+                "proof-of-possession : INVALID (missing, replayed, or wrong key)"
+            )
             sys.exit(1)
     elif params.get("proof") or card_doc.get("proof"):
         click.echo("proof-of-possession : present (pass --challenge NONCE to verify)")
@@ -257,9 +308,9 @@ def verify_card(path: str, challenge: str | None):
     # revocation awareness (Phase 22): flag any vouch on the local revocation list
     try:
         from .revocation import RevocationList
+
         rl = RevocationList.load(_revocations_path())
-        revoked = [v for v in report["valid_vouches"]
-                   if rl.is_revoked_for(v)]
+        revoked = [v for v in report["valid_vouches"] if rl.is_revoked_for(v)]
     except FileNotFoundError:
         # no revocation list yet — nothing to check
         revoked = []
@@ -274,10 +325,14 @@ def verify_card(path: str, challenge: str | None):
 
 @cli.command()
 @click.option("--from", "from_name", required=True, help="issuer identity name")
-@click.option("--for", "for_did", required=True, help="subject agent DID or local identity name")
+@click.option(
+    "--for", "for_did", required=True, help="subject agent DID or local identity name"
+)
 @click.option("--scope", required=True, help="capability scope, e.g. coding")
 @click.option("--score", type=float, required=True, help="trust score 0..1")
-@click.option("--claim", default="", help="free-text capability claim about the subject")
+@click.option(
+    "--claim", default="", help="free-text capability claim about the subject"
+)
 @click.option("--out", default="claim.json", help="output file")
 def issue(from_name: str, for_did: str, scope: str, score: float, claim: str, out: str):
     """Phase 26 — issue a signed capability claim about a subject DID.
@@ -286,10 +341,13 @@ def issue(from_name: str, for_did: str, scope: str, score: float, claim: str, ou
     file (not the store) so any agent can issue/verify it peer-to-peer.
     """
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     resolved = _resolve_did(for_did)
     if resolved is None:
-        click.echo(f"unknown subject (not a DID and no local identity with "
-                   f"that name): {for_did.strip()!r}")
+        click.echo(
+            f"unknown subject (not a DID and no local identity with "
+            f"that name): {for_did.strip()!r}"
+        )
         sys.exit(2)
     for_did = resolved
     if not 0.0 <= score <= 1.0:
@@ -297,9 +355,13 @@ def issue(from_name: str, for_did: str, scope: str, score: float, claim: str, ou
         sys.exit(2)
     keys = _load_keys()
     if from_name not in keys:
-        click.echo(f"no identity '{from_name}'"); sys.exit(1)
-    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[from_name]["private"]))
+        click.echo(f"no identity '{from_name}'")
+        sys.exit(1)
+    priv = Ed25519PrivateKey.from_private_bytes(
+        bytes.fromhex(keys[from_name]["private"])
+    )
     from .identity import Identity, public_key_from_did
+
     issuer = Identity(private_key=priv, public_key=priv.public_key())
     # reconstruct subject public key from DID (did:key or legacy did:agent:)
     subject_pub = public_key_from_did(for_did)
@@ -333,8 +395,12 @@ def verify_claim(path: str):
 
 @cli.command(name="vc-export")
 @click.argument("path")
-@click.option("--from", "from_name", required=True,
-              help="issuer identity name (must own the vouch's issuer key)")
+@click.option(
+    "--from",
+    "from_name",
+    required=True,
+    help="issuer identity name (must own the vouch's issuer key)",
+)
 @click.option("--out", default="vouch.vc.json", help="output file")
 def vc_export(path: str, from_name: str, out: str):
     """Export a native vouch as a W3C Verifiable Credential (SPEC §3.1).
@@ -346,17 +412,23 @@ def vc_export(path: str, from_name: str, out: str):
     with open(path, "r", encoding="utf-8") as f:
         blob = json.load(f)
     if not verify_vouch(blob):
-        click.echo("INVALID vouch (signature does not verify)"); sys.exit(1)
+        click.echo("INVALID vouch (signature does not verify)")
+        sys.exit(1)
     keys = _load_keys()
     if from_name not in keys:
-        click.echo(f"no identity '{from_name}'"); sys.exit(1)
+        click.echo(f"no identity '{from_name}'")
+        sys.exit(1)
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from .identity import Identity, normalize_did, did_from_public
     from .vc import vouch_to_credential, sign_credential
-    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[from_name]["private"]))
+
+    priv = Ed25519PrivateKey.from_private_bytes(
+        bytes.fromhex(keys[from_name]["private"])
+    )
     issuer = Identity(private_key=priv, public_key=priv.public_key())
     if normalize_did(blob["payload"]["issuer"]) != did_from_public(issuer.public_key):
-        click.echo("identity does not match the vouch's issuer"); sys.exit(1)
+        click.echo("identity does not match the vouch's issuer")
+        sys.exit(1)
     vc = sign_credential(vouch_to_credential(blob), issuer)
     with open(out, "w", encoding="utf-8") as f:
         json.dump(vc, f, indent=2)
@@ -375,6 +447,7 @@ def vc_verify(path: str):
     with open(path, "r", encoding="utf-8") as f:
         vc = json.load(f)
     from .vc import verify_credential, credential_to_vouch_payload
+
     if not verify_credential(vc):
         click.echo("INVALID")
         sys.exit(1)
@@ -390,6 +463,7 @@ def vc_verify(path: str):
 def _load_store_vouches() -> list[dict]:
     """Load all vouches from the persistent store (Phase 7)."""
     from .store import VouchStore
+
     return VouchStore(_store_path()).all()
 
 
@@ -401,11 +475,13 @@ def _resolve_did(value: str):
     alice`` instead of copy-pasting DIDs between commands.
     """
     from .identity import is_supported_did
+
     value = value.strip()
     if is_supported_did(value):
         return value
     try:
         from .agent_bootstrap import known_agent_names
+
         return known_agent_names().get(value)
     except Exception:
         return None
@@ -415,6 +491,7 @@ def _default_seed():
     """Return the DID of the seeded agent in the registry, or None."""
     try:
         from .agent_bootstrap import AgentRegistry
+
         reg = AgentRegistry()
         if reg.seed_did:
             return reg.seed_did
@@ -424,7 +501,11 @@ def _default_seed():
 
 
 @cli.command()
-@click.option("--seed", default=None, help="trusted seed DID or local identity name (default: the seeded agent from the registry)")
+@click.option(
+    "--seed",
+    default=None,
+    help="trusted seed DID or local identity name (default: the seeded agent from the registry)",
+)
 @click.option("--scope", default="intelligence", help="capability scope to evaluate")
 @click.option("--home", "home", default=None, help="override ATAR_HOME (vouch store)")
 def graph(seed: str | None, scope: str, home: str | None):
@@ -441,7 +522,8 @@ def graph(seed: str | None, scope: str, home: str | None):
         if resolved is None:
             raise SystemExit(
                 f"unknown seed (not a DID and no local identity with that "
-                f"name): {seed.strip()!r}")
+                f"name): {seed.strip()!r}"
+            )
         seed = resolved
     else:
         seed = _default_seed()
@@ -451,16 +533,20 @@ def graph(seed: str | None, scope: str, home: str | None):
     from .revocation import RevocationList
     from .dispute import DisputeList
     from .freshness import VOUCH_TTL_DEFAULT
+
     g = TrustGraph()
     for v in _load_store_vouches():
         g.add(v)
     loaded = len(g.all_vouches())
     # SPEC §8.1/8.2: only valid, unrevoked, unexpired vouches carry trust;
     # trusted (>= 0.5) disputers discount the vouches they warn against.
-    trust = g.compute_trust(seed_did=seed, scope=scope,
-                            revocations=RevocationList.load(_revocations_path()),
-                            disputes=DisputeList.load(_disputes_path()),
-                            ttl=VOUCH_TTL_DEFAULT)
+    trust = g.compute_trust(
+        seed_did=seed,
+        scope=scope,
+        revocations=RevocationList.load(_revocations_path()),
+        disputes=DisputeList.load(_disputes_path()),
+        ttl=VOUCH_TTL_DEFAULT,
+    )
     ranked = sorted(trust.items(), key=lambda kv: kv[1], reverse=True)
     click.echo(f"seed  : {seed}")
     click.echo(f"scope : {scope}")
@@ -470,6 +556,7 @@ def graph(seed: str | None, scope: str, home: str | None):
     # resolve names like the dashboard does (registry + keygen identities)
     from .agent_bootstrap import known_agent_names
     from .identity import normalize_did
+
     name_by_did = {}
     for n, d in known_agent_names().items():
         try:
@@ -487,7 +574,11 @@ def graph(seed: str | None, scope: str, home: str | None):
 
 
 @cli.command()
-@click.option("--seed", default=None, help="trusted seed DID or local identity name (default: the seeded agent from the registry)")
+@click.option(
+    "--seed",
+    default=None,
+    help="trusted seed DID or local identity name (default: the seeded agent from the registry)",
+)
 @click.option("--scope", default="intelligence", help="capability scope to render")
 @click.option("--out", default="atar-dashboard.html", help="output HTML file")
 @click.option("--home", "home", default=None, help="override ATAR_HOME (vouch store)")
@@ -505,7 +596,8 @@ def dashboard(seed: str | None, scope: str, out: str, home: str | None):
         if resolved is None:
             raise SystemExit(
                 f"unknown seed (not a DID and no local identity with that "
-                f"name): {seed.strip()!r}")
+                f"name): {seed.strip()!r}"
+            )
         seed = resolved
     else:
         seed = _default_seed()
@@ -513,12 +605,15 @@ def dashboard(seed: str | None, scope: str, out: str, home: str | None):
         raise SystemExit("no --seed given and no seeded agent in registry")
     from .dashboard import render_dashboard_html
     from .agent_bootstrap import known_agent_names
+
     agents = known_agent_names()  # registry + plain keygen identities
     net = {"agents": agents, "seed_did": seed, "vouches": _load_store_vouches()}
     html = render_dashboard_html(net, scope=scope)
     with open(out, "w", encoding="utf-8") as f:
         f.write(html)
-    click.echo(f"dashboard written to {out} ({len(net['vouches'])} vouches, scope={scope})")
+    click.echo(
+        f"dashboard written to {out} ({len(net['vouches'])} vouches, scope={scope})"
+    )
 
 
 def _store_path() -> str:
@@ -535,11 +630,13 @@ def add(path: str):
     revocation is enforced at the insertion point, not just at verify time.
     """
     from .store import VouchStore
+
     with open(path, "r", encoding="utf-8") as f:
         blob = json.load(f)
     # revocation check BEFORE admitting to the store
     try:
         from .revocation import RevocationList
+
         rl = RevocationList.load(_revocations_path())
         if rl.is_revoked_for(blob):
             click.echo("rejected (vouch is REVOKED)")
@@ -558,6 +655,7 @@ def add(path: str):
 def list():
     """List all vouches in the persistent local store."""
     from .store import VouchStore
+
     s = VouchStore(_store_path())
     if not s.all():
         click.echo("store is empty")
@@ -565,14 +663,18 @@ def list():
     click.echo(f"{s.count()} vouches:")
     for v in s.all():
         p = v["payload"]
-        click.echo(f"  {p['issuer']} -> {p['subject']}  "
-                    f"score={p['score']} scope={p['scope']}")
+        click.echo(
+            f"  {p['issuer']} -> {p['subject']}  score={p['score']} scope={p['scope']}"
+        )
 
 
 @cli.command()
 @click.option("--port", default=8790, help="port to listen on (default 8790)")
-@click.option("--bind", default="127.0.0.1",
-              help="bind address (default 127.0.0.1; use 0.0.0.0 to serve the LAN)")
+@click.option(
+    "--bind",
+    default="127.0.0.1",
+    help="bind address (default 127.0.0.1; use 0.0.0.0 to serve the LAN)",
+)
 def peer(port, bind):
     """Serve the local store as an HTTP gossip peer (Stage C1, SPEC 9.1).
 
@@ -582,6 +684,7 @@ def peer(port, bind):
     Still content-addressed, still no central server - every peer is equal.
     """
     from .peer import run_peer
+
     run_peer(port=port, bind=bind, home=_home())
 
 
@@ -599,6 +702,7 @@ def auto_sync():
     from .store import VouchStore
     from .revocation import RevocationList
     from .peer import is_url, sync_with_url
+
     peers_file = os.path.join(_home(), "atar_peers.json")
     if not os.path.exists(peers_file):
         click.echo("no peers configured (atar_peers.json absent) — nothing to sync")
@@ -619,18 +723,22 @@ def auto_sync():
     for p in peers:
         if is_url(p):
             try:
-                counts = sync_with_url(p, self_store, self_rl, disputes_path=_disputes_path())
+                counts = sync_with_url(
+                    p, self_store, self_rl, disputes_path=_disputes_path()
+                )
             except (URLError, OSError, json.JSONDecodeError) as exc:
                 click.echo(f"  (peer {p}: unreachable ({exc}), skipped)")
                 continue
             total_new += counts["vouches_in"]
             rev_new += counts["revocations_in"]
-            click.echo(f"  synced {p}: +{counts['vouches_in']} vouches, "
-                       f"+{counts['revocations_in']} revocations, "
-                       f"+{counts['disputes_in']} disputes "
-                       f"(to peer: +{counts['vouches_out']} vouches, "
-                       f"+{counts['revocations_out']} revocations, "
-                       f"+{counts['disputes_out']} disputes)")
+            click.echo(
+                f"  synced {p}: +{counts['vouches_in']} vouches, "
+                f"+{counts['revocations_in']} revocations, "
+                f"+{counts['disputes_in']} disputes "
+                f"(to peer: +{counts['vouches_out']} vouches, "
+                f"+{counts['revocations_out']} revocations, "
+                f"+{counts['disputes_out']} disputes)"
+            )
             continue
         if not os.path.isdir(p):
             click.echo(f"  (peer {p}: dir missing, skipped)")
@@ -645,16 +753,33 @@ def auto_sync():
             if self_store.add(v):
                 added_self += 1
         added_peer = sum(1 for v in self_store.all() if peer_store.add(v))
-        added_rev_self = sum(1 for e in peer_rl.all()
-                             if self_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
-                                            vouch=self_store.get(e["vid"]) or peer_store.get(e["vid"])))
-        added_rev_peer = sum(1 for e in self_rl.all()
-                             if peer_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
-                                            vouch=peer_store.get(e["vid"]) or self_store.get(e["vid"])))
+        added_rev_self = sum(
+            1
+            for e in peer_rl.all()
+            if self_rl.add(
+                e["revoked_by"],
+                e["vid"],
+                e["ts"],
+                e["signature"],
+                vouch=self_store.get(e["vid"]) or peer_store.get(e["vid"]),
+            )
+        )
+        added_rev_peer = sum(
+            1
+            for e in self_rl.all()
+            if peer_rl.add(
+                e["revoked_by"],
+                e["vid"],
+                e["ts"],
+                e["signature"],
+                vouch=peer_store.get(e["vid"]) or self_store.get(e["vid"]),
+            )
+        )
         peer_rl.save(os.path.join(p, "revocations.json"))
         self_rl.save(_revocations_path())
         # dispute gossip (SPEC 8.2)
         from .dispute import DisputeList
+
         self_dl = DisputeList.load(_disputes_path())
         peer_dl = DisputeList.load(os.path.join(p, "disputes.json"))
         for e in peer_dl.all():
@@ -665,16 +790,25 @@ def auto_sync():
         self_dl.save(_disputes_path())
         total_new += added_self
         rev_new += added_rev_self
-        click.echo(f"  synced {p}: +{added_self} vouches, +{added_rev_self} revocations "
-                   f"(to peer: +{added_peer} vouches, +{added_rev_peer} revocations)")
+        click.echo(
+            f"  synced {p}: +{added_self} vouches, +{added_rev_self} revocations "
+            f"(to peer: +{added_peer} vouches, +{added_rev_peer} revocations)"
+        )
     after = self_store.count()
-    click.echo(f"auto-sync done: {before} -> {after} vouches ({total_new} new), "
-               f"{rev_new} new revocation(s)")
+    click.echo(
+        f"auto-sync done: {before} -> {after} vouches ({total_new} new), "
+        f"{rev_new} new revocation(s)"
+    )
 
 
 @cli.command()
-@click.option("--with", "peer", required=True, multiple=True,
-              help="peer ATAR_HOME directory or http(s):// peer URL to exchange vouches with (repeatable)")
+@click.option(
+    "--with",
+    "peer",
+    required=True,
+    multiple=True,
+    help="peer ATAR_HOME directory or http(s):// peer URL to exchange vouches with (repeatable)",
+)
 def sync(peer):
     """Gossip vouches between local agent stores (decentralized, no server).
 
@@ -686,6 +820,7 @@ def sync(peer):
     from .store import VouchStore
     from .revocation import RevocationList
     from .peer import is_url, sync_with_url
+
     self_path = _store_path()
     self_store = VouchStore(self_path)
     self_rl = RevocationList.load(_revocations_path())
@@ -696,20 +831,25 @@ def sync(peer):
     for p in peer:
         if is_url(p):
             from urllib.error import URLError
+
             try:
-                counts = sync_with_url(p, self_store, self_rl, disputes_path=_disputes_path())
+                counts = sync_with_url(
+                    p, self_store, self_rl, disputes_path=_disputes_path()
+                )
             except (URLError, OSError, json.JSONDecodeError) as exc:
                 click.echo(f"  (peer {p}: unreachable ({exc}), skipped)")
                 continue
             total_in += counts["vouches_in"]
             rev_in += counts["revocations_in"]
             disp_in_total += counts["disputes_in"]
-            click.echo(f"  synced {p}: +{counts['vouches_in']} vouches, "
-                       f"+{counts['revocations_in']} revocations, "
-                       f"+{counts['disputes_in']} disputes "
-                       f"(to peer: +{counts['vouches_out']} vouches, "
-                       f"+{counts['revocations_out']} revocations, "
-                       f"+{counts['disputes_out']} disputes)")
+            click.echo(
+                f"  synced {p}: +{counts['vouches_in']} vouches, "
+                f"+{counts['revocations_in']} revocations, "
+                f"+{counts['disputes_in']} disputes "
+                f"(to peer: +{counts['vouches_out']} vouches, "
+                f"+{counts['revocations_out']} revocations, "
+                f"+{counts['disputes_out']} disputes)"
+            )
             continue
         peer_path = os.path.join(p, "vouches.json")
         # VouchStore creates the file on first add, so a missing peer store is
@@ -731,38 +871,61 @@ def sync(peer):
         peer_rl = RevocationList.load(os.path.join(p, "revocations.json"))
         added_rev_self = 0
         for e in peer_rl.all():
-            if self_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
-                           vouch=self_store.get(e["vid"]) or peer_store.get(e["vid"])):
+            if self_rl.add(
+                e["revoked_by"],
+                e["vid"],
+                e["ts"],
+                e["signature"],
+                vouch=self_store.get(e["vid"]) or peer_store.get(e["vid"]),
+            ):
                 added_rev_self += 1
         added_rev_peer = 0
         for e in self_rl.all():
-            if peer_rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
-                           vouch=peer_store.get(e["vid"]) or self_store.get(e["vid"])):
+            if peer_rl.add(
+                e["revoked_by"],
+                e["vid"],
+                e["ts"],
+                e["signature"],
+                vouch=peer_store.get(e["vid"]) or self_store.get(e["vid"]),
+            ):
                 added_rev_peer += 1
         peer_rl.save(os.path.join(p, "revocations.json"))
         self_rl.save(_revocations_path())
         # --- dispute gossip (SPEC 8.2): exchange signed disputes too ---
         from .dispute import DisputeList
+
         self_dl = DisputeList.load(_disputes_path())
         peer_dl = DisputeList.load(os.path.join(p, "disputes.json"))
         added_disp_self = sum(
-            1 for e in peer_dl.all()
-            if self_dl.add(e, vouch=self_store.get(e["vid"]) or peer_store.get(e["vid"])))
+            1
+            for e in peer_dl.all()
+            if self_dl.add(
+                e, vouch=self_store.get(e["vid"]) or peer_store.get(e["vid"])
+            )
+        )
         added_disp_peer = sum(
-            1 for e in self_dl.all()
-            if peer_dl.add(e, vouch=peer_store.get(e["vid"]) or self_store.get(e["vid"])))
+            1
+            for e in self_dl.all()
+            if peer_dl.add(
+                e, vouch=peer_store.get(e["vid"]) or self_store.get(e["vid"])
+            )
+        )
         peer_dl.save(os.path.join(p, "disputes.json"))
         self_dl.save(_disputes_path())
         rev_in += added_rev_self
         disp_in_total += added_disp_self
         total_in += added_to_self
-        click.echo(f"  synced {p}: +{added_to_self} vouches, +{added_rev_self} revocations, "
-                   f"+{added_disp_self} disputes "
-                   f"(to peer: +{added_peer} vouches, +{added_rev_peer} revocations, "
-                   f"+{added_disp_peer} disputes)")
+        click.echo(
+            f"  synced {p}: +{added_to_self} vouches, +{added_rev_self} revocations, "
+            f"+{added_disp_self} disputes "
+            f"(to peer: +{added_peer} vouches, +{added_rev_peer} revocations, "
+            f"+{added_disp_peer} disputes)"
+        )
     after = self_store.count()
-    click.echo(f"sync done: {before} -> {after} vouches ({total_in} new), "
-               f"{rev_in} new revocation(s), {disp_in_total} new dispute(s)")
+    click.echo(
+        f"sync done: {before} -> {after} vouches ({total_in} new), "
+        f"{rev_in} new revocation(s), {disp_in_total} new dispute(s)"
+    )
 
 
 @cli.command()
@@ -788,6 +951,7 @@ def bootstrap(config: str):
     """
     import tomllib
     from .agent_bootstrap import AgentRegistry, seed_trust_root
+
     with open(config, "rb") as f:
         cfg = tomllib.load(f)
     reg = AgentRegistry()
@@ -802,15 +966,17 @@ def bootstrap(config: str):
     added = 0
     for v in cfg.get("vouches", []):
         try:
-            ok = reg.vouch(v["issuer"], v["subject"],
-                           score=float(v["score"]), scope=v["scope"])
+            ok = reg.vouch(
+                v["issuer"], v["subject"], score=float(v["score"]), scope=v["scope"]
+            )
         except (ValueError, KeyError) as exc:
             click.echo(f"skipping invalid vouch entry {v!r}: {exc}", err=True)
             continue
         if ok:
             added += 1
-    click.echo(f"bootstrap done: {len(reg._agents) - 1} agents, "
-               f"{added} new vouch(es) added")
+    click.echo(
+        f"bootstrap done: {len(reg._agents) - 1} agents, {added} new vouch(es) added"
+    )
     if seed_name:
         click.echo(f"seed of trust: {reg.did_of(seed_name)}")
 
@@ -826,13 +992,15 @@ def scopes():
     from .store import VouchStore
     from .dashboard import dashboard_data
     from .agent_bootstrap import AgentRegistry
+
     store = VouchStore(_store_path())
     if not store.all():
         click.echo("no vouches yet — network is empty")
         return
     # collect all scopes present in the vouches
-    scope_set = sorted({v["payload"].get("scope") for v in store.all()
-                        if v["payload"].get("scope")})
+    scope_set = sorted(
+        {v["payload"].get("scope") for v in store.all() if v["payload"].get("scope")}
+    )
     reg = AgentRegistry()
     click.echo(f"scopes in network: {len(scope_set)}")
     for scope in scope_set:
@@ -855,12 +1023,14 @@ def rotate(name: str, out: str):
     the old key. Trust carries forward under the new DID — no total loss.
     """
     from .rotation import rotate_identity, verify_rotation
+
     old = _identity_from_name(name)  # Ed25519PrivateKey (exits when unknown)
     new = generate_identity()
     stmt = rotate_identity(old, new)
     # persist the new key under the same name (replaces old) — under the
     # cross-process lock so a concurrent keygen/import is not lost
     from .store import file_lock
+
     with file_lock(_keys_path()):
         keys = _load_keys()
         keys[name] = {
@@ -878,17 +1048,25 @@ def rotate(name: str, out: str):
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(stmt.to_dict(), f, indent=2)
     assert verify_rotation(stmt)
-    click.echo(f"rotated '{name}': old {stmt.old_did[:20]}... -> new {stmt.new_did[:20]}...")
+    click.echo(
+        f"rotated '{name}': old {stmt.old_did[:20]}... -> new {stmt.new_did[:20]}..."
+    )
     click.echo(f"rotation statement written to {out_path}")
-    click.echo("next: atar reissue --name " + name + "  then  atar revoke (old vouches)")
+    click.echo(
+        "next: atar reissue --name " + name + "  then  atar revoke (old vouches)"
+    )
 
 
 @cli.command()
 @click.option("--name", required=True, help="identity name whose vouches to re-issue")
 @click.option("--scope", default=None, help="re-issue only this scope (default: all)")
 @click.option("--out", default="reissued.json", help="output file (JSON list)")
-@click.option("--commit", is_flag=True, help="write re-issued vouches to the store AND "
-              "revoke the old-key (pre-rotation) vouches — closes the rotation loop")
+@click.option(
+    "--commit",
+    is_flag=True,
+    help="write re-issued vouches to the store AND "
+    "revoke the old-key (pre-rotation) vouches — closes the rotation loop",
+)
 def reissue(name: str, scope: str | None, out: str, commit: bool):
     """Re-sign this agent's out-going vouches under its CURRENT (post-rotation)
     key with fresh timestamps (Phase 24). Preserves score/scope/subject.
@@ -901,6 +1079,7 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
     from .rotation import reissue_vouch
     from .store import VouchStore
     from .revocation import RevocationList, revoke_payload_id
+
     new_id = _identity_from_name(name)  # Ed25519PrivateKey (post-rotation)
     store = VouchStore(_store_path())
     my_did = did_from_public(new_id.public_key())
@@ -910,9 +1089,12 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
     keys = _load_keys()
     old_did = keys.get(name, {}).get("rotated_from")
     if not old_did:
-        click.echo(f"no rotation recorded for '{name}' - run `atar rotate --name {name}` first. "
-                   "Re-issuing without a rotation would re-sign OTHER agents' vouches "
-                   "under your key.", err=True)
+        click.echo(
+            f"no rotation recorded for '{name}' - run `atar rotate --name {name}` first. "
+            "Re-issuing without a rotation would re-sign OTHER agents' vouches "
+            "under your key.",
+            err=True,
+        )
         sys.exit(1)
     reissued = []
     old_vouches = []
@@ -929,7 +1111,9 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
             old_vouches.append(v)
     with open(os.path.join(_home(), out), "w", encoding="utf-8") as f:
         json.dump(reissued, f, indent=2)
-    click.echo(f"re-issued {len(reissued)} vouch(es) under {my_did[:20]}... -> {os.path.join(_home(), out)}")
+    click.echo(
+        f"re-issued {len(reissued)} vouch(es) under {my_did[:20]}... -> {os.path.join(_home(), out)}"
+    )
     if not commit:
         return
     # commit: add re-issued vouches + revoke the old-key ones
@@ -941,10 +1125,12 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
     # vouch's issuer). `rotate` keeps the old key locally for exactly this.
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from .revocation import revoke_vouch
+
     old_priv_hex = keys.get(name, {}).get("old_private")
     old_id = None
     if old_priv_hex and old_did:
         from .identity import Identity
+
         old_priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(old_priv_hex))
         old_id = Identity(private_key=old_priv, public_key=old_priv.public_key())
     for v in old_vouches:
@@ -957,19 +1143,25 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
         # old key has served its only remaining purpose — retire it locally
         # (re-read under the lock so a concurrent write is not clobbered)
         from .store import file_lock
+
         with file_lock(_keys_path()):
             keys = _load_keys()
             keys.get(name, {}).pop("old_private", None)
             _save_keys(keys)
-    click.echo(f"committed: +{added} re-issued vouch(es) to store, {revoked} old-key vouch(es) revoked")
+    click.echo(
+        f"committed: +{added} re-issued vouch(es) to store, {revoked} old-key vouch(es) revoked"
+    )
     click.echo("rotation complete — old key fully retired, trust carried under new DID")
 
 
 @cli.command()
 @click.option("--out", default="atar-network.atpkg", help="output bundle file")
-@click.option("--include-keys", is_flag=True,
-              help="ALSO bundle private keys (for full migration). "
-                   "NEVER share the result — it contains secrets.")
+@click.option(
+    "--include-keys",
+    is_flag=True,
+    help="ALSO bundle private keys (for full migration). "
+    "NEVER share the result — it contains secrets.",
+)
 def export(out: str, include_keys: bool):
     """Export your trust network as a portable bundle (.atpkg).
 
@@ -982,6 +1174,7 @@ def export(out: str, include_keys: bool):
     from .revocation import RevocationList
     from .dispute import DisputeList
     from .agent_bootstrap import AgentRegistry, known_agent_names
+
     store = VouchStore(_store_path())
     rl = RevocationList.load(_revocations_path())
     dl = DisputeList.load(_disputes_path())
@@ -1007,10 +1200,12 @@ def export(out: str, include_keys: bool):
         bundle["agents"] = {}
     with open(out, "w", encoding="utf-8") as f:
         json.dump(bundle, f, indent=2)
-    click.echo(f"exported {len(bundle['vouches'])} vouch(es), "
-               f"{len(bundle['revocations'])} revocation(s), "
-               f"{len(bundle['disputes'])} dispute(s) -> {out}"
-               + (" (WITH PRIVATE KEYS — keep secret)" if include_keys else ""))
+    click.echo(
+        f"exported {len(bundle['vouches'])} vouch(es), "
+        f"{len(bundle['revocations'])} revocation(s), "
+        f"{len(bundle['disputes'])} dispute(s) -> {out}"
+        + (" (WITH PRIVATE KEYS — keep secret)" if include_keys else "")
+    )
 
 
 @cli.command()
@@ -1024,6 +1219,7 @@ def import_cmd(bundle: str, force: bool):
     """
     from .store import VouchStore
     from .revocation import RevocationList
+
     with open(bundle, "r", encoding="utf-8") as f:
         data = json.load(f)
     store = VouchStore(_store_path())
@@ -1035,6 +1231,7 @@ def import_cmd(bundle: str, force: bool):
             # --force: overwrite an existing entry (still signature-verified;
             # an invalid vouch is never imported, force or not)
             from .transparency import canonical_vouch_id
+
             store._vouches[canonical_vouch_id(v)] = v
             store._save()
             added += 1
@@ -1043,14 +1240,20 @@ def import_cmd(bundle: str, force: bool):
     for e in data.get("revocations", []):
         # verified at intake like any other source: signature against
         # revoked_by, plus issuer binding when the vouch is in the bundle
-        if rl.add(e["revoked_by"], e["vid"], e["ts"], e["signature"],
-                  vouch=store.get(e["vid"])):
+        if rl.add(
+            e["revoked_by"],
+            e["vid"],
+            e["ts"],
+            e["signature"],
+            vouch=store.get(e["vid"]),
+        ):
             revoked += 1
     rl.save(_revocations_path())
     # disputes: same verified intake as gossip (signature always; issuer
     # dispute rejected when the disputed vouch is known) - old bundles
     # simply have no "disputes" key
     from .dispute import DisputeList
+
     dl = DisputeList.load(_disputes_path())
     disputed = 0
     for e in data.get("disputes", []):
@@ -1061,6 +1264,7 @@ def import_cmd(bundle: str, force: bool):
     keys_restored = 0
     if "keys" in data:
         from .store import file_lock
+
         with file_lock(_keys_path()):
             keys = _load_keys()
             for name, k in data["keys"].items():
@@ -1074,6 +1278,7 @@ def import_cmd(bundle: str, force: bool):
     names_restored = 0
     if data.get("agents"):
         from .store import atomic_save_json, file_lock
+
         known_path = os.path.join(_home(), "known-agents.json")
         with file_lock(known_path):
             known = {}
@@ -1086,6 +1291,7 @@ def import_cmd(bundle: str, force: bool):
             existing = set(known)
             try:
                 from .agent_bootstrap import known_agent_names
+
                 existing |= set(known_agent_names())
             except Exception:
                 pass
@@ -1096,10 +1302,12 @@ def import_cmd(bundle: str, force: bool):
                     known[name] = did
                     names_restored += 1
             atomic_save_json(known, known_path)
-    click.echo(f"imported {added} vouch(es), {revoked} revocation(s)"
-               + (f", {disputed} dispute(s)" if disputed else "")
-               + (f", {keys_restored} key(s)" if keys_restored else "")
-               + (f", {names_restored} agent name(s)" if names_restored else ""))
+    click.echo(
+        f"imported {added} vouch(es), {revoked} revocation(s)"
+        + (f", {disputed} dispute(s)" if disputed else "")
+        + (f", {keys_restored} key(s)" if keys_restored else "")
+        + (f", {names_restored} agent name(s)" if names_restored else "")
+    )
 
 
 def _audit_state(max_age):
@@ -1107,6 +1315,7 @@ def _audit_state(max_age):
     from .store import VouchStore
     from .revocation import RevocationList
     from .freshness import is_fresh
+
     store = VouchStore(_store_path())
     vouches = store.all()
     rl = RevocationList.load(_revocations_path())
@@ -1115,7 +1324,9 @@ def _audit_state(max_age):
     by_scope = {}
     for v in vouches:
         scope = v["payload"].get("scope", "?")
-        by_scope.setdefault(scope, {"valid": 0, "revoked": 0, "expired": 0, "invalid": 0})
+        by_scope.setdefault(
+            scope, {"valid": 0, "revoked": 0, "expired": 0, "invalid": 0}
+        )
         if not verify_vouch(v):
             invalid += 1
             by_scope[scope]["invalid"] += 1
@@ -1131,15 +1342,24 @@ def _audit_state(max_age):
         valid += 1
         by_scope[scope]["valid"] += 1
     return {
-        "total": len(vouches), "valid": valid, "revoked": revoked,
-        "expired": expired, "invalid": invalid, "by_scope": by_scope,
+        "total": len(vouches),
+        "valid": valid,
+        "revoked": revoked,
+        "expired": expired,
+        "invalid": invalid,
+        "by_scope": by_scope,
         "healthy": not (revoked or expired or invalid),
     }
 
 
 @cli.command()
-@click.option("--max-age", "max_age", default=None, type=int,
-              help="treat vouches older than N seconds as EXPIRED (default: off)")
+@click.option(
+    "--max-age",
+    "max_age",
+    default=None,
+    type=int,
+    help="treat vouches older than N seconds as EXPIRED (default: off)",
+)
 def audit(max_age):
     """Health-check your local trust network.
 
@@ -1152,23 +1372,37 @@ def audit(max_age):
     click.echo(f"ATAR trust audit — {st['total']} vouch(es) in store")
     click.echo(f"  valid   : {st['valid']}")
     click.echo(f"  revoked : {st['revoked']}")
-    click.echo(f"  expired : {st['expired']}" + (f" (max-age={max_age}s)" if max_age else " (max-age off)"))
+    click.echo(
+        f"  expired : {st['expired']}"
+        + (f" (max-age={max_age}s)" if max_age else " (max-age off)")
+    )
     click.echo(f"  invalid : {st['invalid']}")
     if st["by_scope"]:
         click.echo("  by scope:")
         for scope, c in sorted(st["by_scope"].items()):
-            click.echo(f"    {scope:14s} valid={c['valid']} revoked={c['revoked']} "
-                       f"expired={c['expired']} invalid={c['invalid']}")
+            click.echo(
+                f"    {scope:14s} valid={c['valid']} revoked={c['revoked']} "
+                f"expired={c['expired']} invalid={c['invalid']}"
+            )
     # non-zero revoked/expired/invalid => unhealthy (exit 2), else 0
     if not st["healthy"]:
         sys.exit(2)
 
 
 @cli.command()
-@click.option("--interval", default=3600, type=int,
-              help="seconds between checks (default: 3600 = 1h)")
-@click.option("--max-age", "max_age", default=None, type=int,
-              help="treat vouches older than N seconds as EXPIRED")
+@click.option(
+    "--interval",
+    default=3600,
+    type=int,
+    help="seconds between checks (default: 3600 = 1h)",
+)
+@click.option(
+    "--max-age",
+    "max_age",
+    default=None,
+    type=int,
+    help="treat vouches older than N seconds as EXPIRED",
+)
 @click.option("--once", is_flag=True, help="run a single check and exit (for cron)")
 def watch(interval: int, max_age: int | None, once: bool):
     """Continuously monitor your trust network and ALERT on unhealthy transitions.
@@ -1184,12 +1418,17 @@ def watch(interval: int, max_age: int | None, once: bool):
     def check() -> bool:
         st = _audit_state(max_age)
         if st["healthy"]:
-            click.echo(f"[{_time.strftime('%H:%M:%S')}] healthy — "
-                       f"{st['valid']} valid, {st['total']} total")
+            click.echo(
+                f"[{_time.strftime('%H:%M:%S')}] healthy — "
+                f"{st['valid']} valid, {st['total']} total"
+            )
             return True
-        click.echo(f"[{_time.strftime('%H:%M:%S')}] ALERT: network UNHEALTHY — "
-                   f"valid={st['valid']} revoked={st['revoked']} "
-                   f"expired={st['expired']} invalid={st['invalid']}", err=True)
+        click.echo(
+            f"[{_time.strftime('%H:%M:%S')}] ALERT: network UNHEALTHY — "
+            f"valid={st['valid']} revoked={st['revoked']} "
+            f"expired={st['expired']} invalid={st['invalid']}",
+            err=True,
+        )
         return False
 
     if once:
@@ -1219,6 +1458,7 @@ def serve(port: int):
     from the persistent store on every request.
     """
     from .web import run_server
+
     run_server(port=port)
 
 
@@ -1234,6 +1474,7 @@ def revoke(vouch_file: str):
     agent key is neutralized without changing the protocol.
     """
     from .revocation import RevocationList, revoke_vouch, revoke_payload_id
+
     with open(vouch_file, "r", encoding="utf-8") as f:
         v = json.load(f)
     issuer_did = v["payload"]["issuer"]
@@ -1246,6 +1487,7 @@ def revoke(vouch_file: str):
     priv = _identity_from_name(name)
     # rebuild an Identity from the private key
     from .identity import Identity
+
     ident = Identity(private_key=priv, public_key=priv.public_key())
     rlist = RevocationList.load(_revocations_path())
     if revoke_vouch(rlist, ident, revoke_payload_id(v)):
@@ -1278,13 +1520,18 @@ def dispute(vouch_file: str, from_name: str, reason: str):
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
     from .dispute import DisputeList, create_dispute
     from .identity import Identity
+
     with open(vouch_file, "r", encoding="utf-8") as f:
         blob = json.load(f)
     keys = _load_keys()
     if from_name not in keys:
-        click.echo(f"no identity named '{from_name}'. Create one with: atar keygen --name {from_name}")
+        click.echo(
+            f"no identity named '{from_name}'. Create one with: atar keygen --name {from_name}"
+        )
         sys.exit(1)
-    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[from_name]["private"]))
+    priv = Ed25519PrivateKey.from_private_bytes(
+        bytes.fromhex(keys[from_name]["private"])
+    )
     ident = Identity(private_key=priv, public_key=priv.public_key())
     try:
         entry = create_dispute(ident, blob, reason=reason)
@@ -1296,22 +1543,26 @@ def dispute(vouch_file: str, from_name: str, reason: str):
         click.echo("duplicate or invalid dispute - not stored")
         sys.exit(1)
     dl.save(_disputes_path())
-    click.echo(f"dispute recorded against {entry['vid'][:20]}... "
-               f"({len(dl.all())} dispute(s) on record)")
+    click.echo(
+        f"dispute recorded against {entry['vid'][:20]}... "
+        f"({len(dl.all())} dispute(s) on record)"
+    )
 
 
 @cli.command()
 def disputes():
     """List all signed disputes on record (SPEC 8.2)."""
     from .dispute import DisputeList
+
     dl = DisputeList.load(_disputes_path())
     if not dl.all():
         click.echo("no disputes on record")
         return
     click.echo(f"{len(dl.all())} dispute(s):")
     for e in dl.all():
-        click.echo(f"  {e['vid'][:20]}... disputed by {e['disputed_by']}: "
-                   f"{e['reason']}")
+        click.echo(
+            f"  {e['vid'][:20]}... disputed by {e['disputed_by']}: {e['reason']}"
+        )
 
 
 if __name__ == "__main__":
