@@ -29,7 +29,7 @@ classifiers = [
 dependencies = ["cryptography", "base58", "click"]
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "ruff==0.16.6"]
 
 [project.urls]
 Repository = "https://github.com/Dominik-8/ATAR"
@@ -46,6 +46,39 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["atar"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+# Pinned rule set so CI and local runs are reproducible across ruff versions.
+# Curated for bug-catching value over stylistic noise; every enabled family
+# passes on the current tree.
+select = [
+    "F",      # pyflakes: unused imports/variables, undefined names, redefinitions
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "I",      # isort: canonical import ordering
+    "UP",     # pyupgrade: modern idioms for the Python 3.11 floor
+    "B",      # flake8-bugbear: likely bugs and design problems
+    "SIM",    # flake8-simplify
+    "S",      # bandit security checks
+    "BLE",    # blind except clauses
+    "PIE",    # flake8-pie
+    "C4",     # comprehension best practices
+    "RET",    # return-statement idioms
+    "RUF",    # ruff-native checks
+    "FURB",   # refurb
+    "TRY004", # type errors must raise TypeError, not ValueError
+]
+ignore = [
+    "E501",  # line length is owned by the formatter (line-length above), not the linter
+]
+
+[tool.ruff.lint.per-file-ignores]
+# asserts, seeded RNGs and local HTTP/subprocess calls are test idioms
+"tests/**" = ["S101", "S310", "S311", "S603", "S607"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
