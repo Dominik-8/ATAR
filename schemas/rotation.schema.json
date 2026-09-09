@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Dominik-8/ATAR/blob/master/schemas/rotation.schema.json",
+  "title": "ATAR key-rotation statement",
+  "description": "A key-rotation statement (SPEC §10.1): the OLD key signs the binding to the new DID. Signature is lowercase hex Ed25519 over the canonical JSON of {type, old_did, new_did, ts}.",
+  "type": "object",
+  "required": ["type", "old_did", "new_did", "ts", "signature"],
+  "additionalProperties": false,
+  "properties": {
+    "type": { "const": "rotation" },
+    "old_did": {
+      "type": "string",
+      "pattern": "^did:(key:z[1-9A-HJ-NP-Za-km-z]{20,80}|agent:[1-9A-HJ-NP-Za-km-z]{20,80})$"
+    },
+    "new_did": {
+      "type": "string",
+      "pattern": "^did:(key:z[1-9A-HJ-NP-Za-km-z]{20,80}|agent:[1-9A-HJ-NP-Za-km-z]{20,80})$"
+    },
+    "ts": { "type": "integer" },
+    "signature": { "type": "string", "pattern": "^[0-9a-f]{128}$" }
+  }
+}

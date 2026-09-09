@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Dominik-8/ATAR/blob/master/schemas/revocation.schema.json",
+  "title": "ATAR revocation entry",
+  "description": "A signed revocation entry (SPEC §6): 'vid|revoked_by|ts' signed with base64-encoded Ed25519.",
+  "type": "object",
+  "required": ["vid", "revoked_by", "ts", "signature"],
+  "additionalProperties": false,
+  "properties": {
+    "vid": {
+      "type": "string",
+      "pattern": "^vouch:[0-9a-f]{64}$",
+      "description": "Canonical vouch ID: 'vouch:' + sha256 hex of the signed claim (ts/signature excluded)."
+    },
+    "revoked_by": {
+      "type": "string",
+      "pattern": "^did:(key:z[1-9A-HJ-NP-Za-km-z]{20,80}|agent:[1-9A-HJ-NP-Za-km-z]{20,80})$"
+    },
+    "ts": { "type": "integer" },
+    "signature": {
+      "type": "string",
+      "contentEncoding": "base64",
+      "description": "Base64 Ed25519 signature over 'vid|revoked_by|ts'."
+    }
+  }
+}

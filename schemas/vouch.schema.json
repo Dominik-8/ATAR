@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Dominik-8/ATAR/blob/master/schemas/vouch.schema.json",
+  "title": "ATAR native vouch",
+  "description": "A signed ATAR vouch (SPEC §3): a signed payload plus the hex-encoded Ed25519 signature over the canonical JSON of the payload.",
+  "type": "object",
+  "required": ["payload", "signature"],
+  "additionalProperties": false,
+  "properties": {
+    "payload": {
+      "type": "object",
+      "required": ["type", "issuer", "subject", "score", "scope", "claim", "ts"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "vouch" },
+        "issuer": { "$ref": "#/$defs/did" },
+        "subject": { "$ref": "#/$defs/did" },
+        "score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Dimensionless confidence in [0.0, 1.0] (SPEC §3.2)."
+        },
+        "scope": { "type": "string", "minLength": 1 },
+        "claim": {
+          "type": ["string", "null"],
+          "description": "Optional free text, used only for self-vouches (SPEC §3)."
+        },
+        "ts": { "type": "integer", "description": "Unix seconds." },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Optional references to the observations behind the score (SPEC §3.2); part of the signed claim when present."
+        }
+      }
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{128}$",
+      "description": "Lowercase hex Ed25519 signature over the canonical JSON (sorted keys, no whitespace) of payload."
+    }
+  },
+  "$defs": {
+    "did": {
+      "type": "string",
+      "pattern": "^did:(key:z[1-9A-HJ-NP-Za-km-z]{20,80}|agent:[1-9A-HJ-NP-Za-km-z]{20,80})$",
+      "description": "did:key (multibase base58btc) or legacy did:agent: identifier (SPEC §2)."
+    }
+  }
+}

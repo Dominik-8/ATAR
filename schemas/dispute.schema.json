@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Dominik-8/ATAR/blob/master/schemas/dispute.schema.json",
+  "title": "ATAR dispute entry",
+  "description": "A signed third-party dispute against a vouch (SPEC §8.2). Disputes come from non-issuers; the issuer's negative signal is revocation (§6).",
+  "type": "object",
+  "required": ["vid", "disputed_by", "reason", "ts", "signature"],
+  "additionalProperties": false,
+  "properties": {
+    "vid": { "type": "string", "pattern": "^vouch:[0-9a-f]{64}$" },
+    "disputed_by": {
+      "type": "string",
+      "pattern": "^did:(key:z[1-9A-HJ-NP-Za-km-z]{20,80}|agent:[1-9A-HJ-NP-Za-km-z]{20,80})$"
+    },
+    "reason": { "type": "string" },
+    "ts": { "type": "integer" },
+    "signature": { "type": "string", "contentEncoding": "base64" }
+  }
+}

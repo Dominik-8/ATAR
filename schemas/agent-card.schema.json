@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Dominik-8/ATAR/blob/master/schemas/agent-card.schema.json",
+  "title": "ATAR signed agent card (A2A-compatible)",
+  "description": "An A2A Agent Card carrying the ATAR trust extension (SPEC §11.2) and an optional JWS-style EdDSA signature in 'signatures'. Only the ATAR-relevant structure is constrained; the full A2A Agent Card schema is owned by the A2A project.",
+  "type": "object",
+  "required": ["name", "url", "capabilities"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "url": { "type": "string", "format": "uri" },
+    "version": { "type": "string" },
+    "capabilities": {
+      "type": "object",
+      "properties": {
+        "extensions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/extension" }
+        }
+      }
+    },
+    "defaultInputModes": { "type": "array", "items": { "type": "string" } },
+    "defaultOutputModes": { "type": "array", "items": { "type": "string" } },
+    "skills": { "type": "array" },
+    "signatures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["protected", "signature"],
+        "additionalProperties": false,
+        "properties": {
+          "protected": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+          "signature": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "extension": {
+      "type": "object",
+      "required": ["uri"],
+      "properties": {
+        "uri": { "type": "string", "format": "uri" },
+        "description": { "type": "string" },
+        "required": { "type": "boolean" },
+        "params": {
+          "type": "object",
+          "description": "When uri is the ATAR trust extension: the presented identity and trust data.",
+          "properties": {
+            "identity": {
+              "type": "string",
+              "pattern": "^did:(key:z[1-9A-HJ-NP-Za-km-z]{20,80}|agent:[1-9A-HJ-NP-Za-km-z]{20,80})$"
+            },
+            "vouches": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+              "description": "ATC vouch tokens (SPEC §11.1): base64url of the canonical JSON vouch blob."
+            },
+            "pop": {
+              "type": "object",
+              "description": "Optional proof-of-possession (SPEC §11.3).",
+              "properties": {
+                "nonce": { "type": "string" },
+                "signature": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

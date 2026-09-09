@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- JSON Schemas for every wire format (`schemas/`, draft 2020-12): native
+  vouch, VC export, revocation, dispute, rotation and the A2A-compatible
+  agent card with the ATAR trust extension. A second implementation can now
+  validate ATAR messages with any standard validator instead of reading
+  Python code; `tests/test_schemas.py` validates the golden vectors against
+  the schemas in both directions (vectors pass, broken instances fail), so
+  schemas, vectors and implementation cannot drift apart without a red build.
 - Property-based fuzz coverage (`tests/test_property_fuzz.py`, hypothesis
   pinned in the dev extra): DID encode/decode round-trips and graceful
   rejection of arbitrary input, JCS canonicalization fixed-point and key-order

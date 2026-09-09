@@ -15,6 +15,11 @@ this codebase first — the same role test vectors play for RFCs.
 | `agent-card.json` | A2A-compatible signed agent card with the ATAR trust extension | SPEC §11.2 |
 | `rotation.json` | Signed key-rotation statement (old key binds the new DID) | SPEC §10.1 |
 
+The wire-format *structure* is additionally pinned by machine-readable JSON
+Schemas in [`schemas/`](../schemas/README.md) (draft 2020-12): the vectors pin
+the exact bytes, the schemas pin field sets, types and value ranges, and
+`tests/test_schemas.py` keeps both in lockstep with the implementation.
+
 Rules for working with them:
 
 - The private keys are test-only seeds (`identity.json`); never use them anywhere else.

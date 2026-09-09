@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Dominik-8/ATAR/blob/master/schemas/vc-vouch.schema.json",
+  "title": "ATAR vouch as W3C Verifiable Credential",
+  "description": "The VC export of an ATAR vouch (SPEC §3.3): a W3C VC 2.0 credential with the ATAR claim fields under the 'atar:' namespace in credentialSubject, optionally carrying an eddsa-jcs-2022 Data Integrity proof.",
+  "type": "object",
+  "required": ["@context", "type", "issuer", "validFrom", "credentialSubject"],
+  "properties": {
+    "@context": {
+      "type": "array",
+      "minItems": 1,
+      "contains": { "const": "https://www.w3.org/ns/credentials/v2" }
+    },
+    "type": {
+      "type": "array",
+      "allOf": [
+        { "contains": { "const": "VerifiableCredential" } },
+        { "contains": { "const": "ATARVouch" } }
+      ]
+    },
+    "issuer": {
+      "type": "string",
+      "pattern": "^did:(key:z[1-9A-HJ-NP-Za-km-z]{20,80}|agent:[1-9A-HJ-NP-Za-km-z]{20,80})$"
+    },
+    "validFrom": { "type": "string", "format": "date-time" },
+    "credentialSubject": {
+      "type": "object",
+      "required": ["id", "atar:scope", "atar:score"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^did:(key:z[1-9A-HJ-NP-Za-km-z]{20,80}|agent:[1-9A-HJ-NP-Za-km-z]{20,80})$"
+        },
+        "atar:scope": { "type": "string", "minLength": 1 },
+        "atar:score": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "atar:claim": { "type": "string" },
+        "atar:evidence": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "proof": {
+      "type": "object",
+      "required": ["type", "cryptosuite", "created", "verificationMethod", "proofPurpose", "proofValue"],
+      "properties": {
+        "type": { "const": "DataIntegrityProof" },
+        "cryptosuite": { "const": "eddsa-jcs-2022" },
+        "created": { "type": "string", "format": "date-time" },
+        "verificationMethod": { "type": "string", "pattern": "^did:(key:z|agent:).+#.+$" },
+        "proofPurpose": { "const": "assertionMethod" },
+        "proofValue": { "type": "string", "pattern": "^z[1-9A-HJ-NP-Za-km-z]{20,120}$" }
+      }
+    }
+  }
+}
