@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- MCP server (`atar mcp`, optional extra `atar-trust[mcp]`): ATAR's trust
+  surface as a read-only MCP server over stdio. Tools: `verify_vouch`,
+  `verify_vouch_token`, `verify_agent_card`, `trust_scores` (the same
+  transitive computation as `atar graph`, honoring revocation/TTL/disputes),
+  `vouches_for` and `list_known_agents`. Any MCP host (Claude, ChatGPT,
+  Cursor, Copilot, ...) can verify agent trust artifacts against the
+  operator's local store. The server never signs: reputation is minted by
+  the operator through the CLI, never by a connected client. Runs the real
+  MCP protocol in tests via the in-memory client.
 - JSON Schemas for every wire format (`schemas/`, draft 2020-12): native
   vouch, VC export, revocation, dispute, rotation and the A2A-compatible
   agent card with the ATAR trust extension. A second implementation can now

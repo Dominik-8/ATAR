@@ -1579,5 +1579,20 @@ def disputes():
         )
 
 
+@cli.command("mcp")
+def mcp_serve():
+    """Run the ATAR MCP server over stdio (needs: pip install "atar-trust[mcp]").
+
+    Exposes read-only trust tools (verify vouch/token/card, trust_scores,
+    vouches_for, list_known_agents) to any MCP host. Point your host's MCP
+    config at this command, e.g.:
+
+        {"mcpServers": {"atar": {"command": "atar", "args": ["mcp"]}}}
+    """
+    from .integrations.mcp_server import main as mcp_main
+
+    mcp_main()
+
+
 if __name__ == "__main__":
     cli()

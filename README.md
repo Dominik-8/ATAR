@@ -29,6 +29,7 @@ revocation, TTL and key rotation — on top of the emerging standards.
 - [Visual identity](#visual-identity-atar-style)
 - [Project status](#project-status)
 - [Honest constraints](#honest-constraints)
+- [Integrations](#integrations)
 - [Contributing](#contributing)
 
 ## Why it matters (the "top layer" thesis)
@@ -153,6 +154,16 @@ See [`SPEC.md`](SPEC.md) for the full wire format and algorithms.
 | `atar issue --from N --for DID --scope S --score X [--claim C]` | issue a signed capability claim (standalone file) |
 | `atar verify-claim FILE` | verify a signed capability claim (independent of store) |
 | `atar vc-export F --from N` / `atar vc-verify F` | export a vouch as a W3C Verifiable Credential / verify one offline |
+
+## Integrations
+
+- **MCP server** — `atar mcp` exposes read-only trust tools (verify vouch /
+  token / agent card, transitive trust scores, store lookups) to any MCP
+  host over stdio. Needs the optional extra: `pip install "atar-trust[mcp]"`.
+  See [`docs/mcp-server.md`](docs/mcp-server.md).
+- **CrewAI plugin** — framework agents get persistent identities and earn
+  operator-signed vouches for completed tasks. See
+  [`docs/crewai-plugin.md`](docs/crewai-plugin.md).
 
 ## Visual identity (ATAR-style)
 
