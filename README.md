@@ -50,6 +50,15 @@ revocation, TTL and key rotation — on top of the emerging standards.
 
 ## Install
 
+Install from PyPI:
+
+```bash
+pip install atar-trust
+```
+
+The package is `atar-trust`; the CLI command is `atar`. Current release:
+`1.0.0a2` (alpha), including the did:key / W3C VC / A2A realignment.
+
 Install from source (this is where current development lives):
 
 ```bash
@@ -57,11 +66,6 @@ git clone https://github.com/Dominik-8/ATAR.git
 cd ATAR
 pip install -e ".[dev]"
 ```
-
-> **PyPI:** `pip install atar-trust` currently serves `1.0.0a1`, which
-> predates the did:key / W3C VC / A2A realignment. An updated package will
-> be published with the next release - until then, install from source.
-> The package is `atar-trust`; the CLI command is `atar`.
 
 See [CHANGELOG.md](CHANGELOG.md) for what shipped and what is in flight.
 

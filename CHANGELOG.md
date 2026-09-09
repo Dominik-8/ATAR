@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0a2] - 2026-09-09
+
 ### Added (overnight hardening, 2026-09)
 - Two more trust invariants pinned under random graphs: a dense isolated
   Sybil cluster vouching only for itself earns exactly zero trust (nodes
@@ -172,11 +174,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dashboard, flagged REVOKED with trust 0.
 - SPEC §8 `vouch_id` formula synced with the implementation
   (`"vouch:"` prefix, `ts` excluded).
-- README install leads with install-from-source; the stale PyPI package
-  (`1.0.0a1`, pre-realignment) is marked pending update.
+- README install led with install-from-source while the stale PyPI
+  package (`1.0.0a1`, pre-realignment) was pending update; `1.0.0a2`
+  replaces it on PyPI.
 - Package metadata and repo description reflect the did:key realignment;
-  version on master is `1.0.0a2.dev0` (alpha development toward the next
-  packaged release).
+  this release packages master as `1.0.0a2`.
 
 ### Added (realignment C4, prep only)
 - Standardization drafts for review (nothing submitted): a W3C
@@ -257,4 +259,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RFC Draft (draft-dbrueck-atar-00)
 - PyPI release (`pip install atar-trust`)
 
+[1.0.0a2]: https://github.com/Dominik-8/ATAR/compare/v1.0.0a1...v1.0.0a2
 [1.0.0a1]: https://github.com/Dominik-8/ATAR/releases/tag/v1.0.0a1
