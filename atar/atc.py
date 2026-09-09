@@ -55,8 +55,10 @@ def vouch_from_token(token: str) -> dict:
 def verify_token(token: str) -> bool:
     """Verify a vouch token's signature. Returns True/False."""
     try:
+        if not isinstance(token, str):
+            return False
         return verify_vouch(vouch_from_token(token))
-    except (ValueError, KeyError):
+    except (ValueError, KeyError, TypeError):
         return False
 
 
@@ -78,13 +80,23 @@ def _trust_params(card: dict) -> dict:
     Also reads the pre-realignment standalone layout (``schema``/
     ``did``/``atar.vouches``) so legacy cards stay verifiable.
     """
+    if not isinstance(card, dict):
+        return {}
     if card.get("schema") == LEGACY_CARD_SCHEMA:
-        legacy = dict(card.get("atar", {}))
+        legacy_raw = card.get("atar")
+        legacy = dict(legacy_raw) if isinstance(legacy_raw, dict) else {}
         legacy.setdefault("identity", card.get("did"))
         return legacy
-    for ext in card.get("capabilities", {}).get("extensions", []):
-        if ext.get("uri") == ATAR_TRUST_EXT_URI:
-            return ext.get("params", {}) or {}
+    capabilities = card.get("capabilities")
+    if not isinstance(capabilities, dict):
+        return {}
+    extensions = capabilities.get("extensions")
+    if not isinstance(extensions, list):
+        return {}
+    for ext in extensions:
+        if isinstance(ext, dict) and ext.get("uri") == ATAR_TRUST_EXT_URI:
+            params = ext.get("params")
+            return params if isinstance(params, dict) else {}
     return {}
 
 
@@ -236,9 +248,18 @@ def verify_agent_card(card: dict) -> dict:
           "signature_valid": True/False/None (None = unsigned, e.g. legacy card),
         }
     """
+    if not isinstance(card, dict):
+        return {
+            "did": None,
+            "name": None,
+            "valid_vouches": [],
+            "invalid_vouches": [],
+            "signature_valid": False,
+        }
     params = _trust_params(card)
+    vouches = params.get("vouches")
     valid, invalid = [], []
-    for tok in params.get("vouches", []):
+    for tok in vouches if isinstance(vouches, list) else []:
         if verify_token(tok):
             valid.append(vouch_from_token(tok))
         else:

@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Property-based fuzz coverage (`tests/test_property_fuzz.py`, hypothesis
+  pinned in the dev extra): DID encode/decode round-trips and graceful
+  rejection of arbitrary input, JCS canonicalization fixed-point and key-order
+  invariance, graceful rejection of arbitrary JSON/strings/bytes by every
+  verification entry point (`verify_vouch`, `verify_token`,
+  `verify_credential`, `verify_card_signature`, `verify_agent_card`,
+  `verify_revocation_entry`, `verify_dispute_entry`, `verify_rotation`), and
+  positive round-trips for vouch tokens, the VC bridge, disputes and
+  rotations.
+
+### Fixed
+- `verify_agent_card` and `verify_token` now reject structurally malformed
+  input gracefully instead of crashing: non-dict cards, `capabilities`/
+  `extensions`/`params` of the wrong type, and non-string tokens previously
+  raised `AttributeError`/`TypeError` at the trust-verification boundary
+  (found by the new fuzz tests).
 - Standardization package (review-ready, not submitted): the complete
   Internet-Draft `draft-dbrueck-atar-lifecycle-00` (kramdown source plus
   validated RFCXML, text and HTML renderings) specifying the attestation
