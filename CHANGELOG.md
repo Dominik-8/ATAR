@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Applied the deferred repo-wide `ruff format` sweep (94 files). Purely
+  cosmetic: every changed file is AST-identical to its previous revision and
+  the full test suite passes unchanged. No behavior change.
+
 ## [1.0.0a2] - 2026-09-09
 
 ### Added (overnight hardening, 2026-09)
