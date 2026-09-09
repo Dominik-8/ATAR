@@ -1,4 +1,4 @@
-from atar.identity import generate_identity, did_from_public
+from atar.identity import did_from_public, generate_identity
 
 
 def test_generate_identity_returns_keypair():

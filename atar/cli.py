@@ -10,12 +10,13 @@ from __future__ import annotations
 import json
 import os
 import sys
+from pathlib import Path
 
 import click
 
-from .identity import generate_identity, did_from_public
-from .vouch import create_vouch, verify_vouch
 from .atc import make_agent_card, verify_agent_card
+from .identity import did_from_public, generate_identity
+from .vouch import create_vouch, verify_vouch
 
 
 def _home() -> str:
@@ -30,7 +31,7 @@ def _load_keys() -> dict:
     p = _keys_path()
     if not os.path.exists(p):
         return {}
-    with open(p, "r", encoding="utf-8") as f:
+    with open(p, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -50,8 +51,7 @@ def _identity_from_name(name: str):
         sys.exit(1)
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[name]["private"]))
-    return priv
+    return Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[name]["private"]))
 
 
 @click.group()
@@ -178,7 +178,7 @@ def verify(path: str, max_age):
     """
     from .freshness import is_fresh
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         blob = json.load(f)
     if not verify_vouch(blob):
         click.echo("INVALID")
@@ -246,8 +246,9 @@ def card(name: str, out: str, challenge: str | None):
         if subj_canonical == my_canonical:
             vouches.append(blob)
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    from .atc import ATAR_TRUST_EXT_URI, sign_agent_card, sign_pop_proof
     from .identity import Identity
-    from .atc import sign_pop_proof, sign_agent_card, ATAR_TRUST_EXT_URI
 
     card_doc = make_agent_card(did=did, name=name, vouches=vouches)
     priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[name]["private"]))
@@ -275,7 +276,7 @@ def card(name: str, out: str, challenge: str | None):
 )
 def verify_card(path: str, challenge: str | None):
     """Verify every vouch inside an agent card. Prints a report (flags revoked)."""
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         card_doc = json.load(f)
     from .atc import _trust_params
 
@@ -378,7 +379,7 @@ def issue(from_name: str, for_did: str, scope: str, score: float, claim: str, ou
 @click.argument("path")
 def verify_claim(path: str):
     """Phase 26 — verify a signed capability claim (independent of the store)."""
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         blob = json.load(f)
     if verify_vouch(blob):
         payload = blob.get("payload", {})
@@ -409,7 +410,7 @@ def vc_export(path: str, from_name: str, out: str):
     issuer's private key is required. Identifiers are emitted in canonical
     did:key form even for pre-realignment (did:agent:) vouches.
     """
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         blob = json.load(f)
     if not verify_vouch(blob):
         click.echo("INVALID vouch (signature does not verify)")
@@ -419,8 +420,9 @@ def vc_export(path: str, from_name: str, out: str):
         click.echo(f"no identity '{from_name}'")
         sys.exit(1)
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    from .identity import Identity, normalize_did, did_from_public
-    from .vc import vouch_to_credential, sign_credential
+
+    from .identity import Identity, did_from_public, normalize_did
+    from .vc import sign_credential, vouch_to_credential
 
     priv = Ed25519PrivateKey.from_private_bytes(
         bytes.fromhex(keys[from_name]["private"])
@@ -444,9 +446,9 @@ def vc_verify(path: str):
     are identifiers and are never fetched. Revocation/TTL stay ATAR-side —
     this checks the signed attestation only.
     """
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         vc = json.load(f)
-    from .vc import verify_credential, credential_to_vouch_payload
+    from .vc import credential_to_vouch_payload, verify_credential
 
     if not verify_credential(vc):
         click.echo("INVALID")
@@ -483,7 +485,7 @@ def _resolve_did(value: str):
         from .agent_bootstrap import known_agent_names
 
         return known_agent_names().get(value)
-    except Exception:
+    except Exception:  # noqa: BLE001 - best-effort: unresolvable names fall back to None (DID-only mode)
         return None
 
 
@@ -495,7 +497,7 @@ def _default_seed():
         reg = AgentRegistry()
         if reg.seed_did:
             return reg.seed_did
-    except Exception:
+    except Exception:  # noqa: BLE001,S110 - best-effort: no readable registry means "no seed", never a crash
         pass
     return None
 
@@ -529,10 +531,10 @@ def graph(seed: str | None, scope: str, home: str | None):
         seed = _default_seed()
     if not seed:
         raise SystemExit("no --seed given and no seeded agent in registry")
-    from .transparency import TrustGraph
-    from .revocation import RevocationList
     from .dispute import DisputeList
     from .freshness import VOUCH_TTL_DEFAULT
+    from .revocation import RevocationList
+    from .transparency import TrustGraph
 
     g = TrustGraph()
     for v in _load_store_vouches():
@@ -603,8 +605,8 @@ def dashboard(seed: str | None, scope: str, out: str, home: str | None):
         seed = _default_seed()
     if not seed:
         raise SystemExit("no --seed given and no seeded agent in registry")
-    from .dashboard import render_dashboard_html
     from .agent_bootstrap import known_agent_names
+    from .dashboard import render_dashboard_html
 
     agents = known_agent_names()  # registry + plain keygen identities
     net = {"agents": agents, "seed_did": seed, "vouches": _load_store_vouches()}
@@ -631,7 +633,7 @@ def add(path: str):
     """
     from .store import VouchStore
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         blob = json.load(f)
     # revocation check BEFORE admitting to the store
     try:
@@ -641,7 +643,7 @@ def add(path: str):
         if rl.is_revoked_for(blob):
             click.echo("rejected (vouch is REVOKED)")
             sys.exit(1)
-    except Exception:
+    except Exception:  # noqa: BLE001,S110 - best-effort: RevocationList.load already treats a missing/corrupt list as empty; only exotic I/O errors land here and must not block adds
         pass
     s = VouchStore(_store_path())
     if s.add(blob):
@@ -699,16 +701,19 @@ def auto_sync():
     no-op, not an error.
     """
     from urllib.error import URLError
-    from .store import VouchStore
-    from .revocation import RevocationList
+
     from .peer import is_url, sync_with_url
+    from .revocation import RevocationList
+    from .store import VouchStore
 
     peers_file = os.path.join(_home(), "atar_peers.json")
     if not os.path.exists(peers_file):
         click.echo("no peers configured (atar_peers.json absent) — nothing to sync")
         return
     try:
-        peers = json.load(open(peers_file)).get("peers", [])
+        peers = json.loads(Path(peers_file).read_text(encoding="utf-8")).get(
+            "peers", []
+        )
     except (json.JSONDecodeError, KeyError):
         click.echo("atar_peers.json malformed — skipped")
         return
@@ -817,9 +822,9 @@ def sync(peer):
     duplicates are ignored. This is how ATAR stays decentralized: trust spreads
     peer-to-peer without a central operator. Repeatable and idempotent.
     """
-    from .store import VouchStore
-    from .revocation import RevocationList
     from .peer import is_url, sync_with_url
+    from .revocation import RevocationList
+    from .store import VouchStore
 
     self_path = _store_path()
     self_store = VouchStore(self_path)
@@ -950,6 +955,7 @@ def bootstrap(config: str):
         scope = "intelligence"
     """
     import tomllib
+
     from .agent_bootstrap import AgentRegistry, seed_trust_root
 
     with open(config, "rb") as f:
@@ -989,9 +995,9 @@ def scopes():
     may be trusted in one scope but unknown in another — this shows the shape of
     your trust graph at a glance, without rendering the full dashboard.
     """
-    from .store import VouchStore
-    from .dashboard import dashboard_data
     from .agent_bootstrap import AgentRegistry
+    from .dashboard import dashboard_data
+    from .store import VouchStore
 
     store = VouchStore(_store_path())
     if not store.all():
@@ -1047,7 +1053,10 @@ def rotate(name: str, out: str):
     out_path = os.path.join(_home(), out)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(stmt.to_dict(), f, indent=2)
-    assert verify_rotation(stmt)
+    if not verify_rotation(stmt):
+        raise click.ClickException(
+            "internal error: rotation statement failed self-check"
+        )
     click.echo(
         f"rotated '{name}': old {stmt.old_did[:20]}... -> new {stmt.new_did[:20]}..."
     )
@@ -1076,9 +1085,9 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
     (pre-rotation) vouches are revoked — the rotation is then complete and the
     old key can be considered fully retired.
     """
+    from .revocation import RevocationList, revoke_payload_id
     from .rotation import reissue_vouch
     from .store import VouchStore
-    from .revocation import RevocationList, revoke_payload_id
 
     new_id = _identity_from_name(name)  # Ed25519PrivateKey (post-rotation)
     store = VouchStore(_store_path())
@@ -1124,6 +1133,7 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
     # the only key that can sign for the old DID (SPEC §6: revoked_by is the
     # vouch's issuer). `rotate` keeps the old key locally for exactly this.
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     from .revocation import revoke_vouch
 
     old_priv_hex = keys.get(name, {}).get("old_private")
@@ -1135,9 +1145,12 @@ def reissue(name: str, scope: str | None, out: str, commit: bool):
         old_id = Identity(private_key=old_priv, public_key=old_priv.public_key())
     for v in old_vouches:
         vid = revoke_payload_id(v)
-        if not rl.is_revoked(vid) and old_id is not None:
-            if revoke_vouch(rl, old_id, vid):
-                revoked += 1
+        if (
+            not rl.is_revoked(vid)
+            and old_id is not None
+            and revoke_vouch(rl, old_id, vid)
+        ):
+            revoked += 1
     rl.save(_revocations_path())
     if old_priv_hex:
         # old key has served its only remaining purpose — retire it locally
@@ -1170,10 +1183,10 @@ def export(out: str, include_keys: bool):
     --include-keys only for a full migration to another machine, and treat the
     resulting file as a secret.
     """
-    from .store import VouchStore
-    from .revocation import RevocationList
+    from .agent_bootstrap import known_agent_names
     from .dispute import DisputeList
-    from .agent_bootstrap import AgentRegistry, known_agent_names
+    from .revocation import RevocationList
+    from .store import VouchStore
 
     store = VouchStore(_store_path())
     rl = RevocationList.load(_revocations_path())
@@ -1187,16 +1200,16 @@ def export(out: str, include_keys: bool):
         "disputes": dl.all(),
     }
     if include_keys:
-        try:
+        try:  # noqa: SIM105 - contextlib.suppress would hide the intent comment less clearly here
             bundle["keys"] = _load_keys()
-        except Exception:
+        except Exception:  # noqa: BLE001,S110 - best-effort: export must still succeed without the optional keys section
             pass
     # always record agent names (DID-only, no secret material) from BOTH
     # identity stores - bootstrap registry and plain keys.json - so the
     # import side can rebuild human-readable names for dashboard/graph
     try:
         bundle["agents"] = known_agent_names()
-    except Exception:
+    except Exception:  # noqa: BLE001 - best-effort: agent names are display metadata; export must still succeed without them
         bundle["agents"] = {}
     with open(out, "w", encoding="utf-8") as f:
         json.dump(bundle, f, indent=2)
@@ -1217,10 +1230,10 @@ def import_cmd(bundle: str, force: bool):
     Restores vouches + revocations into your local store. Private keys are
     imported only if the bundle contains them (--include-keys export).
     """
-    from .store import VouchStore
     from .revocation import RevocationList
+    from .store import VouchStore
 
-    with open(bundle, "r", encoding="utf-8") as f:
+    with open(bundle, encoding="utf-8") as f:
         data = json.load(f)
     store = VouchStore(_store_path())
     added = 0
@@ -1284,7 +1297,7 @@ def import_cmd(bundle: str, force: bool):
             known = {}
             if os.path.exists(known_path):
                 try:
-                    with open(known_path, "r", encoding="utf-8") as f:
+                    with open(known_path, encoding="utf-8") as f:
                         known = json.load(f)
                 except json.JSONDecodeError:
                     known = {}
@@ -1293,7 +1306,7 @@ def import_cmd(bundle: str, force: bool):
                 from .agent_bootstrap import known_agent_names
 
                 existing |= set(known_agent_names())
-            except Exception:
+            except Exception:  # noqa: BLE001,S110 - best-effort: an unreadable registry must not abort the import
                 pass
             for name, did in data["agents"].items():
                 if not isinstance(name, str) or not isinstance(did, str):
@@ -1312,9 +1325,9 @@ def import_cmd(bundle: str, force: bool):
 
 def _audit_state(max_age):
     """Compute the trust-network health state dict (shared by audit + watch)."""
-    from .store import VouchStore
-    from .revocation import RevocationList
     from .freshness import is_fresh
+    from .revocation import RevocationList
+    from .store import VouchStore
 
     store = VouchStore(_store_path())
     vouches = store.all()
@@ -1473,9 +1486,9 @@ def revoke(vouch_file: str):
     though its original signature is still valid. This is how a leaked/malicious
     agent key is neutralized without changing the protocol.
     """
-    from .revocation import RevocationList, revoke_vouch, revoke_payload_id
+    from .revocation import RevocationList, revoke_payload_id, revoke_vouch
 
-    with open(vouch_file, "r", encoding="utf-8") as f:
+    with open(vouch_file, encoding="utf-8") as f:
         v = json.load(f)
     issuer_did = v["payload"]["issuer"]
     keys = _load_keys()
@@ -1518,10 +1531,11 @@ def dispute(vouch_file: str, from_name: str, reason: str):
     itself trusted. Issuers are rejected here: they should `atar revoke`.
     """
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
     from .dispute import DisputeList, create_dispute
     from .identity import Identity
 
-    with open(vouch_file, "r", encoding="utf-8") as f:
+    with open(vouch_file, encoding="utf-8") as f:
         blob = json.load(f)
     keys = _load_keys()
     if from_name not in keys:

@@ -1,12 +1,10 @@
 import os
-import tempfile
 
+from atar.agent_bootstrap import AgentRegistry, seed_trust_root
 from atar.dashboard import (
     dashboard_data,
-    render_dashboard_html,
     render_multi_scope_html,
 )
-from atar.agent_bootstrap import AgentRegistry, seed_trust_root
 
 
 def _build_multi_scope(home):

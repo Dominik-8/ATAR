@@ -24,6 +24,7 @@ def test_no_vector_fixture_is_gitignored():
         capture_output=True,
         text=True,
         cwd=VECTORS.parent.parent,
+        check=False,
     )
     # exit 1 means "nothing is ignored" - the only acceptable outcome.
     # --no-index: check ignore rules even for already-tracked files, so

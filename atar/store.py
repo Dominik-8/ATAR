@@ -58,17 +58,15 @@ def file_lock(path: str):
     lock_path = path + ".lock"
     os.makedirs(os.path.dirname(lock_path) or ".", exist_ok=True)
     with open(lock_path, "a+b") as f:
-        try:
+        with contextlib.suppress(
+            OSError
+        ):  # pragma: no cover - locking unsupported/failed
             _lock_fd(f)
-        except OSError:  # pragma: no cover - locking unsupported/failed
-            pass
         try:
             yield
         finally:
-            try:
+            with contextlib.suppress(OSError):  # pragma: no cover
                 _unlock_fd(f)
-            except OSError:  # pragma: no cover
-                pass
 
 
 def atomic_save_json(obj, path: str) -> None:
@@ -96,7 +94,7 @@ class VouchStore:
         if not os.path.exists(self.path):
             return
         try:
-            with open(self.path, "r", encoding="utf-8") as f:
+            with open(self.path, encoding="utf-8") as f:
                 data = json.load(f)
             for v in data.get("vouches", []):
                 vid = canonical_vouch_id(v)

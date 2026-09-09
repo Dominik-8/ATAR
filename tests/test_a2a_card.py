@@ -18,7 +18,6 @@ from atar.atc import (
     make_agent_card,
     new_pop_challenge,
     sign_agent_card,
-    sign_pop_proof,
     verify_agent_card,
     verify_card_signature,
 )
@@ -135,7 +134,8 @@ def test_pop_proof_lives_in_extension(tmp_path, monkeypatch):
         cli, ["card", "--name", "bob", "--challenge", nonce, "--out", card_path]
     )
     assert r.exit_code == 0, r.output
-    card = json.load(open(card_path))
+    with open(card_path) as _f:
+        card = json.load(_f)
     assert _trust_params(card)["proof"]["nonce"] == nonce
     assert verify_card_signature(card)  # signed after the proof was embedded
     r = runner.invoke(cli, ["verify-card", card_path, "--challenge", nonce])

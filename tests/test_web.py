@@ -1,23 +1,15 @@
-import os
-import tempfile
-
 from click.testing import CliRunner
 
 from atar.cli import cli
-from atar.web import build_dashboard_response, run_server, DashboardHandler
+from atar.web import build_dashboard_response
 
 
 def _seed_real_net(home: str, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", home)
     runner = CliRunner()
-    reg_cmds = [
-        (["keygen", "--name", "seed_agent"], None),
-    ]
     runner.invoke(cli, ["keygen", "--name", "seed_agent"])
-    r2 = runner.invoke(cli, ["keygen", "--name", "research"])
-    r3 = runner.invoke(cli, ["keygen", "--name", "market"])
-    research_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
-    market_did = [l for l in r3.output.splitlines() if l.startswith("did:key:")][0]
+    runner.invoke(cli, ["keygen", "--name", "research"])
+    runner.invoke(cli, ["keygen", "--name", "market"])
     # seed root + vouches into store
     from atar.agent_bootstrap import AgentRegistry, seed_trust_root
 
@@ -42,7 +34,6 @@ def test_web_builds_html_response(tmp_path, monkeypatch):
 def test_web_handler_serves_dashboard(tmp_path, monkeypatch):
     home = str(tmp_path)
     seed = _seed_real_net(home, monkeypatch)
-    handler = DashboardHandler
     # simulate a GET by calling the render method directly via helper
     html = build_dashboard_response(scope="intelligence")
     assert "seed_agent" in html.lower() or seed in html

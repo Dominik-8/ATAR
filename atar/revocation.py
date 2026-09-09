@@ -27,7 +27,8 @@ import os
 import time
 
 from cryptography.exceptions import InvalidSignature
-from .identity import Identity, did_from_public, public_key_from_did, normalize_did
+
+from .identity import Identity, did_from_public, normalize_did, public_key_from_did
 from .transparency import canonical_vouch_id
 from .vouch import verify_vouch
 
@@ -55,12 +56,12 @@ def revoke_payload_id(vouch: dict) -> str:
 def _sign_revocation(issuer: Identity, vid: str, revoked_by: str, ts: int) -> str:
     from base64 import b64encode
 
-    msg = f"{vid}|{revoked_by}|{ts}".encode("utf-8")
+    msg = f"{vid}|{revoked_by}|{ts}".encode()
     sig = issuer.private_key.sign(msg)
     return b64encode(sig).decode("ascii")
 
 
-def revoke_vouch(rlist: "RevocationList", issuer: Identity, vid: str) -> bool:
+def revoke_vouch(rlist: RevocationList, issuer: Identity, vid: str) -> bool:
     """Add a revocation signed by the vouch's issuer. Returns False if dup/invalid."""
     revoked_by = did_from_public(issuer.public_key)
     ts = int(time.time())
@@ -83,7 +84,7 @@ def verify_revocation_entry(entry: dict, verify_key=None) -> bool:
         ts = entry["ts"]
         signature = entry["signature"]
         key = verify_key if verify_key is not None else public_key_from_did(revoked_by)
-        msg = f"{vid}|{revoked_by}|{ts}".encode("utf-8")
+        msg = f"{vid}|{revoked_by}|{ts}".encode()
         key.verify(b64decode(signature), msg)
         return True
     except (InvalidSignature, ValueError, KeyError, TypeError):
@@ -162,7 +163,7 @@ class RevocationList:
             atomic_save_json({"revocations": self.all()}, path)
 
     @classmethod
-    def load(cls, path: str) -> "RevocationList":
+    def load(cls, path: str) -> RevocationList:
         """Load from disk, verifying every entry (SPEC §6): entries whose
         signature does not verify against ``revoked_by`` are dropped, so a
         forged or tampered revocations.json cannot kill vouches."""
@@ -170,7 +171,7 @@ class RevocationList:
         if not os.path.exists(path):
             return r
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except json.JSONDecodeError:
             return r  # corrupt file — start clean rather than crash

@@ -15,7 +15,7 @@ from atar.cli import cli
 def _cli_only_network(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     runner = CliRunner()
-    r1 = runner.invoke(cli, ["keygen", "--name", "a"])
+    runner.invoke(cli, ["keygen", "--name", "a"])
     r2 = runner.invoke(cli, ["keygen", "--name", "b"])
     b_did = r2.output.strip()
     vf = tmp_path / "v.json"

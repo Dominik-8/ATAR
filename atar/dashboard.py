@@ -65,7 +65,7 @@ def dashboard_data(net: dict, *, scope: str) -> dict:
         rl = RevocationList.load(_revocations_path_for(net))
         for e in rl.all():
             revoked_by[e["vid"]] = e["revoked_by"]
-    except Exception:
+    except Exception:  # noqa: BLE001 - best-effort: dashboard still renders when the revocation list is unreadable
         rl = None
 
     # SPEC §8.1/8.2: trust flows only through valid, unrevoked, unexpired
@@ -248,7 +248,7 @@ def render_dashboard_html(net: dict, *, scope: str) -> str:
       <h1>Know Your Agent</h1>
       <div class="sub">trust network &middot; scope: {_html.escape(str(data["scope"]))}</div>
     </div>
-    {cards if cards else '<div class="empty">No agents in this scope yet.</div>'}
+    {cards or '<div class="empty">No agents in this scope yet.</div>'}
   </div>
 </body>
 </html>"""

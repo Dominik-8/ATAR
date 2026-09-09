@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import base58
 from cryptography.exceptions import InvalidSignature
@@ -42,16 +42,12 @@ CRYPTOSUITE = "eddsa-jcs-2022"
 
 
 def _iso(ts: int) -> str:
-    return datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime(
-        "%Y-%m-%dT%H:%M:%SZ"
-    )
+    return datetime.fromtimestamp(int(ts), tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _from_iso(text: str) -> int:
     return int(
-        datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ")
-        .replace(tzinfo=timezone.utc)
-        .timestamp()
+        datetime.strptime(text, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC).timestamp()
     )
 
 

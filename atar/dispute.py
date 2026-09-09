@@ -32,7 +32,7 @@ from base64 import b64decode, b64encode
 
 from cryptography.exceptions import InvalidSignature
 
-from .identity import Identity, did_from_public, public_key_from_did, normalize_did
+from .identity import Identity, did_from_public, normalize_did, public_key_from_did
 from .transparency import canonical_vouch_id
 
 # Disputer trust at or above this level makes a dispute "count" in trust
@@ -51,7 +51,7 @@ def _same_did(a: str, b: str) -> bool:
 
 
 def _signing_message(vid: str, disputed_by: str, reason: str, ts: int) -> bytes:
-    return f"{vid}|{disputed_by}|{reason}|{ts}".encode("utf-8")
+    return f"{vid}|{disputed_by}|{reason}|{ts}".encode()
 
 
 def create_dispute(
@@ -146,14 +146,14 @@ class DisputeList:
             atomic_save_json({"disputes": self.all()}, path)
 
     @classmethod
-    def load(cls, path: str) -> "DisputeList":
+    def load(cls, path: str) -> DisputeList:
         """Load from disk, verifying every entry — a forged or tampered
         disputes.json cannot smear honest vouches."""
         d = cls()
         if not os.path.exists(path):
             return d
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except json.JSONDecodeError:
             return d

@@ -18,7 +18,8 @@ from atar.cli import cli
 
 
 def _did(home, name):
-    keys = json.load(open(os.path.join(home, "keys.json")))
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     return keys[name]["did"]
 
 
@@ -30,7 +31,8 @@ def test_rotate_then_reissue_commit_revokes_old_vouch(tmp_path, monkeypatch):
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-    keys = json.load(open(os.path.join(tmp_path, "keys.json")))
+    with open(os.path.join(tmp_path, "keys.json")) as _f:
+        keys = json.load(_f)
     alice = Ed25519PrivateKey.from_private_bytes(
         bytes.fromhex(keys["alice"]["private"])
     )
@@ -77,7 +79,8 @@ def test_rotate_without_reissue_leaves_old_vouch_valid(tmp_path, monkeypatch):
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-    keys = json.load(open(os.path.join(tmp_path, "keys.json")))
+    with open(os.path.join(tmp_path, "keys.json")) as _f:
+        keys = json.load(_f)
     alice = Ed25519PrivateKey.from_private_bytes(
         bytes.fromhex(keys["alice"]["private"])
     )

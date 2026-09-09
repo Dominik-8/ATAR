@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import time
 
-from .vouch import verify_vouch
 from .revocation import RevocationList
+from .vouch import verify_vouch
 
 # Default trust lifetime: 180 days. Re-vouch before it lapses.
 VOUCH_TTL_DEFAULT = 180 * 24 * 3600
@@ -44,6 +44,4 @@ def trust_valid(
         return False
     if revocation_list is not None and revocation_list.is_revoked_for(vouch):
         return False
-    if not is_fresh(vouch, ttl=ttl, now=now):
-        return False
-    return True
+    return is_fresh(vouch, ttl=ttl, now=now)

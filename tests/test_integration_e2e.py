@@ -8,8 +8,8 @@ rotate -> reissue --commit -> export -> import -> watch.
 If this passes, the protocol is verifiably complete end-to-end.
 """
 
-import os
 import json
+import os
 
 from click.testing import CliRunner
 
@@ -25,7 +25,8 @@ def _run(runner, args):
 
 
 def _did(home, name):
-    keys = json.load(open(os.path.join(home, "keys.json")))
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     return keys[name]["did"]
 
 
@@ -87,7 +88,8 @@ def test_full_trust_lifecycle_e2e(tmp_path, monkeypatch):
     # 7. Export (Phase 30) — default: NO private keys
     pkg = os.path.join(home, "net.atpkg")
     _run(runner, ["export", "--out", pkg])
-    bundle = json.load(open(pkg))
+    with open(pkg) as _f:
+        bundle = json.load(_f)
     assert "vouches" in bundle and len(bundle["vouches"]) >= 1
     assert "keys" not in bundle
 

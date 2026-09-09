@@ -1,10 +1,9 @@
 import os
-import tempfile
 
 from click.testing import CliRunner
 
+from atar.agent_bootstrap import AgentRegistry
 from atar.cli import cli
-from atar.agent_bootstrap import AgentRegistry, seed_trust_root
 
 
 def test_real_agents_bootstrap_from_config(tmp_path, monkeypatch):
@@ -62,8 +61,8 @@ scope = "intelligence"
     )
     runner = CliRunner()
     runner.invoke(cli, ["bootstrap", "--config", str(cfg)])
-    from atar.dashboard import dashboard_data
     from atar.agent_bootstrap import AgentRegistry
+    from atar.dashboard import dashboard_data
 
     reg = AgentRegistry()
     net = reg.build_network(scope="intelligence")

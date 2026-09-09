@@ -8,21 +8,20 @@ other agents' vouches. These tests pin the fix.
 
 import json
 import os
-
 from base64 import b64encode
 
 from click.testing import CliRunner
 
 from atar.cli import cli
-from atar.identity import generate_identity, did_from_public
-from atar.vouch import create_vouch
+from atar.identity import did_from_public, generate_identity
 from atar.revocation import (
     RevocationList,
-    revoke_vouch,
     revoke_payload_id,
+    revoke_vouch,
     verify_revocation_entry,
     verify_vouch_revocation_aware,
 )
+from atar.vouch import create_vouch
 
 
 def _vouch():
@@ -34,7 +33,7 @@ def _vouch():
 def _entry_for(vid, signer, revoked_by=None, ts=1690000000):
     """A revocation entry signed by ``signer`` (well-formed unless told otherwise)."""
     rb = revoked_by or did_from_public(signer.public_key)
-    msg = f"{vid}|{rb}|{ts}".encode("utf-8")
+    msg = f"{vid}|{rb}|{ts}".encode()
     return {
         "vid": vid,
         "revoked_by": rb,
@@ -59,7 +58,7 @@ def test_signature_checked_against_revoked_by_not_just_any_key():
 
 
 def test_attacker_self_signed_entry_never_revokes():
-    issuer, v = _vouch()
+    _issuer, v = _vouch()
     attacker = generate_identity()
     vid = revoke_payload_id(v)
     # well-formed entry: attacker signs as themselves -> verifies standalone
@@ -121,7 +120,9 @@ def test_sync_does_not_import_forged_revocation(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", alice_home)
     runner.invoke(cli, ["keygen", "--name", "alice"])
     r = runner.invoke(cli, ["keygen", "--name", "bob"])
-    bob_did = [l for l in r.output.splitlines() if l.startswith("did:key:")][0]
+    bob_did = next(
+        line for line in r.output.splitlines() if line.startswith("did:key:")
+    )
     vf = os.path.join(alice_home, "v.json")
     runner.invoke(
         cli,
@@ -140,7 +141,7 @@ def test_sync_does_not_import_forged_revocation(tmp_path, monkeypatch):
         ],
     )
     runner.invoke(cli, ["add", vf])
-    with open(vf, "r", encoding="utf-8") as f:
+    with open(vf, encoding="utf-8") as f:
         v = json.load(f)
     vid = revoke_payload_id(v)
     # mallory receives the vouch via legitimate sync, then forges a revocation
@@ -171,7 +172,7 @@ def test_reissue_commit_revocation_verifiable_and_old_key_retired(
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "a"])
     r = runner.invoke(cli, ["keygen", "--name", "b"])
-    b_did = [l for l in r.output.splitlines() if l.startswith("did:key:")][0]
+    b_did = next(line for line in r.output.splitlines() if line.startswith("did:key:"))
     vf = os.path.join(home, "v.json")
     runner.invoke(
         cli,
@@ -190,10 +191,11 @@ def test_reissue_commit_revocation_verifiable_and_old_key_retired(
         ],
     )
     runner.invoke(cli, ["add", vf])
-    with open(vf, "r", encoding="utf-8") as f:
+    with open(vf, encoding="utf-8") as f:
         v = json.load(f)
     runner.invoke(cli, ["rotate", "--name", "a"])
-    keys = json.load(open(os.path.join(home, "keys.json")))
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     assert "old_private" in keys["a"]  # retained to sign retirement revocations
     r = runner.invoke(cli, ["reissue", "--name", "a", "--commit"])
     assert r.exit_code == 0, r.output
@@ -203,5 +205,6 @@ def test_reissue_commit_revocation_verifiable_and_old_key_retired(
     entry = rl.entries[vid]
     assert entry["revoked_by"] == v["payload"]["issuer"]  # signed by old DID's key
     assert verify_revocation_entry(entry) is True
-    keys = json.load(open(os.path.join(home, "keys.json")))
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     assert "old_private" not in keys["a"]  # retired after commit

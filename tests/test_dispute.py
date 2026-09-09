@@ -13,8 +13,7 @@ from atar.dispute import (
     create_dispute,
     verify_dispute_entry,
 )
-from atar.identity import generate_identity, did_from_public
-from atar.store import VouchStore
+from atar.identity import did_from_public, generate_identity
 from atar.transparency import TrustGraph, canonical_vouch_id
 from atar.vouch import create_vouch
 
@@ -77,9 +76,11 @@ def test_tampered_dispute_dropped_on_load(tmp_path):
     dl.add(e)
     dl.save(path)
     # tamper with the file
-    data = json.load(open(path))
+    with open(path) as _f:
+        data = json.load(_f)
     data["disputes"][0]["reason"] = "totally different reason"
-    json.dump(data, open(path, "w"))
+    with open(path, "w") as _f:
+        json.dump(data, _f)
     assert DisputeList.load(path).all() == []
 
 
@@ -110,7 +111,7 @@ def _graph_with_chain():
 
 
 def test_untrusted_disputer_does_not_move_scores():
-    g, seed, alice, bob, _, v_ab = _graph_with_chain()
+    g, seed, _alice, _bob, _, v_ab = _graph_with_chain()
     sybil = generate_identity()  # nobody trusts the Sybil
     dl = DisputeList()
     dl.add(create_dispute(sybil, v_ab, reason="spam", ts=1000))
@@ -138,7 +139,7 @@ def test_trusted_disputer_discounts_vouch():
 
 def test_threshold_boundary():
     # carol is a third party trusted at exactly 0.9 (>= 0.5): her dispute counts
-    g, seed, alice, bob, v_sa, v_ab = _graph_with_chain()
+    g, seed, _alice, bob, _v_sa, v_ab = _graph_with_chain()
     carol = generate_identity()
     v_sc, _, _ = _vouch(seed, carol, score=0.9)
     g.add(v_sc)
@@ -161,7 +162,8 @@ def test_dispute_cli_and_listing(tmp_path, monkeypatch):
     runner.invoke(cli, ["keygen", "--name", "watcher"])
     v, _, _ = _vouch()
     vf = str(tmp_path / "v.json")
-    json.dump(v, open(vf, "w"))
+    with open(vf, "w") as _f:
+        json.dump(v, _f)
     r = runner.invoke(
         cli, ["dispute", vf, "--from", "watcher", "--reason", "bad output"]
     )
@@ -181,12 +183,10 @@ def test_dispute_cli_issuer_rejected(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", home)
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "alice"])
-    keys = json.load(open(os.path.join(home, "keys.json")))
-    alice_did = keys["alice"]["did"]
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     # alice vouches for someone; she cannot dispute her own vouch
     _, subject = generate_identity(), generate_identity()
-    from atar.identity import public_key_from_did
-    import atar.identity as I
 
     priv_hex = keys["alice"]["private"]
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -197,7 +197,8 @@ def test_dispute_cli_issuer_rejected(tmp_path, monkeypatch):
     ident = Identity(private_key=priv, public_key=priv.public_key())
     v = create_vouch(ident, subject.public_key, score=0.9, scope="coding")
     vf = str(tmp_path / "v.json")
-    json.dump(v, open(vf, "w"))
+    with open(vf, "w") as _f:
+        json.dump(v, _f)
     r = runner.invoke(cli, ["dispute", vf, "--from", "alice", "--reason", "oops"])
     assert r.exit_code == 1
     assert "revoke" in r.output
@@ -209,7 +210,8 @@ def test_verify_warns_about_disputes(tmp_path, monkeypatch):
     runner = CliRunner()
     v, _, _ = _vouch()
     vf = str(tmp_path / "v.json")
-    json.dump(v, open(vf, "w"))
+    with open(vf, "w") as _f:
+        json.dump(v, _f)
     dl = DisputeList()
     dl.add(create_dispute(generate_identity(), v, reason="suspicious", ts=1000))
     dl.save(os.path.join(home, "disputes.json"))

@@ -1,6 +1,4 @@
 import os
-import json
-import tempfile
 
 from click.testing import CliRunner
 
@@ -34,7 +32,7 @@ def test_sync_exchanges_vouches_between_stores(tmp_path, monkeypatch):
     runner = CliRunner()
 
     # alice creates a vouch for some DID
-    from atar.identity import generate_identity, did_from_public
+    from atar.identity import did_from_public, generate_identity
 
     subj = generate_identity()
     subj_did = did_from_public(subj.public_key)
@@ -58,7 +56,7 @@ def test_sync_is_idempotent(tmp_path, monkeypatch):
     bob = _agent_home(str(tmp_path), "bob")
     monkeypatch.setenv("ATAR_HOME", alice)
     runner = CliRunner()
-    from atar.identity import generate_identity, did_from_public
+    from atar.identity import did_from_public, generate_identity
 
     subj = generate_identity()
     subj_did = did_from_public(subj.public_key)
@@ -75,7 +73,7 @@ def test_sync_bidirectional(tmp_path, monkeypatch):
     alice = _agent_home(str(tmp_path), "alice")
     bob = _agent_home(str(tmp_path), "bob")
     runner = CliRunner()
-    from atar.identity import generate_identity, did_from_public
+    from atar.identity import did_from_public, generate_identity
 
     # alice has a vouch
     monkeypatch.setenv("ATAR_HOME", alice)

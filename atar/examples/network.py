@@ -10,9 +10,9 @@ This is a local fixture, not a published artifact. Keep it private.
 
 from __future__ import annotations
 
-from atar.identity import generate_identity, did_from_public
-from atar.vouch import create_vouch
+from atar.identity import did_from_public, generate_identity
 from atar.transparency import graph_from_vouches
+from atar.vouch import create_vouch
 
 
 def build_demo_network() -> dict:

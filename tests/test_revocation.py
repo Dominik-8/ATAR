@@ -1,9 +1,9 @@
 import os
 import tempfile
 
-from atar.identity import generate_identity, did_from_public
+from atar.identity import generate_identity
+from atar.revocation import RevocationList, is_revoked, revoke_payload_id, revoke_vouch
 from atar.vouch import create_vouch, verify_vouch
-from atar.revocation import RevocationList, revoke_vouch, is_revoked, revoke_payload_id
 
 
 def _make_vouch():
@@ -14,7 +14,7 @@ def _make_vouch():
 
 
 def test_revoke_makes_vouch_invalid():
-    issuer, subject, v = _make_vouch()
+    issuer, _subject, v = _make_vouch()
     assert verify_vouch(v) is True
     # issuer revokes it
     rlist = RevocationList()
@@ -25,7 +25,7 @@ def test_revoke_makes_vouch_invalid():
 
 
 def test_unrevoked_vouch_still_valid():
-    issuer, subject, v = _make_vouch()
+    _issuer, _subject, v = _make_vouch()
     rlist = RevocationList()
     from atar.revocation import verify_vouch_revocation_aware
 
@@ -33,15 +33,13 @@ def test_unrevoked_vouch_still_valid():
 
 
 def test_revocation_persists_and_is_dedup():
-    issuer, subject, v = _make_vouch()
-    revoked_by = did_from_public(issuer.public_key)
+    issuer, _subject, v = _make_vouch()
     vid = revoke_payload_id(v)
     rlist = RevocationList()
     assert revoke_vouch(rlist, issuer, vid) is True  # first add
     assert revoke_vouch(rlist, issuer, vid) is False  # duplicate rejected
     assert len(rlist.entries) == 1
     # simulate reload from disk
-    import json
 
     path = os.path.join(tempfile.mkdtemp(), "revocations.json")
     rlist.save(path)
@@ -51,7 +49,7 @@ def test_revocation_persists_and_is_dedup():
 
 def test_only_issuer_can_revoke():
     """A non-issuer cannot add a valid revocation entry (structure check)."""
-    issuer, subject, v = _make_vouch()
+    issuer, _subject, v = _make_vouch()
     attacker = generate_identity()
     vid = revoke_payload_id(v)
     rlist = RevocationList()

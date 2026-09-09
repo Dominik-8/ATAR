@@ -1,10 +1,11 @@
-import os, threading, urllib.request
+import os
+import urllib.request
 
-from atar.web import run_server
+from atar.agent_bootstrap import AgentRegistry
+from atar.identity import did_from_public, generate_identity
 from atar.store import VouchStore
 from atar.vouch import create_vouch
-from atar.identity import Identity, generate_identity, did_from_public
-from atar.agent_bootstrap import AgentRegistry
+from atar.web import run_server
 
 
 def test_web_server_escapes_xss(tmp_path, monkeypatch):
@@ -30,7 +31,8 @@ def test_web_server_escapes_xss(tmp_path, monkeypatch):
             "did": did_from_public(subj.public_key),
         },
     }
-    _json.dump(keys, open(os.path.join(home, "keys.json"), "w"))
+    with open(os.path.join(home, "keys.json"), "w") as _f:
+        _json.dump(keys, _f)
     # registry so web._build_net resolves names + seed
     reg = AgentRegistry()
     reg._agents[evil_name] = {

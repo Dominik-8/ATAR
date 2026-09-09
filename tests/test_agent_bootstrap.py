@@ -1,6 +1,5 @@
-import os
 import json
-import tempfile
+import os
 
 from atar.agent_bootstrap import (
     AgentRegistry,
@@ -28,7 +27,8 @@ def test_vouch_for_writes_to_persistent_store(tmp_path, monkeypatch):
     assert ok is True
     # store on disk has the vouch
     store_path = os.path.join(tmp_path, "vouches.json")
-    data = json.load(open(store_path))
+    with open(store_path) as _f:
+        data = json.load(_f)
     assert len(data["vouches"]) == 1
     p = data["vouches"][0]["payload"]
     assert p["issuer"] == a and p["subject"] == b

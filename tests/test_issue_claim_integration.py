@@ -1,13 +1,14 @@
+import json
 import os
+from pathlib import Path
 
 from click.testing import CliRunner
 
 from atar.cli import cli
-from atar.store import VouchStore
 
 
 def _did(home, name):
-    keys = __import__("json").load(open(os.path.join(home, "keys.json")))
+    keys = json.loads(Path(os.path.join(home, "keys.json")).read_text(encoding="utf-8"))
     return keys[name]["did"]
 
 

@@ -9,13 +9,10 @@ If any of these RAISES instead of returning False, the silent-catch removal
 regressed.
 """
 
-import base64
-
+from atar.atc import verify_agent_card, verify_token
+from atar.revocation import RevocationList, verify_vouch_revocation_aware
+from atar.rotation import RotationStatement, verify_rotation
 from atar.vouch import verify_vouch
-from atar.rotation import verify_rotation, RotationStatement
-from atar.atc import verify_token, verify_agent_card
-from atar.revocation import verify_vouch_revocation_aware, RevocationList
-
 
 # --- malformed vouches: every one must return False, never raise ---
 _BAD_VOUCHES = [
@@ -95,8 +92,8 @@ def test_verify_vouch_rejects_all_malformed():
     for bad in _BAD_VOUCHES:
         try:
             result = verify_vouch(bad)
-        except Exception as exc:  # pragma: no cover - this is what we forbid
-            raise AssertionError(f"verify_vouch raised on {bad!r}: {exc}")
+        except Exception as exc:  # deliberate: the test forbids ANY exception here  # pragma: no cover - this is what we forbid
+            raise AssertionError(f"verify_vouch raised on {bad!r}: {exc}") from exc
         assert result is False, f"malformed vouch {bad!r} should be False, got {result}"
 
 
@@ -118,8 +115,10 @@ def test_verify_rotation_rejects_malformed():
             result = (
                 verify_rotation(stmt) if stmt is not None else verify_rotation(None)
             )
-        except Exception as exc:  # pragma: no cover
-            raise AssertionError(f"verify_rotation raised on {stmt!r}: {exc}")
+        except (
+            Exception
+        ) as exc:  # deliberate: the test forbids ANY exception here  # pragma: no cover
+            raise AssertionError(f"verify_rotation raised on {stmt!r}: {exc}") from exc
         assert result is False
 
 
@@ -128,8 +127,10 @@ def test_verify_token_rejects_malformed():
     for tok in bad_tokens:
         try:
             result = verify_token(tok)
-        except Exception as exc:  # pragma: no cover
-            raise AssertionError(f"verify_token raised on {tok!r}: {exc}")
+        except (
+            Exception
+        ) as exc:  # deliberate: the test forbids ANY exception here  # pragma: no cover
+            raise AssertionError(f"verify_token raised on {tok!r}: {exc}") from exc
         assert result is False
 
 
@@ -142,8 +143,10 @@ def test_verify_agent_card_handles_all_invalid():
     }
     try:
         report = verify_agent_card(card)
-    except Exception as exc:  # pragma: no cover
-        raise AssertionError(f"verify_agent_card raised: {exc}")
+    except (
+        Exception
+    ) as exc:  # deliberate: the test forbids ANY exception here  # pragma: no cover
+        raise AssertionError(f"verify_agent_card raised: {exc}") from exc
     assert report["valid_vouches"] == []
     assert len(report["invalid_vouches"]) == 3
 
@@ -153,8 +156,10 @@ def test_verify_vouch_revocation_aware_rejects_malformed():
     for bad in _BAD_VOUCHES:
         try:
             result = verify_vouch_revocation_aware(bad, rlist)
-        except Exception as exc:  # pragma: no cover
+        except (
+            Exception
+        ) as exc:  # deliberate: the test forbids ANY exception here  # pragma: no cover
             raise AssertionError(
                 f"verify_vouch_revocation_aware raised on {bad!r}: {exc}"
-            )
+            ) from exc
         assert result is False

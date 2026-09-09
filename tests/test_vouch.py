@@ -1,4 +1,4 @@
-from atar.identity import generate_identity, did_from_public
+from atar.identity import did_from_public, generate_identity
 from atar.vouch import create_vouch, verify_vouch, vouch_from_self
 
 

@@ -1,5 +1,5 @@
+from atar.dashboard import dashboard_data, render_dashboard_html
 from atar.examples.network import build_demo_network
-from atar.dashboard import render_dashboard_html, dashboard_data
 
 
 def test_dashboard_data_ranks_agents():

@@ -7,8 +7,7 @@ wanted to avoid). Click auto-converts underscores to kebab-case
 
 import os
 import re
-
-import pytest
+from pathlib import Path
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -20,9 +19,9 @@ def _normalize(name: str) -> str:
 def test_readme_commands_exist_in_cli():
     from atar.cli import cli
 
-    actual = {_normalize(c) for c in cli.commands.keys()}
+    actual = {_normalize(c) for c in cli.commands}
 
-    readme = open(os.path.join(ROOT, "README.md"), encoding="utf-8").read()
+    readme = Path(os.path.join(ROOT, "README.md")).read_text(encoding="utf-8")
     documented = {_normalize(c) for c in re.findall(r"`atar\s+([a-z][a-z-]+)", readme)}
 
     # every documented command must exist
@@ -33,15 +32,15 @@ def test_readme_commands_exist_in_cli():
 def test_cli_commands_documented_in_readme():
     from atar.cli import cli
 
-    actual = {_normalize(c) for c in cli.commands.keys()}
+    actual = {_normalize(c) for c in cli.commands}
 
-    readme = open(os.path.join(ROOT, "README.md"), encoding="utf-8").read()
+    readme = Path(os.path.join(ROOT, "README.md")).read_text(encoding="utf-8")
     documented = {_normalize(c) for c in re.findall(r"`atar\s+([a-z][a-z-]+)", readme)}
 
     # every CLI command should be documented (no hidden/undocumented commands)
     undocumented = actual - documented
     # 'import-cmd' is registered as 'import' by Click; allow that alias
-    undocumented = {c for c in undocumented if c not in ("import-cmd",)}
+    undocumented = {c for c in undocumented if c != "import-cmd"}
     assert not undocumented, (
         f"CLI commands not documented in README: {sorted(undocumented)}"
     )

@@ -1,12 +1,12 @@
-import os
 import json
+import os
 import time
 
 from click.testing import CliRunner
 
 from atar.cli import cli
-from atar.vouch import create_vouch, verify_vouch
-from atar.identity import generate_identity, did_from_public
+from atar.identity import generate_identity
+from atar.vouch import create_vouch
 
 
 def _seed_audit_home(home, monkeypatch):
@@ -14,7 +14,8 @@ def _seed_audit_home(home, monkeypatch):
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "seed_agent"])
     runner.invoke(cli, ["keygen", "--name", "bob"])
-    keys = json.load(open(os.path.join(home, "keys.json")))
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     bob = keys["bob"]["did"]
     # a valid, fresh vouch
     runner.invoke(
@@ -63,7 +64,7 @@ def test_audit_reports_valid_and_expired(tmp_path, monkeypatch):
 
 
 def test_audit_reports_revoked(tmp_path, monkeypatch):
-    keys = _seed_audit_home(str(tmp_path), monkeypatch)
+    _seed_audit_home(str(tmp_path), monkeypatch)
     runner = CliRunner()
     # revoke the valid v1 vouch
     runner.invoke(cli, ["revoke", os.path.join(str(tmp_path), "v1.json")])
@@ -79,7 +80,8 @@ def test_audit_clean_network_exits_zero(tmp_path, monkeypatch):
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "seed_agent"])
     runner.invoke(cli, ["keygen", "--name", "bob"])
-    keys = json.load(open(os.path.join(home, "keys.json")))
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     bob = keys["bob"]["did"]
     runner.invoke(
         cli,

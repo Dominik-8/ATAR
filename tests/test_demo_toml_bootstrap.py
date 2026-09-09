@@ -6,11 +6,11 @@ exact thing we removed from agents.toml. This test proves demo.toml works.
 """
 
 import os
+from pathlib import Path
 
 from click.testing import CliRunner
 
 from atar.cli import cli
-
 
 _CFG = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "demo.toml"
@@ -36,8 +36,8 @@ def test_demo_toml_bootstraps_multi_agent_graph(tmp_path, monkeypatch):
         "founder_intel",
     } <= names, f"missing agents: {names}"
 
-    from atar.store import VouchStore
     from atar.cli import _home
+    from atar.store import VouchStore
 
     store = VouchStore(os.path.join(_home(), "vouches.json"))
     assert len(store.all()) >= 5, "demo should produce multiple vouches"
@@ -49,6 +49,6 @@ def test_demo_toml_bootstraps_multi_agent_graph(tmp_path, monkeypatch):
     # dashboard renders without crashing
     rd = runner.invoke(cli, ["dashboard", "--out", str(tmp_path / "d.html")])
     assert rd.exit_code == 0, rd.output
-    html = open(tmp_path / "d.html", encoding="utf-8").read()
+    html = Path(tmp_path / "d.html").read_text(encoding="utf-8")
     for n in ("seed_agent", "research", "market", "founder_intel", "reporting_agent"):
         assert n in html, f"agent {n} missing from dashboard"

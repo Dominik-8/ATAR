@@ -1,7 +1,5 @@
-from atar.identity import generate_identity, did_from_public
-from atar.vouch import create_vouch
-from atar.transparency import graph_from_vouches, TrustGraph
 from atar.examples.network import build_demo_network, demo_trust_report
+from atar.transparency import graph_from_vouches
 
 
 def test_demo_network_transitive_trust():

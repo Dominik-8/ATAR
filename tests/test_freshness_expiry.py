@@ -33,7 +33,8 @@ def test_verify_reports_expired_with_max_age(tmp_path, monkeypatch):
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-    keys = json.load(open(os.path.join(tmp_path, "keys.json")))
+    with open(os.path.join(tmp_path, "keys.json")) as _f:
+        keys = json.load(_f)
     alice = Ed25519PrivateKey.from_private_bytes(
         bytes.fromhex(keys["alice"]["private"])
     )
@@ -63,7 +64,8 @@ def test_audit_flags_expired_vouch(tmp_path, monkeypatch):
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-    keys = json.load(open(os.path.join(tmp_path, "keys.json")))
+    with open(os.path.join(tmp_path, "keys.json")) as _f:
+        keys = json.load(_f)
     alice = Ed25519PrivateKey.from_private_bytes(
         bytes.fromhex(keys["alice"]["private"])
     )
@@ -88,7 +90,8 @@ def test_watch_once_flags_expired(tmp_path, monkeypatch):
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-    keys = json.load(open(os.path.join(tmp_path, "keys.json")))
+    with open(os.path.join(tmp_path, "keys.json")) as _f:
+        keys = json.load(_f)
     alice = Ed25519PrivateKey.from_private_bytes(
         bytes.fromhex(keys["alice"]["private"])
     )

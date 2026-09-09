@@ -1,11 +1,11 @@
-import os
-import tempfile
-import threading
 import urllib.request
 
-from atar.web import build_dashboard_response, run_server
 from atar.agent_bootstrap import AgentRegistry, seed_trust_root
-from atar.store import VouchStore
+from atar.web import (
+    build_dashboard_response,
+    build_dashboard_response_multi,
+    run_server,
+)
 
 
 def _seed_multi(home, monkeypatch):
@@ -52,7 +52,3 @@ def test_server_serves_and_scope_query(tmp_path, monkeypatch):
         assert "market" not in body
     finally:
         srv.shutdown()
-
-
-# helper: reuse the multi-scope renderer the web module now exposes
-from atar.web import build_dashboard_response_multi  # noqa: E402

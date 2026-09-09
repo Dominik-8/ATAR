@@ -1,13 +1,14 @@
+import json
 import os
+from pathlib import Path
 
 from click.testing import CliRunner
 
 from atar.cli import cli
-from atar.vouch import verify_vouch
 
 
 def _id(home, name):
-    keys = __import__("json").load(open(os.path.join(home, "keys.json")))
+    keys = json.loads(Path(os.path.join(home, "keys.json")).read_text(encoding="utf-8"))
     return keys[name]["did"]
 
 
@@ -49,9 +50,11 @@ def test_issue_and_verify_claim(tmp_path, monkeypatch):
     # tamper with the claim -> verify must fail
     import json
 
-    claim = json.load(open(str(tmp_path / "claim.json")))
+    with open(str(tmp_path / "claim.json")) as _f:
+        claim = json.load(_f)
     claim["payload"]["claim"] = "TAMPERED"
-    json.dump(claim, open(str(tmp_path / "claim.json"), "w"))
+    with open(str(tmp_path / "claim.json"), "w") as _f:
+        json.dump(claim, _f)
     r3 = runner.invoke(cli, ["verify-claim", str(tmp_path / "claim.json")])
     assert r3.exit_code != 0
     assert "INVALID" in r3.output

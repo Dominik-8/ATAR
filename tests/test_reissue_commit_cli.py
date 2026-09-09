@@ -1,12 +1,12 @@
-import os
 import json
+import os
 
 from click.testing import CliRunner
 
 from atar.cli import cli
-from atar.vouch import verify_vouch
 from atar.revocation import RevocationList, revoke_payload_id
 from atar.store import VouchStore
+from atar.vouch import verify_vouch
 
 
 def _seed_seed_agent_with_vouch(home, monkeypatch):
@@ -14,7 +14,8 @@ def _seed_seed_agent_with_vouch(home, monkeypatch):
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "seed_agent"])
     runner.invoke(cli, ["keygen", "--name", "bob"])
-    keys = json.load(open(os.path.join(home, "keys.json")))
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     bob = keys["bob"]["did"]
     r = runner.invoke(
         cli,
@@ -48,7 +49,8 @@ def test_reissue_commit_adds_new_and_revokes_old(tmp_path, monkeypatch):
     vouches = store.all()
     assert len(vouches) >= 1
     # at least one vouch is validly signed under the NEW key
-    keys = json.load(open(os.path.join(str(tmp_path), "keys.json")))
+    with open(os.path.join(str(tmp_path), "keys.json")) as _f:
+        keys = json.load(_f)
     new_did = keys["seed_agent"]["did"]
     assert any(v["payload"]["issuer"] == new_did and verify_vouch(v) for v in vouches)
     # the OLD vouch (issuer == rotated_from) is now on the revocation list

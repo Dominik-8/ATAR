@@ -62,7 +62,7 @@ def create_vouch(
         )
     issuer_pub = (
         issuer.public_key()
-        if hasattr(issuer, "public_key") and callable(getattr(issuer, "public_key"))
+        if hasattr(issuer, "public_key") and callable(issuer.public_key)
         else issuer.public_key
     )
     payload = {

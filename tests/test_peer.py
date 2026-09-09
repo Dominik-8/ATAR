@@ -3,13 +3,14 @@
 import json
 import os
 from urllib import request as urlrequest
+from urllib.error import HTTPError
 
 import pytest
 from click.testing import CliRunner
 
 from atar.cli import cli
-from atar.identity import generate_identity, did_from_public
-from atar.peer import run_peer, sync_with_url, is_url
+from atar.identity import generate_identity
+from atar.peer import is_url, run_peer, sync_with_url
 from atar.revocation import RevocationList, revoke_vouch
 from atar.store import VouchStore
 from atar.transparency import canonical_vouch_id
@@ -127,7 +128,7 @@ def test_issuer_revoked_vouch_never_admitted_over_http(server):
 
 
 def test_sync_with_url_both_directions(server, tmp_path):
-    url, home = server
+    url, _home = server
     vouch_remote, _, _ = _make_vouch(scope="research")
     _post(url + "/vouches", vouch_remote)
     local_store = VouchStore(str(tmp_path / "local" / "vouches.json"))
@@ -143,7 +144,7 @@ def test_sync_with_url_both_directions(server, tmp_path):
 
 
 def test_sync_cli_with_http_peer(server, tmp_path, monkeypatch):
-    url, peer_home = server
+    url, _peer_home = server
     my_home = str(tmp_path / "me")
     os.makedirs(my_home)
     monkeypatch.setenv("ATAR_HOME", my_home)
@@ -158,13 +159,14 @@ def test_sync_cli_with_http_peer(server, tmp_path, monkeypatch):
 
 
 def test_auto_sync_cli_with_http_peer(server, tmp_path, monkeypatch):
-    url, peer_home = server
+    url, _peer_home = server
     my_home = str(tmp_path / "me")
     os.makedirs(my_home)
     monkeypatch.setenv("ATAR_HOME", my_home)
     vouch, _, _ = _make_vouch()
     _post(url + "/vouches", vouch)
-    json.dump({"peers": [url]}, open(os.path.join(my_home, "atar_peers.json"), "w"))
+    with open(os.path.join(my_home, "atar_peers.json"), "w") as _f:
+        json.dump({"peers": [url]}, _f)
     runner = CliRunner()
     r = runner.invoke(cli, ["auto-sync"])
     assert r.exit_code == 0, r.output
@@ -175,10 +177,11 @@ def test_auto_sync_unreachable_url_is_skipped(tmp_path, monkeypatch):
     my_home = str(tmp_path / "me")
     os.makedirs(my_home)
     monkeypatch.setenv("ATAR_HOME", my_home)
-    json.dump(
-        {"peers": ["http://127.0.0.1:1"]},
-        open(os.path.join(my_home, "atar_peers.json"), "w"),
-    )
+    with open(os.path.join(my_home, "atar_peers.json"), "w") as _f:
+        json.dump(
+            {"peers": ["http://127.0.0.1:1"]},
+            _f,
+        )
     runner = CliRunner()
     r = runner.invoke(cli, ["auto-sync"])
     assert r.exit_code == 0, r.output
@@ -187,5 +190,5 @@ def test_auto_sync_unreachable_url_is_skipped(tmp_path, monkeypatch):
 
 def test_unknown_route_404(server):
     url, _ = server
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPError):
         _get(url + "/nope")

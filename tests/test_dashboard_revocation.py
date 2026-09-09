@@ -1,12 +1,9 @@
 import os
-import json
-import tempfile
 
-from atar.dashboard import dashboard_data, render_dashboard_html
 from atar.agent_bootstrap import AgentRegistry, seed_trust_root
+from atar.dashboard import dashboard_data, render_dashboard_html
+from atar.revocation import RevocationList, revoke_payload_id, revoke_vouch
 from atar.store import VouchStore
-from atar.revocation import RevocationList, revoke_vouch, revoke_payload_id
-from atar.identity import generate_identity, did_from_public
 
 
 def _build_net_with_revocation(home, monkeypatch):
@@ -24,7 +21,6 @@ def _build_net_with_revocation(home, monkeypatch):
     for vv in VouchStore(os.path.join(home, "vouches.json")).all():
         if vv["payload"]["subject"] == reg.did_of("market"):
             v = vv
-    break_outer = True
     # sign revocation with seed_agent's key
     vid = revoke_payload_id(v)
     rl = RevocationList()
@@ -35,7 +31,7 @@ def _build_net_with_revocation(home, monkeypatch):
 
 
 def test_revoked_agent_shows_in_dashboard(tmp_path, monkeypatch):
-    reg, vid = _build_net_with_revocation(str(tmp_path), monkeypatch)
+    reg, _vid = _build_net_with_revocation(str(tmp_path), monkeypatch)
     net = reg.build_network(scope="intelligence")
     data = dashboard_data(net, scope="intelligence")
     market_entry = next(a for a in data["agents"] if a["name"] == "market")
@@ -44,7 +40,7 @@ def test_revoked_agent_shows_in_dashboard(tmp_path, monkeypatch):
 
 
 def test_revoked_agent_has_zero_trust(tmp_path, monkeypatch):
-    reg, vid = _build_net_with_revocation(str(tmp_path), monkeypatch)
+    reg, _vid = _build_net_with_revocation(str(tmp_path), monkeypatch)
     net = reg.build_network(scope="intelligence")
     data = dashboard_data(net, scope="intelligence")
     market_entry = next(a for a in data["agents"] if a["name"] == "market")
@@ -52,7 +48,7 @@ def test_revoked_agent_has_zero_trust(tmp_path, monkeypatch):
 
 
 def test_revoked_renders_red_in_html(tmp_path, monkeypatch):
-    reg, vid = _build_net_with_revocation(str(tmp_path), monkeypatch)
+    reg, _vid = _build_net_with_revocation(str(tmp_path), monkeypatch)
     net = reg.build_network(scope="intelligence")
     html = render_dashboard_html(net, scope="intelligence")
     assert "REVOKED" in html
@@ -61,7 +57,7 @@ def test_revoked_renders_red_in_html(tmp_path, monkeypatch):
 
 
 def test_non_revoked_agent_not_flagged(tmp_path, monkeypatch):
-    reg, vid = _build_net_with_revocation(str(tmp_path), monkeypatch)
+    reg, _vid = _build_net_with_revocation(str(tmp_path), monkeypatch)
     net = reg.build_network(scope="intelligence")
     data = dashboard_data(net, scope="intelligence")
     research = next(a for a in data["agents"] if a["name"] == "research")

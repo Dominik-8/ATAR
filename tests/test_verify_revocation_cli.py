@@ -1,12 +1,8 @@
 import os
-import json
-import tempfile
 
 from click.testing import CliRunner
 
 from atar.cli import cli
-from atar.revocation import RevocationList, revoke_vouch, revoke_payload_id
-from atar.identity import generate_identity, did_from_public
 
 
 def _make_vouch_file(home, monkeypatch):
@@ -14,7 +10,9 @@ def _make_vouch_file(home, monkeypatch):
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "alice"])
     r2 = runner.invoke(cli, ["keygen", "--name", "bob"])
-    bob_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
+    bob_did = next(
+        line for line in r2.output.splitlines() if line.startswith("did:key:")
+    )
     out = os.path.join(home, "v.json")
     runner.invoke(
         cli,

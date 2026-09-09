@@ -22,10 +22,11 @@ from __future__ import annotations
 import json
 import os
 
-from .identity import generate_identity, did_from_public, Identity
-from .vouch import create_vouch
-from .store import VouchStore
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+from .identity import Identity, did_from_public, generate_identity
+from .store import VouchStore
+from .vouch import create_vouch
 
 
 def _home() -> str:
@@ -63,7 +64,7 @@ def known_agent_names() -> dict[str, str]:
     known_path = os.path.join(_home(), "known-agents.json")
     try:
         if os.path.exists(known_path):
-            with open(known_path, "r", encoding="utf-8") as f:
+            with open(known_path, encoding="utf-8") as f:
                 for n, did in json.load(f).items():
                     if isinstance(n, str) and isinstance(did, str):
                         names[n] = did
@@ -72,7 +73,7 @@ def known_agent_names() -> dict[str, str]:
     keys_path = os.path.join(_home(), "keys.json")
     try:
         if os.path.exists(keys_path):
-            with open(keys_path, "r", encoding="utf-8") as f:
+            with open(keys_path, encoding="utf-8") as f:
                 for n, rec in json.load(f).items():
                     if isinstance(rec, dict) and isinstance(rec.get("did"), str):
                         names[n] = rec["did"]
@@ -83,7 +84,7 @@ def known_agent_names() -> dict[str, str]:
         for n, d in reg._agents.items():
             if n != "_seed" and isinstance(d, dict) and isinstance(d.get("did"), str):
                 names[n] = d["did"]
-    except Exception:
+    except Exception:  # noqa: BLE001,S110 - best-effort: a broken registry must never break name display
         pass
     return names
 
@@ -100,7 +101,7 @@ class AgentRegistry:
     # --- identity management ------------------------------------------------
     def _load(self) -> dict:
         if os.path.exists(self._agents_file):
-            with open(self._agents_file, "r", encoding="utf-8") as f:
+            with open(self._agents_file, encoding="utf-8") as f:
                 return json.load(f)
         return {}
 

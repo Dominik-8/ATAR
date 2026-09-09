@@ -1,10 +1,7 @@
-import os
-import tempfile
-
 from click.testing import CliRunner
 
-from atar.cli import cli
 from atar.agent_bootstrap import AgentRegistry, seed_trust_root
+from atar.cli import cli
 
 
 def _seed_multi_scope(home, monkeypatch):

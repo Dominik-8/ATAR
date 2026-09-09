@@ -1,4 +1,4 @@
-import os, json
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -18,7 +18,7 @@ def test_dashboard_cli_resolves_agent_names_from_registry(tmp_path, monkeypatch)
     out = str(tmp_path / "dash.html")
     r2 = runner.invoke(cli, ["dashboard", "--out", out])
     assert r2.exit_code == 0, r2.output
-    html = open(out, encoding="utf-8").read()
+    html = Path(out).read_text(encoding="utf-8")
     # registry agents must appear by NAME (not '?')
     assert "seed_agent" in html
     assert "reporting_agent" in html

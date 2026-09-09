@@ -4,23 +4,22 @@ should surface an error, not let revoked vouches appear VALID."""
 
 import json
 import os
+from pathlib import Path
 
 from click.testing import CliRunner
-
-from atar.cli import cli
-from atar.vouch import create_vouch
-from atar.identity import Identity, generate_identity, did_from_public
-from atar.revocation import revoke_payload_id
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PrivateKey,
-    Ed25519PublicKey,
 )
+
+from atar.cli import cli
+from atar.identity import Identity
+from atar.vouch import create_vouch
 
 
 def _id(home, name):
-    keys = json.load(open(os.path.join(home, "keys.json")))
-    priv = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[name]["private"]))
-    return priv
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
+    return Ed25519PrivateKey.from_private_bytes(bytes.fromhex(keys[name]["private"]))
 
 
 def test_verify_revoked_vouch_reported_revoked(tmp_path, monkeypatch):
@@ -54,10 +53,9 @@ def test_verify_no_broad_except_hides_corrupt_rl():
     a revoked vouch could slip through as VALID. We prove the production code
     only catches FileNotFoundError now (the happy path already confirms
     REVOKED above)."""
-    src = open(
-        os.path.join(os.path.dirname(__file__), "..", "atar", "cli.py"),
-        encoding="utf-8",
-    ).read()
+    src = Path(
+        os.path.join(os.path.dirname(__file__), "..", "atar", "cli.py")
+    ).read_text(encoding="utf-8")
     # the verify function's revocation block must not use a broad except
     verify_block = src.split("def verify(", 1)[1].split("def card(", 1)[0]
     assert "except FileNotFoundError" in verify_block

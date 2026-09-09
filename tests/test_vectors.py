@@ -17,6 +17,15 @@ from pathlib import Path
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from atar.atc import (
+    make_agent_card,
+    sign_agent_card,
+    verify_agent_card,
+    verify_card_signature,
+    verify_token,
+    vouch_from_token,
+    vouch_to_token,
+)
 from atar.identity import (
     Identity,
     did_key_from_public,
@@ -26,22 +35,13 @@ from atar.identity import (
 )
 from atar.jcs import canonicalize
 from atar.revocation import verify_revocation_entry
+from atar.rotation import RotationStatement, verify_rotation
 from atar.transparency import canonical_vouch_id
 from atar.vc import (
     credential_to_vouch_payload,
     verify_credential,
     vouch_to_credential,
 )
-from atar.atc import (
-    make_agent_card,
-    sign_agent_card,
-    verify_agent_card,
-    verify_card_signature,
-    vouch_from_token,
-    vouch_to_token,
-    verify_token,
-)
-from atar.rotation import RotationStatement, verify_rotation
 from atar.vouch import create_vouch, verify_vouch
 
 VECTORS = Path(__file__).parent / "vectors"

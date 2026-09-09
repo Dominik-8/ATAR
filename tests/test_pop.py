@@ -10,14 +10,14 @@ import os
 
 from click.testing import CliRunner
 
-from atar.cli import cli
-from atar.identity import generate_identity, did_from_public
 from atar.atc import (
     make_agent_card,
     new_pop_challenge,
     sign_pop_proof,
     verify_pop_proof,
 )
+from atar.cli import cli
+from atar.identity import did_from_public, generate_identity
 
 
 def test_pop_roundtrip():
@@ -69,7 +69,7 @@ def test_copied_card_without_pop_fails_verification():
     """The attack this closes: Mallory copies Bob's card and presents it."""
     bob = generate_identity()
     did = did_from_public(bob.public_key)
-    from atar.atc import card_identity, _trust_params
+    from atar.atc import _trust_params, card_identity
 
     card = make_agent_card(did=did, name="bob", vouches=[])  # what Mallory copies
     nonce = new_pop_challenge()  # recipient's fresh challenge
@@ -82,7 +82,7 @@ def test_copied_card_without_pop_fails_verification():
 
 def _keygen(runner, name):
     r = runner.invoke(cli, ["keygen", "--name", name])
-    return [l for l in r.output.splitlines() if l.startswith("did:key:")][0]
+    return next(line for line in r.output.splitlines() if line.startswith("did:key:"))
 
 
 def test_cli_card_challenge_and_verify(tmp_path, monkeypatch):
@@ -95,7 +95,8 @@ def test_cli_card_challenge_and_verify(tmp_path, monkeypatch):
         cli, ["card", "--name", "bob", "--challenge", nonce, "--out", card_path]
     )
     assert r.exit_code == 0, r.output
-    card = json.load(open(card_path))
+    with open(card_path) as _f:
+        card = json.load(_f)
     from atar.atc import _trust_params
 
     proof = _trust_params(card).get("proof")

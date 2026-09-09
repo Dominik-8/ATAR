@@ -46,7 +46,7 @@ def _default_home() -> str:
 
 def is_url(peer: str) -> bool:
     """True iff a peer address is an HTTP(S) endpoint rather than a local dir."""
-    return peer.startswith("http://") or peer.startswith("https://")
+    return peer.startswith(("http://", "https://"))
 
 
 class _PeerState:
@@ -160,13 +160,13 @@ def make_peer_handler(state: _PeerState):
             else:
                 self._send_json({"error": "not found"}, status=404)
 
-        def do_GET(self):  # noqa: N802  (stdlib API)
+        def do_GET(self):
             try:
                 self._route_GET()
             except Exception:  # noqa: BLE001 - never drop a connection bare
                 self._send_json({"error": "internal error"}, status=500)
 
-        def do_POST(self):  # noqa: N802  (stdlib API)
+        def do_POST(self):
             try:
                 self._route_POST()
             except Exception:  # noqa: BLE001 - never drop a connection bare
@@ -242,7 +242,8 @@ def run_peer(
 
 
 def _get_json(url: str, timeout: float = 10.0) -> dict:
-    with urlrequest.urlopen(url, timeout=timeout) as resp:
+    # peer URLs are the explicitly configured sync targets (http/https only, see is_url)
+    with urlrequest.urlopen(url, timeout=timeout) as resp:  # noqa: S310
         data = json.loads(resp.read().decode("utf-8"))
     # a peer (or anything answering on that port) may return a non-object
     return data if isinstance(data, dict) else {}
@@ -250,10 +251,10 @@ def _get_json(url: str, timeout: float = 10.0) -> dict:
 
 def _post_json(url: str, obj: dict, timeout: float = 10.0) -> dict:
     data = json.dumps(obj).encode("utf-8")
-    req = urlrequest.Request(
+    req = urlrequest.Request(  # noqa: S310 - explicitly configured peer URL (http/https only, see is_url)
         url, data=data, headers={"Content-Type": "application/json"}
     )
-    with urlrequest.urlopen(req, timeout=timeout) as resp:
+    with urlrequest.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - explicitly configured peer URL
         return json.loads(resp.read().decode("utf-8"))
 
 

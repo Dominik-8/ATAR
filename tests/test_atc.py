@@ -1,12 +1,12 @@
-from atar.identity import generate_identity, did_from_public
-from atar.vouch import create_vouch
 from atar.atc import (
-    vouch_to_token,
-    vouch_from_token,
-    verify_token,
     make_agent_card,
     verify_agent_card,
+    verify_token,
+    vouch_from_token,
+    vouch_to_token,
 )
+from atar.identity import did_from_public, generate_identity
+from atar.vouch import create_vouch
 
 
 def test_vouch_token_roundtrip():

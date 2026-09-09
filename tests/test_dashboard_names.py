@@ -7,8 +7,6 @@ reading "via ?". Names now resolve from keys.json via known_agent_names().
 
 from __future__ import annotations
 
-import json
-
 from click.testing import CliRunner
 
 from atar.cli import cli
@@ -77,7 +75,7 @@ def test_known_agent_names_merges_keys_and_registry(tmp_path, monkeypatch):
 
 def test_live_server_resolves_keygen_names(tmp_path, monkeypatch):
     """web._build_net must pick up keygen-only identities too."""
-    runner, dids = _seed_cli_network(tmp_path, monkeypatch)
+    _runner, dids = _seed_cli_network(tmp_path, monkeypatch)
     from atar.web import _build_net
 
     net = _build_net()

@@ -21,15 +21,15 @@ import json
 import os
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
+from .agent_bootstrap import AgentRegistry
 from .dashboard import (
+    dashboard_data,
     render_dashboard_html,
     render_multi_scope_html,
-    dashboard_data,
 )
 from .store import VouchStore
-from .agent_bootstrap import AgentRegistry
 
 
 def _store_path() -> str:
@@ -45,7 +45,7 @@ def _all_scopes() -> list[str]:
     """Every scope present across all vouches in the store (sorted, distinct)."""
     try:
         vouches = VouchStore(_store_path()).all()
-    except Exception:
+    except Exception:  # noqa: BLE001 - best-effort: fall back to the default scope when the store is unreadable
         return ["intelligence"]
     scopes = sorted(
         {v["payload"].get("scope") for v in vouches if v["payload"].get("scope")}
@@ -62,7 +62,7 @@ def _build_net() -> dict:
         from .agent_bootstrap import known_agent_names
 
         agents = known_agent_names()  # registry + plain keygen identities
-    except Exception:
+    except Exception:  # noqa: BLE001 - best-effort: dashboard renders from the plain store when the registry is unreadable
         seed = ""
         vouches = VouchStore(_store_path()).all() if _store_path_exists() else []
         agents = {}
@@ -99,7 +99,7 @@ def build_dashboard_response_multi(
 class DashboardHandler(BaseHTTPRequestHandler):
     """Serves the multi-scope dashboard on GET / and JSON on GET /api."""
 
-    def do_GET(self):  # noqa: N802  (stdlib API)
+    def do_GET(self):
         if self.path.startswith("/api"):
             self._serve_json()
         else:
@@ -113,7 +113,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 body = build_dashboard_response(scope=scope_param)
             else:
                 body = build_dashboard_response_multi()
-        except Exception as exc:  # pragma: no cover - defensive
+        except Exception as exc:  # noqa: BLE001 - deliberate: any render failure becomes an error page, never a dead server  # pragma: no cover
             import html as _html
 
             body = f"<h1>ATAR dashboard error</h1><pre>{_html.escape(str(exc))}</pre>"

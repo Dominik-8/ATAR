@@ -1,5 +1,4 @@
 import os
-import tempfile
 
 from click.testing import CliRunner
 
@@ -74,6 +73,7 @@ name = "scout"
     reg_file = os.path.join(tmp_path, "agents", "registry.json")
     import json
 
-    reg = json.load(open(reg_file))
+    with open(reg_file) as _f:
+        reg = json.load(_f)
     assert "seed_agent" in reg and "scout" in reg
     assert reg.get("_seed") == reg["seed_agent"]["did"]

@@ -1,11 +1,9 @@
-from atar.identity import generate_identity, did_from_public
-from atar.vouch import create_vouch
+from atar.identity import did_from_public, generate_identity
 from atar.transparency import (
-    TrustGraph,
     canonical_vouch_id,
-    add_vouch,
     graph_from_vouches,
 )
+from atar.vouch import create_vouch
 
 
 def _make_vouch(issuer, subject_pub, score, scope):

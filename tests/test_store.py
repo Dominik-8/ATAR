@@ -1,10 +1,9 @@
 import os
-import json
 import tempfile
 
-from atar.identity import generate_identity, did_from_public
-from atar.vouch import create_vouch
+from atar.identity import did_from_public, generate_identity
 from atar.store import VouchStore, add_vouch_file, load_store, save_store
+from atar.vouch import create_vouch
 
 
 def test_vouch_store_persists_and_reloads():

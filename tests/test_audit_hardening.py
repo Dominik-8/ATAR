@@ -1,7 +1,6 @@
 """Pre-publication audit nice-to-haves: key-file permissions, --score bounds,
 evidence preservation on VC export and rotation re-issue."""
 
-import json
 import os
 import stat
 

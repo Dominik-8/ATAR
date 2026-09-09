@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -32,7 +33,8 @@ def _build_home_a(tmp_path):
     runner = CliRunner()
     _run(runner, ["keygen", "--name", "alice"], env)
     _run(runner, ["keygen", "--name", "bob"], env)
-    keys = json.load(open(os.path.join(home_a, "keys.json")))
+    with open(os.path.join(home_a, "keys.json")) as _f:
+        keys = json.load(_f)
     bob = keys["bob"]["did"]
     _run(
         runner,
@@ -59,7 +61,8 @@ def _build_home_a(tmp_path):
         carol, dave.public_key, score=0.4, scope="coding", ts=1_700_000_000
     )
     fpath = os.path.join(home_a, "foreign.json")
-    json.dump(foreign, open(fpath, "w"))
+    with open(fpath, "w") as _f:
+        json.dump(foreign, _f)
     _run(runner, ["add", fpath], env)
     _run(
         runner,
@@ -75,7 +78,8 @@ def test_roundtrip_carries_disputes_and_names(tmp_path):
     bundle = os.path.join(home_a, "net.atpkg")
     _run(runner, ["export", "--out", bundle], env_a)
 
-    data = json.load(open(bundle))
+    with open(bundle) as _f:
+        data = json.load(_f)
     assert len(data["vouches"]) == 2
     assert len(data["disputes"]) == 1, "export must include disputes"
     assert data["agents"]["alice"] and data["agents"]["bob"], (
@@ -118,7 +122,9 @@ def test_import_names_never_clobber_local_identity(tmp_path):
     env_b = {"ATAR_HOME": home_b}
     # home B already has its own "alice" - a DIFFERENT key
     _run(runner, ["keygen", "--name", "alice"], env_b)
-    b_alice = json.load(open(os.path.join(home_b, "keys.json")))["alice"]["did"]
+    b_alice = json.loads(
+        Path(os.path.join(home_b, "keys.json")).read_text(encoding="utf-8")
+    )["alice"]["did"]
     _run(runner, ["import", bundle], env_b)
 
     from atar.agent_bootstrap import known_agent_names

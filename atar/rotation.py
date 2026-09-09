@@ -23,9 +23,10 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
-from .identity import did_from_public
-from .vouch import create_vouch, _canonical
 from cryptography.exceptions import InvalidSignature
+
+from .identity import did_from_public
+from .vouch import _canonical, create_vouch
 
 
 @dataclass
@@ -45,7 +46,7 @@ class RotationStatement:
         }
 
     @classmethod
-    def from_dict(cls, d: dict) -> "RotationStatement":
+    def from_dict(cls, d: dict) -> RotationStatement:
         return cls(
             old_did=d["old_did"],
             new_did=d["new_did"],
@@ -124,7 +125,7 @@ def reissue_vouch(
     from .identity import public_key_from_did
 
     subj_pub = public_key_from_did(subject_did)
-    out = create_vouch(
+    return create_vouch(
         new_issuer,
         subj_pub,
         score=float(score if score is not None else p["score"]),
@@ -132,4 +133,3 @@ def reissue_vouch(
         claim=p.get("claim"),
         evidence=p.get("evidence"),
     )
-    return out

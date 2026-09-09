@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 from click.testing import CliRunner
 
@@ -28,7 +29,8 @@ def _setup(tmp_path):
     for name in ("alice", "bob"):
         r = runner.invoke(cli, ["keygen", "--name", name], env=env)
         assert r.exit_code == 0, r.output
-    keys = json.load(open(home / "keys.json"))
+    with open(home / "keys.json") as _f:
+        keys = json.load(_f)
     return runner, env, home, keys
 
 
@@ -53,12 +55,13 @@ def test_vouch_for_accepts_local_name(tmp_path):
         env=env,
     )
     assert r.exit_code == 0, r.output
-    blob = json.load(open(out))
+    with open(out) as _f:
+        blob = json.load(_f)
     assert blob["payload"]["subject"] == keys["bob"]["did"]
 
 
 def test_vouch_for_unknown_name_errors_clearly(tmp_path):
-    runner, env, home, _ = _setup(tmp_path)
+    runner, env, _home, _ = _setup(tmp_path)
     r = runner.invoke(
         cli,
         [
@@ -99,7 +102,10 @@ def test_vouch_for_still_accepts_raw_did(tmp_path):
         env=env,
     )
     assert r.exit_code == 0, r.output
-    assert json.load(open(out))["payload"]["subject"] == keys["bob"]["did"]
+    assert (
+        json.loads(Path(out).read_text(encoding="utf-8"))["payload"]["subject"]
+        == keys["bob"]["did"]
+    )
 
 
 def test_issue_for_accepts_local_name(tmp_path):
@@ -123,7 +129,10 @@ def test_issue_for_accepts_local_name(tmp_path):
         env=env,
     )
     assert r.exit_code == 0, r.output
-    assert json.load(open(out))["payload"]["subject"] == keys["bob"]["did"]
+    assert (
+        json.loads(Path(out).read_text(encoding="utf-8"))["payload"]["subject"]
+        == keys["bob"]["did"]
+    )
 
 
 def test_graph_seed_accepts_local_name(tmp_path):
@@ -154,7 +163,7 @@ def test_graph_seed_accepts_local_name(tmp_path):
 
 
 def test_dashboard_seed_accepts_local_name(tmp_path):
-    runner, env, home, keys = _setup(tmp_path)
+    runner, env, home, _keys = _setup(tmp_path)
     v = str(home / "v.json")
     runner.invoke(
         cli,
@@ -185,7 +194,7 @@ def test_dashboard_seed_accepts_local_name(tmp_path):
 
 
 def test_graph_seed_unknown_name_errors_clearly(tmp_path):
-    runner, env, home, _ = _setup(tmp_path)
+    runner, env, _home, _ = _setup(tmp_path)
     r = runner.invoke(cli, ["graph", "--seed", "ghost"], env=env)
     assert r.exit_code != 0
     assert "no local identity" in (r.output or str(r.exception))

@@ -79,7 +79,7 @@ def public_key_from_did(did: str) -> Ed25519PublicKey:
     wrong key length) — callers decide whether to reject or skip.
     """
     if not isinstance(did, str):
-        raise ValueError(f"not a DID string: {did!r}")
+        raise ValueError(f"not a DID string: {did!r}")  # noqa: TRY004 - documented public contract: callers catch ValueError for every malformed-DID case
     if did.startswith(DID_KEY_PREFIX):
         multibase_value = did[len(DID_KEY_PREFIX) :]
         if not multibase_value.startswith("z"):

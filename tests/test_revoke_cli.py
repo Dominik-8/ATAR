@@ -1,6 +1,4 @@
-import os
 import json
-import tempfile
 
 from click.testing import CliRunner
 
@@ -13,7 +11,9 @@ def test_revoke_cli_writes_revocation(tmp_path, monkeypatch):
     # register an agent + create a vouch (export it to a file)
     runner.invoke(cli, ["keygen", "--name", "alice"])
     r2 = runner.invoke(cli, ["keygen", "--name", "bob"])
-    bob_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
+    bob_did = next(
+        line for line in r2.output.splitlines() if line.startswith("did:key:")
+    )
     out = tmp_path / "v.json"
     runner.invoke(
         cli,

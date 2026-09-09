@@ -9,13 +9,12 @@ import sys
 import time
 import urllib.request
 
-import pytest
-
 
 def test_serve_http_smoke(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))
     # bootstrap a tiny real network first
     from click.testing import CliRunner
+
     from atar.cli import cli
 
     r = CliRunner().invoke(cli, ["keygen", "--name", "seed"])
@@ -38,7 +37,7 @@ def test_serve_http_smoke(tmp_path, monkeypatch):
                     assert resp.status == 200, f"status {resp.status}"
                     html = resp.read().decode("utf-8")
                 break
-            except Exception:
+            except Exception:  # noqa: BLE001 - poll loop: any connection failure means "not up yet"
                 time.sleep(0.1)
         assert html is not None, "server did not respond"
         # dashboard markers
@@ -48,5 +47,5 @@ def test_serve_http_smoke(tmp_path, monkeypatch):
         proc.terminate()
         try:
             proc.wait(timeout=5)
-        except Exception:
+        except Exception:  # noqa: BLE001 - cleanup: kill the process no matter why wait() failed
             proc.kill()

@@ -24,7 +24,9 @@ def test_readme_quickstart_end_to_end(tmp_path, monkeypatch):
     assert runner.invoke(cli, ["keygen", "--name", "alice"]).exit_code == 0
     r_bob = runner.invoke(cli, ["keygen", "--name", "bob"])
     assert r_bob.exit_code == 0
-    bob_did = [l for l in r_bob.output.splitlines() if l.startswith("did:key:")][0]
+    bob_did = next(
+        line for line in r_bob.output.splitlines() if line.startswith("did:key:")
+    )
 
     vouch_file = tmp_path / "bob-vouch.json"
     r = runner.invoke(
@@ -82,7 +84,7 @@ def test_readme_quickstart_lists_the_add_step():
 
     readme = Path(__file__).parent.parent / "README.md"
     quickstart = re.search(
-        r"## Quickstart\n\n```bash\n(.*?)```", readme.read_text(), re.S
+        r"## Quickstart\n\n```bash\n(.*?)```", readme.read_text(), re.DOTALL
     )
     assert quickstart, "README quickstart block not found"
     body = quickstart.group(1)

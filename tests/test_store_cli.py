@@ -1,6 +1,3 @@
-import os
-import json
-
 from click.testing import CliRunner
 
 from atar.cli import cli
@@ -12,7 +9,9 @@ def test_add_and_list_store(tmp_path, monkeypatch):
     # create a vouch via the existing vouch command
     runner.invoke(cli, ["keygen", "--name", "alice"])
     r2 = runner.invoke(cli, ["keygen", "--name", "bob"])
-    bob_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
+    bob_did = next(
+        line for line in r2.output.splitlines() if line.startswith("did:key:")
+    )
     out = tmp_path / "sub" / "v.json"
     out.parent.mkdir()
     runner.invoke(
@@ -50,7 +49,9 @@ def test_store_survives_restart(tmp_path, monkeypatch):
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "alice"])
     r2 = runner.invoke(cli, ["keygen", "--name", "bob"])
-    bob_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
+    bob_did = next(
+        line for line in r2.output.splitlines() if line.startswith("did:key:")
+    )
     out = tmp_path / "sub" / "v.json"
     out.parent.mkdir()
     runner.invoke(

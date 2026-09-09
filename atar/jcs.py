@@ -31,7 +31,7 @@ def _quote(s: str) -> str:
         if esc is not None:
             out.append(esc)
         elif ord(ch) < 0x20:
-            out.append("\\u%04x" % ord(ch))
+            out.append(f"\\u{ord(ch):04x}")
         else:
             out.append(ch)
     out.append('"')

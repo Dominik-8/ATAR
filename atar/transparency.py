@@ -112,9 +112,9 @@ class TrustGraph:
             from .freshness import is_fresh
 
             for vid, v in self._vouches.items():
-                if revocations is not None and revocations.is_revoked_for(v):
-                    excluded.add(vid)
-                elif ttl is not None and not is_fresh(v, ttl=ttl, now=now):
+                if (revocations is not None and revocations.is_revoked_for(v)) or (
+                    ttl is not None and not is_fresh(v, ttl=ttl, now=now)
+                ):
                     excluded.add(vid)
 
         discounted: set[str] = set()

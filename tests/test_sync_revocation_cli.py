@@ -1,13 +1,11 @@
-import os
 import json
-import tempfile
+import os
 
 from click.testing import CliRunner
 
 from atar.cli import cli
+from atar.revocation import RevocationList, revoke_payload_id
 from atar.store import VouchStore
-from atar.revocation import RevocationList, revoke_vouch, revoke_payload_id
-from atar.identity import generate_identity, did_from_public
 
 
 def _seed_alice_with_vouch(home, monkeypatch):
@@ -16,7 +14,9 @@ def _seed_alice_with_vouch(home, monkeypatch):
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "alice"])
     r2 = runner.invoke(cli, ["keygen", "--name", "bob"])
-    bob_did = [l for l in r2.output.splitlines() if l.startswith("did:key:")][0]
+    bob_did = next(
+        line for line in r2.output.splitlines() if line.startswith("did:key:")
+    )
     out = os.path.join(home, "v.json")
     runner.invoke(
         cli,
@@ -50,11 +50,11 @@ def test_sync_propagates_revocation(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", alice)
     runner = CliRunner()
     # write the vouch to a file, then revoke it
-    from atar.store import VouchStore
 
     v = VouchStore(os.path.join(alice, "vouches.json")).all()[0]
     vf = os.path.join(alice, "v.json")
-    json.dump(v, open(vf, "w"))
+    with open(vf, "w") as _f:
+        json.dump(v, _f)
     r = runner.invoke(cli, ["revoke", vf])
     assert r.exit_code == 0
     assert RevocationList.load(os.path.join(alice, "revocations.json")).is_revoked(
@@ -76,11 +76,11 @@ def test_revoked_vouch_rejected_after_sync(tmp_path, monkeypatch):
 
     monkeypatch.setenv("ATAR_HOME", alice)
     runner = CliRunner()
-    from atar.store import VouchStore
 
     v = VouchStore(os.path.join(alice, "vouches.json")).all()[0]
     vf = os.path.join(alice, "v.json")
-    json.dump(v, open(vf, "w"))
+    with open(vf, "w") as _f:
+        json.dump(v, _f)
     runner.invoke(cli, ["revoke", vf])
     runner.invoke(cli, ["sync", "--with", bob])
 

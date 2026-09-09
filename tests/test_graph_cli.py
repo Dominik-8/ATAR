@@ -1,8 +1,9 @@
-from atar.identity import generate_identity, did_from_public
-from atar.vouch import create_vouch
-from atar.transparency import graph_from_vouches, TrustGraph
-from atar.cli import cli
 from click.testing import CliRunner
+
+from atar.cli import cli
+from atar.identity import did_from_public, generate_identity
+from atar.transparency import graph_from_vouches
+from atar.vouch import create_vouch
 
 
 def _seed_graph():

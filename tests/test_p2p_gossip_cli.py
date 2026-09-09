@@ -13,8 +13,7 @@ import json
 import os
 import subprocess
 import sys
-
-import pytest
+from pathlib import Path
 
 
 def _atar():
@@ -24,9 +23,9 @@ def _atar():
 def _cli(home, *args):
     """Run an atar command in-process (synchronous, no race)."""
     from click.testing import CliRunner
+
     from atar.cli import cli
 
-    env = {**os.environ, "ATAR_HOME": home}
     old = os.environ.get("ATAR_HOME")
     os.environ["ATAR_HOME"] = home
     try:
@@ -43,13 +42,18 @@ def _sync_subprocess(home, peer):
     """Run `atar sync` as a REAL subprocess (the CLI command under test)."""
     env = {**os.environ, "ATAR_HOME": home}
     r = subprocess.run(
-        _atar() + ["sync", "--with", peer], capture_output=True, text=True, env=env
+        [*_atar(), "sync", "--with", peer],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
     )
     return r.returncode, r.stdout + r.stderr
 
 
 def _did(home, name):
-    keys = json.load(open(os.path.join(home, "keys.json")))
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     return keys[name]["did"]
 
 
@@ -57,7 +61,7 @@ def _count(home):
     p = os.path.join(home, "vouches.json")
     if not os.path.exists(p):
         return 0
-    return len(json.load(open(p))["vouches"])
+    return len(json.loads(Path(p).read_text(encoding="utf-8"))["vouches"])
 
 
 def test_p2p_gossip_between_two_peers(tmp_path):
@@ -155,4 +159,6 @@ def test_p2p_revocation_gossip(tmp_path):
 
     rl = os.path.join(b, "revocations.json")
     assert os.path.exists(rl), "revocation did not gossip to peer B"
-    assert len(json.load(open(rl))) >= 1, "revocation list empty on peer B"
+    assert len(json.loads(Path(rl).read_text(encoding="utf-8"))) >= 1, (
+        "revocation list empty on peer B"
+    )

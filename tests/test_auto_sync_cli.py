@@ -1,6 +1,5 @@
-import os
 import json
-import tempfile
+import os
 
 from click.testing import CliRunner
 
@@ -33,7 +32,8 @@ def test_auto_sync_hook_reads_peer_list(tmp_path, monkeypatch):
 
     # peer list declares the peer home
     peers_file = os.path.join(seed_agent_home, "atar_peers.json")
-    json.dump({"peers": [peer_home]}, open(peers_file, "w"))
+    with open(peers_file, "w") as _f:
+        json.dump({"peers": [peer_home]}, _f)
 
     runner = CliRunner()
     r = runner.invoke(cli, ["auto-sync"])
@@ -62,7 +62,8 @@ def test_auto_sync_hook_missing_peer_dir_is_skipped(tmp_path, monkeypatch):
     monkeypatch.setenv("ATAR_HOME", seed_agent_home)
     _seed_seed_agent_home(seed_agent_home, monkeypatch)
     peers_file = os.path.join(seed_agent_home, "atar_peers.json")
-    json.dump({"peers": [str(tmp_path / "does_not_exist")]}, open(peers_file, "w"))
+    with open(peers_file, "w") as _f:
+        json.dump({"peers": [str(tmp_path / "does_not_exist")]}, _f)
     runner = CliRunner()
     r = runner.invoke(cli, ["auto-sync"])
     assert r.exit_code == 0  # missing peer dir is skipped, not fatal

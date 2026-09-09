@@ -1,11 +1,9 @@
-import os
-import time
 import json
-import tempfile
+import time
 
-from atar.revocation import RevocationList, revoke_vouch, revoke_payload_id
-from atar.identity import generate_identity, did_from_public
-from atar.vouch import create_vouch, verify_vouch
+from atar.identity import generate_identity
+from atar.revocation import RevocationList, revoke_payload_id, revoke_vouch
+from atar.vouch import create_vouch
 
 
 def _make_vouch():
@@ -17,9 +15,9 @@ def _make_vouch():
 
 def test_vouch_expires_after_ttl():
     """A vouch past its TTL is treated as not-trusted (freshness enforcement)."""
-    from atar.freshness import is_fresh, VOUCH_TTL_DEFAULT
+    from atar.freshness import VOUCH_TTL_DEFAULT, is_fresh
 
-    issuer, v = _make_vouch()
+    _issuer, v = _make_vouch()
     # freshly created vouch (ts near now) is fresh
     assert is_fresh(v, ttl=VOUCH_TTL_DEFAULT) is True
     # a vouch whose ts is older than the TTL is stale
@@ -32,7 +30,7 @@ def test_vouch_expires_after_ttl():
 def test_revoked_vs_expired_distinct():
     """Expiry is independent of revocation: a vouch can be fresh-but-revoked
     or valid-but-expired. Both must be rejected by a trust-aware check."""
-    from atar.freshness import is_fresh, VOUCH_TTL_DEFAULT, trust_valid
+    from atar.freshness import VOUCH_TTL_DEFAULT, trust_valid
 
     issuer, v = _make_vouch()
     # valid + fresh
@@ -51,8 +49,9 @@ def test_revoked_vs_expired_distinct():
 def test_freshness_cli_flag(tmp_path, monkeypatch):
     """atar verify --max-age reports EXPIRED for a stale (but validly signed) vouch."""
     from click.testing import CliRunner
+
     from atar.cli import cli
-    from atar.identity import generate_identity, did_from_public
+    from atar.identity import generate_identity
     from atar.vouch import create_vouch
 
     monkeypatch.setenv("ATAR_HOME", str(tmp_path))

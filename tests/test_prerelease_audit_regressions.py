@@ -16,16 +16,16 @@ Each test pins one defect the audit found and fixed:
 import json
 import os
 import stat
+from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 
 from atar.cli import cli
-from atar.identity import generate_identity, did_from_public
-from atar.vouch import create_vouch
-from atar.transparency import graph_from_vouches
+from atar.identity import did_from_public, generate_identity
 from atar.store import VouchStore
-
+from atar.transparency import graph_from_vouches
+from atar.vouch import create_vouch
 
 # --- self-vouches carry no transitive trust (SPEC §13) ----------------------
 
@@ -72,8 +72,6 @@ def test_dashboard_paths_and_revoked_flag_work_with_legacy_did_spelling():
     trust path and REVOKED flag (alias-aware dashboard, SPEC §2.1)."""
     from atar.dashboard import dashboard_data
     from atar.identity import legacy_did_agent_from_public
-    from atar.revocation import RevocationList, revoke_vouch, revoke_payload_id
-    from atar.identity import Identity
 
     seed = generate_identity()
     subj = generate_identity()
@@ -102,7 +100,8 @@ def _mkhome_with_vouch(home, monkeypatch):
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "a"])
     runner.invoke(cli, ["keygen", "--name", "b"])
-    keys = json.load(open(os.path.join(home, "keys.json")))
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     runner.invoke(
         cli,
         [
@@ -148,7 +147,8 @@ def test_keygen_refuses_overwrite_without_force(tmp_path, monkeypatch):
     r2 = runner.invoke(cli, ["keygen", "--name", "a"])
     assert r2.exit_code == 1
     assert "refusing to overwrite" in r2.output
-    keys = json.load(open(os.path.join(str(tmp_path), "keys.json")))
+    with open(os.path.join(str(tmp_path), "keys.json")) as _f:
+        keys = json.load(_f)
     assert keys["a"]["did"] == did1  # key untouched
     r3 = runner.invoke(cli, ["keygen", "--name", "a", "--force"])
     assert r3.exit_code == 0
@@ -171,6 +171,7 @@ def test_reissue_without_rotation_fails_cleanly(tmp_path, monkeypatch):
 def test_sync_with_url_skips_malformed_remote_entries(tmp_path, monkeypatch):
     import threading
     from http.server import BaseHTTPRequestHandler, HTTPServer
+
     from atar.peer import sync_with_url
     from atar.revocation import RevocationList
 
@@ -244,7 +245,7 @@ def test_store_survives_simulated_crash_mid_write(tmp_path):
     subj = generate_identity()
     store = VouchStore(path)
     store.add(create_vouch(seed, subj.public_key, score=0.9, scope="s"))
-    good = open(path, "rb").read()
+    good = Path(path).read_bytes()
     # simulate a crashed partial write (what a non-atomic save could leave)
     with open(path, "wb") as f:
         f.write(good[: len(good) // 2])

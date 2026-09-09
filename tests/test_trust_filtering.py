@@ -30,7 +30,7 @@ def _chain():
 
 
 def test_revoked_vouch_propagates_no_trust():
-    g, seed, alice, bob, v_sa, v_ab = _chain()
+    g, seed, alice, bob, v_sa, _v_ab = _chain()
     rl = RevocationList()
     assert revoke_vouch(rl, seed, revoke_payload_id(v_sa))
     trust = g.compute_trust(
@@ -48,7 +48,7 @@ def test_revoked_vouch_propagates_no_trust():
 
 def test_revocation_by_non_issuer_does_not_apply():
     """SPEC §6: only the issuer's revocation kills a vouch."""
-    g, seed, alice, bob, v_sa, _ = _chain()
+    g, seed, alice, _bob, v_sa, _ = _chain()
     mallory = generate_identity()
     rl = RevocationList()
     # mallory "revokes" alice's vouch - entry verifies against her own key
@@ -83,7 +83,7 @@ def test_expired_vouch_propagates_no_trust():
 
 def test_dispute_and_revocation_compose():
     """A revoked disputer's warnings count for nothing (pass 1 is filtered)."""
-    g, seed, alice, bob, v_sa, v_ab = _chain()
+    g, seed, _alice, bob, _v_sa, v_ab = _chain()
     carol = generate_identity()
     v_sc = create_vouch(seed, carol.public_key, score=0.9, scope="coding")
     g.add(v_sc)

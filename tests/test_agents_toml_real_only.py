@@ -9,7 +9,6 @@ belong in demo.toml.
 import os
 import tomllib
 
-
 _CONFIG = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "agents.toml"
 )

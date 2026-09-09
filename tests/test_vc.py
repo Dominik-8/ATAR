@@ -27,7 +27,6 @@ from atar.vc import (
 )
 from atar.vouch import _canonical, create_vouch
 
-
 # --- JCS (RFC 8785) — vectors cross-checked against the reference ---------
 # implementation (rfc8785) during development, hardcoded here so the repo
 # carries no extra dependency.
@@ -44,7 +43,7 @@ from atar.vouch import _canonical, create_vouch
         ({"num": 1e21}, b'{"num":1e+21}'),
         ({"num": -0.0}, b'{"num":0}'),
         ({"s": '\t\n"\\'}, b'{"s":"\\t\\n\\"\\\\"}'),
-        ({"uni": "héllo €"}, '{"uni":"héllo €"}'.encode("utf-8")),
+        ({"uni": "héllo €"}, '{"uni":"héllo €"}'.encode()),
         ({"z": [1, 2.5, None, True, False]}, b'{"z":[1,2.5,null,true,false]}'),
     ],
 )
@@ -74,7 +73,7 @@ def _vouch(**kw):
 
 
 def test_vouch_to_credential_mapping():
-    issuer, v = _vouch(score=0.95, scope="coding")
+    _issuer, v = _vouch(score=0.95, scope="coding")
     cred = vouch_to_credential(v)
     assert VC_CONTEXT_V2 in cred["@context"]
     assert cred["type"] == ["VerifiableCredential", VC_TYPE_VOUCH]
@@ -172,7 +171,7 @@ def test_credential_to_vouch_payload_roundtrip():
 
 
 def test_sign_credential_rejects_non_issuer_key():
-    issuer, v = _vouch()
+    _issuer, v = _vouch()
     cred = vouch_to_credential(v)
     with pytest.raises(ValueError):
         sign_credential(cred, generate_identity())

@@ -12,7 +12,8 @@ from atar.cli import cli
 
 
 def _did(home, name):
-    keys = json.load(open(os.path.join(home, "keys.json")))
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     return keys[name]["did"]
 
 

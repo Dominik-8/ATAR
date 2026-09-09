@@ -1,5 +1,5 @@
-import os
 import json
+import os
 
 from click.testing import CliRunner
 
@@ -12,7 +12,8 @@ def _seed(home, monkeypatch):
     runner = CliRunner()
     runner.invoke(cli, ["keygen", "--name", "seed_agent"])
     runner.invoke(cli, ["keygen", "--name", "bob"])
-    keys = json.load(open(os.path.join(home, "keys.json")))
+    with open(os.path.join(home, "keys.json")) as _f:
+        keys = json.load(_f)
     bob = keys["bob"]["did"]
     runner.invoke(
         cli,

@@ -183,7 +183,7 @@ def sign_agent_card(card: dict, identity) -> dict:
         "signature": _b64url_encode(identity.sign(signing_input)),
     }
     out = dict(card)
-    out["signatures"] = list(card.get("signatures", [])) + [entry]
+    out["signatures"] = [*card.get("signatures", []), entry]
     return out
 
 
@@ -272,7 +272,7 @@ def new_pop_challenge() -> str:
 
 def pop_message(did: str, nonce: str) -> bytes:
     """The exact bytes a PoP proof signs (domain-separated, DID-bound)."""
-    return f"{POP_CONTEXT}|{did}|{nonce}".encode("utf-8")
+    return f"{POP_CONTEXT}|{did}|{nonce}".encode()
 
 
 def sign_pop_proof(identity, did: str, nonce: str) -> dict:
