@@ -33,7 +33,9 @@ first, watch it fail, then implement.
 
 ## Code style
 
-- Format with `ruff format` (or `black`).
+- Format with `ruff format` and lint with `ruff check` — both run in CI
+  (ruff is pinned in the `dev` extra; rule set lives in `pyproject.toml`).
+  `ruff check` must pass without new `noqa` exceptions.
 - Type hints required on public functions.
 - No new dependencies without discussion — ATAR deliberately stays minimal
   (cryptography, base58, click).
