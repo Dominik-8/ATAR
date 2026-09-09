@@ -66,12 +66,13 @@ that speaks the standard formats.*
   (SPEC §3.2) and signed disputes against foreign vouches (SPEC §8.2),
   gossiped over both transports and honored in trust computation (trusted
   disputers only).
-- **C4 — Standardization path.** Drafts prepared 2026-09-08 for the
-  owner's review (nothing submitted): `docs/standardization/` holds a W3C
-  community intro post and an IETF Internet-Draft skeleton
-  (`draft-dbrueck-atar-lifecycle-00`) positioning the lifecycle
-  (revocation, TTL, rotation, disputes) as the contribution. Next step is
-  the owner's call: review, then submit/join.
+- **C4 — Standardization path.** Package completed 2026-09-09, ready for
+  the owner's review (nothing submitted): `docs/standardization/` holds the
+  complete Internet-Draft `draft-dbrueck-atar-lifecycle-00` (kramdown
+  source + validated RFCXML/text/HTML renderings) specifying the lifecycle
+  (revocation, TTL, rotation, disputes) as the contribution, the polished
+  W3C community intro post, and a click-by-click submission guide. Next
+  step is the owner's call: review, then submit/join.
 
 ## What deliberately stays
 

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Standardization package (review-ready, not submitted): the complete
+  Internet-Draft `draft-dbrueck-atar-lifecycle-00` (kramdown source plus
+  validated RFCXML, text and HTML renderings) specifying the attestation
+  lifecycle (revocation, freshness/TTL, key rotation, disputes, gossip
+  transport, score semantics); the polished W3C Agent Identity Registry
+  Protocol Community Group intro post; and a click-by-click review and
+  submission guide (`docs/standardization/`).
+
 ### Changed
 - Applied the deferred repo-wide `ruff format` sweep (94 files). Purely
   cosmetic: every changed file is AST-identical to its previous revision and
