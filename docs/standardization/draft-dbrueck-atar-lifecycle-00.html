@@ -32,7 +32,7 @@ defines no new identity, attestation, or presentation format.
 <meta content="draft-dbrueck-atar-lifecycle-00" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.34.0
-    Python 3.12.13
+    Python 3.10.12
     ConfigArgParse 1.7.7
     google-i18n-address 3.1.1
     intervaltree 3.2.1
@@ -44,6 +44,7 @@ defines no new identity, attestation, or presentation format.
     PyYAML 6.0.3
     requests 2.34.2
     wcwidth 0.8.3
+    weasyprint 70.0
 -->
 <link href="draft-dbrueck-atar-lifecycle-00.xml" rel="alternate" type="application/rfc+xml">
 <link href="#copyright" rel="license">
@@ -1856,7 +1857,7 @@ exported VC.<a href="#section-3.6-1" class="pilcrow">¶</a></p>
       <h2 id="name-revocation-active-kill">
 <a href="#section-4" class="section-number selfRef">4. </a><a href="#name-revocation-active-kill" class="section-name selfRef">Revocation (Active Kill)</a>
       </h2>
-<p id="section-4-1">A vouch may be revoked by its issuer. Revocation is modelled on CRL and
+<p id="section-4-1">A vouch may be revoked by its issuer. Revocation is modeled on CRL and
 OCSP semantics but is local and peer-propagated: there is no certificate
 authority, no responder, and no ledger.<a href="#section-4-1" class="pilcrow">¶</a></p>
 <div id="sec-revocation-format">
@@ -2437,12 +2438,8 @@ relied on; issuers should treat evidence URIs as public information.<a href="#se
 <span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8174">https://www.rfc-editor.org/info/rfc8174</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC8032">[RFC8032]</dt>
-        <dd>
-<span class="refAuthor">Josefsson, S.</span> and <span class="refAuthor">I. Liusvaara</span>, <span class="refTitle">"Edwards-Curve Digital Signature Algorithm (EdDSA)"</span>, <span class="seriesInfo">RFC 8032</span>, <span class="seriesInfo">DOI 10.17487/RFC8032</span>, <time datetime="2017-01" class="refDate">January 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8032">https://www.rfc-editor.org/info/rfc8032</a>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="DIDKEY">[DIDKEY]</dt>
       <dd>
-<span class="refAuthor">W3C Credentials Community Group</span>, <span class="refTitle">"The did:key Method v0.9"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://w3c-ccg.github.io/did-key-spec/">https://w3c-ccg.github.io/did-key-spec/</a>&gt;</span>. </dd>
+<span class="refAuthor">Josefsson, S.</span> and <span class="refAuthor">I. Liusvaara</span>, <span class="refTitle">"Edwards-Curve Digital Signature Algorithm (EdDSA)"</span>, <span class="seriesInfo">RFC 8032</span>, <span class="seriesInfo">DOI 10.17487/RFC8032</span>, <time datetime="2017-01" class="refDate">January 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8032">https://www.rfc-editor.org/info/rfc8032</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
@@ -2453,6 +2450,10 @@ relied on; issuers should treat evidence URIs as public information.<a href="#se
 <a href="#section-14.2" class="section-number selfRef">14.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
         </h3>
 <dl class="references">
+<dt id="DIDKEY">[DIDKEY]</dt>
+        <dd>
+<span class="refAuthor">W3C Credentials Community Group</span>, <span class="refTitle">"The did:key Method v0.9"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://w3c-ccg.github.io/did-key-spec/">https://w3c-ccg.github.io/did-key-spec/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC7942">[RFC7942]</dt>
         <dd>
 <span class="refAuthor">Sheffer, Y.</span> and <span class="refAuthor">A. Farrel</span>, <span class="refTitle">"Improving Awareness of Running Code: The Implementation Status Section"</span>, <span class="seriesInfo">BCP 205</span>, <span class="seriesInfo">RFC 7942</span>, <span class="seriesInfo">DOI 10.17487/RFC7942</span>, <time datetime="2016-07" class="refDate">July 2016</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc7942">https://www.rfc-editor.org/info/rfc7942</a>&gt;</span>. </dd>

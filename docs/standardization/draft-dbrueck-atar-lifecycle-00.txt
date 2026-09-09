@@ -417,7 +417,7 @@ Internet-Draft            Agent Trust Lifecycle           September 2026
 
 4.  Revocation (Active Kill)
 
-   A vouch may be revoked by its issuer.  Revocation is modelled on CRL
+   A vouch may be revoked by its issuer.  Revocation is modeled on CRL
    and OCSP semantics but is local and peer-propagated: there is no
    certificate authority, no responder, and no ledger.
 
@@ -926,10 +926,10 @@ Internet-Draft            Agent Trust Lifecycle           September 2026
               DOI 10.17487/RFC8032, January 2017,
               <https://www.rfc-editor.org/info/rfc8032>.
 
+14.2.  Informative References
+
    [DIDKEY]   W3C Credentials Community Group, "The did:key Method
               v0.9", 2026, <https://w3c-ccg.github.io/did-key-spec/>.
-
-14.2.  Informative References
 
    [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
               Code: The Implementation Status Section", BCP 205,

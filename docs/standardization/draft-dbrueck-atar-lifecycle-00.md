@@ -23,13 +23,13 @@ normative:
   RFC2119:
   RFC8174:
   RFC8032:
+informative:
   DIDKEY:
     target: https://w3c-ccg.github.io/did-key-spec/
     title: The did:key Method v0.9
     author:
       org: W3C Credentials Community Group
     date: 2026
-informative:
   RFC7942:
   RFC8785:
   DIDCORE:
@@ -388,7 +388,7 @@ exported VC.
 
 # Revocation (Active Kill) {#sec-revocation}
 
-A vouch may be revoked by its issuer. Revocation is modelled on CRL and
+A vouch may be revoked by its issuer. Revocation is modeled on CRL and
 OCSP semantics but is local and peer-propagated: there is no certificate
 authority, no responder, and no ledger.
 

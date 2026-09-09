@@ -232,7 +232,7 @@ A vouch is **trust-valid** only if, *additionally*:
 
 ## 6. Revocation (signed, local/P2P)
 
-A vouch may be **revoked** by its issuer. Revocation is modelled on CRL/OCSP
+A vouch may be **revoked** by its issuer. Revocation is modeled on CRL/OCSP
 but local and peer-propagated — no CA.
 
 One revocation entry:

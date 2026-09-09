@@ -77,7 +77,7 @@ class _PeerState:
         return "added" if self.store().add(vouch) else "duplicates"
 
     def admit_revocation(self, entry: dict) -> str:
-        """'added' | 'duplicate' | 'rejected' — signature + issuer binding."""
+        """'added' | 'duplicates' | 'rejected' — signature + issuer binding."""
         try:
             vid = entry["vid"]
         except (KeyError, TypeError):
