@@ -5,7 +5,7 @@ build/
 dist/
 *.egg-info/
 venv/
-.venv/
+.venv*/
 .env
 # generated artifacts (keep out of the repo) — root-scoped so they can
 # never swallow same-named fixtures under tests/vectors/ (this bit CI twice)
