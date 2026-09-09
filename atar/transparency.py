@@ -74,6 +74,15 @@ class TrustGraph:
         (issuer_trust * vouch_score), only counting edges within ``scope``.
         Seed node starts at 1.0. Decay < 1.0 weakens longer paths.
 
+        Propagation semantics (SPEC §8.1): the score is a fixed point over
+        *all* paths up to the depth bound, not a first-visit traversal —
+        level ``k`` accumulates the summed contribution of every length-``k``
+        path from the seed. The result therefore depends only on the set of
+        valid edges: it is independent of vouch insertion order, and adding
+        a vouch can never lower a score (it only adds non-negative terms).
+        Contributions are summed in a canonical (sorted) edge order so the
+        floating-point result is bit-identical for identical edge sets.
+
         Revocation + freshness (SPEC §8.1): only *valid, unrevoked,
         unexpired* vouches carry trust. When ``revocations`` (a
         RevocationList) is given, issuer-revoked vouches are excluded; when
@@ -136,33 +145,30 @@ class TrustGraph:
 
         seed_did = self._alias(seed_did)
         trust: dict[str, float] = {seed_did: 1.0}
-        # bounded propagation (BFS by trust contribution)
-        frontier = [seed_did]
-        visited = {seed_did}
-        depth = 0
-        while frontier:
-            depth += 1
-            factor = decay ** depth
-            if factor < 1e-9:
-                break
-            nxt = []
-            for issuer in frontier:
-                issuer_score = trust[issuer]
-                for subj, v_score in edges.get(issuer, []):
-                    contrib = issuer_score * v_score * factor
+        # Bounded fixed-point propagation (SPEC §8.1). ``level`` holds the
+        # summed contribution of all paths of exactly the current length;
+        # each step extends every path by one edge with one more decay
+        # factor. Bounded by depth 8 and the 1e-9 contribution floor.
+        # Iterating edges in canonical (sorted) order keeps floating-point
+        # summation order — and thus the exact scores — independent of the
+        # order vouches were inserted into the store.
+        canonical = {issuer: sorted(out) for issuer, out in
+                     sorted(edges.items())}
+        level: dict[str, float] = {seed_did: 1.0}
+        for _depth in range(1, 9):
+            nxt: dict[str, float] = {}
+            for issuer in sorted(level):
+                issuer_contrib = level[issuer]
+                for subj, v_score in canonical.get(issuer, []):
+                    contrib = issuer_contrib * v_score * decay
                     if contrib <= 0:
                         continue
-                    new_score = trust.get(subj, 0.0) + contrib
-                    if new_score > trust.get(subj, 0.0) or subj not in visited:
-                        trust[subj] = max(trust.get(subj, 0.0), new_score)
-                        if subj not in visited:
-                            visited.add(subj)
-                            nxt.append(subj)
-                    elif contrib > 0:
-                        # allow re-propagation if it improves, but cap depth
-                        if depth <= 8:
-                            nxt.append(subj)
-            frontier = nxt
+                    nxt[subj] = nxt.get(subj, 0.0) + contrib
+            if not nxt or max(nxt.values()) < 1e-9:
+                break
+            for subj, contrib in nxt.items():
+                trust[subj] = trust.get(subj, 0.0) + contrib
+            level = nxt
         return trust
 
 

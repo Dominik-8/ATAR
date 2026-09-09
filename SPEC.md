@@ -11,7 +11,7 @@
 > (web-of-trust) and can be revoked, expired, or rotated — so the graph stays
 > alive instead of rotting.
 
-Status: **implemented and tested** (285 tests, CI green). This document is the
+Status: **implemented and tested** (288 tests, CI green). This document is the
 authoritative wire + algorithm spec.
 
 ---
@@ -310,6 +310,11 @@ Given a seed DID (your own identity, or a trusted root) and a scope:
 - For each valid, unrevoked, unexpired vouch `issuer → subject (score s)`,
   the subject's trust is increased by `issuer_trust × s × decay^depth`.
 - Propagation is bounded (depth ≤ 8, or until contribution < 1e-9).
+- The score is the fixed point over **all** paths up to that bound, not a
+  first-visit traversal: the result depends only on the set of valid edges.
+  Equivalent edge sets therefore always yield identical scores regardless of
+  vouch insertion order, and adding a valid vouch can never lower an existing
+  score — it can only add non-negative terms (monotonicity).
 - Only cryptographically valid vouches are admitted, so a forgery cannot inject
   fake trust.
 

@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import random
 
-import pytest
-
 from atar.dispute import DisputeList, create_dispute
 from atar.identity import generate_identity
 from atar.revocation import RevocationList, revoke_vouch
@@ -73,17 +71,12 @@ def test_self_vouches_never_change_any_score():
         assert before == after
 
 
-@pytest.mark.xfail(reason="KNOWN ISSUE (filed for owner decision): propagation "
-                          "uses each issuer's trust at first-visit time and never "
-                          "re-queues a node whose trust later improves, so results "
-                          "depend on insertion order and adding a vouch can lower a "
-                          "score. See test_trust_propagation_order_independent.",
-                   strict=True)
 def test_adding_vouches_never_decreases_trust_without_disputes():
     """Monotonicity of the pure propagation per SPEC §8.1: more endorsements
-    can only add trust. Currently fails — see the order-dependence repro
-    below. (Disputes are exempt either way: a newly trusted disputer can
-    discount vouches, which is the SPEC §8.2 mechanism, not a leak.)"""
+    can only add trust. Regression test for the fixed order-dependence bug
+    (a node used to propagate its first-visit trust and was never re-queued
+    when its trust improved). Disputes are exempt: a newly trusted disputer
+    can discount vouches, which is the SPEC §8.2 mechanism, not a leak."""
     rng = random.Random(20260910)
     for _ in range(40):
         g, idents, _ = _random_graph(rng, self_vouches=False)
@@ -155,13 +148,10 @@ def test_other_scopes_never_leak_into_scope():
                                                          scope="coding")
 
 
-@pytest.mark.xfail(reason="KNOWN ISSUE (filed for owner decision): identical edge "
-                          "sets produce different trust scores depending on vouch "
-                          "insertion order — propagation is order-dependent.",
-                   strict=True)
 def test_trust_propagation_order_independent():
     """Minimal deterministic repro: the same four edges, inserted in two
-    different orders, must yield the same scores. Today they do not."""
+    different orders, must yield the same scores. Regression test for the
+    fixed order-dependence bug."""
     from atar.identity import did_from_public
 
     seed, a, b = generate_identity(), generate_identity(), generate_identity()
@@ -228,3 +218,56 @@ def test_reissued_vouch_does_not_double_count():
             _did(bob)]
 
     assert graph(with_reissue=False) == graph(with_reissue=True)
+
+
+def test_cycle_propagation_is_bounded_and_exact():
+    """Cycles must terminate: a 3-cycle of score-1.0 vouches keeps feeding
+    trust around forever in a naive traversal. SPEC §8.1 bounds propagation
+    at depth 8, so each node collects exactly the cycle passes that fit:
+    seed gets its baseline 1.0 plus the length-3 and length-6 returns
+    (3.0), a and b get three passes each (levels 1/4/7 and 2/5/8)."""
+    seed, a, b = generate_identity(), generate_identity(), generate_identity()
+    g = TrustGraph()
+    for issuer, subj in ((seed, a), (a, b), (b, seed)):
+        g.add(create_vouch(issuer, subj.public_key, score=1.0, scope="coding",
+                           ts=1_700_000_000))
+    trust = g.compute_trust(seed_did=_did(seed), scope="coding")
+    assert trust[_did(seed)] == 3.0
+    assert trust[_did(a)] == 3.0
+    assert trust[_did(b)] == 3.0
+    # decay shrinks each pass: same cycle with decay 0.5
+    trust_d = g.compute_trust(seed_did=_did(seed), scope="coding", decay=0.5)
+    assert abs(trust_d[_did(a)] - (0.5 + 0.5**4 + 0.5**7)) < 1e-12
+    assert abs(trust_d[_did(b)] - (0.5**2 + 0.5**5 + 0.5**8)) < 1e-12
+    assert abs(trust_d[_did(seed)] - (1.0 + 0.5**3 + 0.5**6)) < 1e-12
+
+
+def test_propagation_respects_depth_cap():
+    """A chain longer than the SPEC §8.1 depth bound (8) must stop: the node
+    at depth 9 earns nothing."""
+    idents = [generate_identity() for _ in range(10)]
+    g = TrustGraph()
+    for k in range(9):
+        g.add(create_vouch(idents[k], idents[k + 1].public_key, score=1.0,
+                           scope="coding", ts=1_700_000_000))
+    trust = g.compute_trust(seed_did=_did(idents[0]), scope="coding")
+    assert trust[_did(idents[8])] == 1.0  # depth 8: last counted hop
+    assert _did(idents[9]) not in trust   # depth 9: beyond the cap
+
+
+def test_all_insertion_orders_are_bit_identical():
+    """Stronger than the minimal repro: for several random graphs, EVERY
+    permutation of the insertion order must yield the exact same trust map
+    (bit-identical floats, not just within tolerance)."""
+    rng = random.Random(20260914)
+    for _ in range(10):
+        g, idents, vouches = _random_graph(rng, n_nodes=6, n_edges=12)
+        expected = g.compute_trust(seed_did=_did(idents[0]), scope="coding")
+        for _ in range(10):
+            perm = vouches[:]
+            rng.shuffle(perm)
+            shuffled = TrustGraph()
+            for v in perm:
+                shuffled.add(v)
+            assert shuffled.compute_trust(seed_did=_did(idents[0]),
+                                          scope="coding") == expected

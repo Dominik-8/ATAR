@@ -66,12 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`tests/test_trust_invariants.py`, seeded stdlib random, no new deps):
   non-negativity, seed baseline, self-vouch exclusion (SPEC §13),
   revocation monotonicity, inert Sybil disputers (SPEC §8.2), and scope
-  isolation. Two further invariants are encoded as strict xfails that
-  document a known issue filed for the owner's decision: trust propagation
-  is currently order-dependent (identical edge sets yield different scores
-  depending on insertion order, and adding a vouch can lower a score),
-  because a node is propagated with its trust at first-visit time and never
-  re-queued when its trust later improves.
+  isolation.
 
 - Extended the vectors to the remaining wire formats: ATC vouch token
   (§11.1), the A2A-compatible signed agent card (§11.2), and the signed
@@ -83,6 +78,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   proof. `tests/test_vectors.py` asserts the implementation keeps matching
   them, so a second implementation can verify interop against fixed targets
   and format drift cannot sneak in silently.
+
+### Fixed (2026-09-09, owner-approved algorithm correction)
+- **Trust propagation is now order-independent and monotone** (SPEC §8.1,
+  owner decision 2026-09-09). The previous traversal propagated each node
+  with its trust at first-visit time and never re-queued a node whose trust
+  later improved, so identical edge sets produced different scores depending
+  on vouch insertion order, and adding a valid vouch could lower an existing
+  score. `compute_trust` now computes the bounded fixed point over all paths
+  (depth ≤ 8, contribution floor 1e-9, decay applied per hop), summing
+  contributions in canonical (sorted) edge order so identical edge sets are
+  bit-identical. Computed scores change where the old traversal dropped
+  late-arriving contributions — this is the intended correction, approved
+  by the owner ahead of 1.0.0a2. The two strict-xfail repro tests are now
+  permanent passing regressions; new tests pin exact cycle values at the
+  depth bound, the depth-8 cap itself, and bit-identical scores across all
+  insertion orders of random graphs. Performance is unchanged in practice
+  (~100 ms per computation on a dense 200-node / 2000-vouch graph, within
+  ~4% of the old traversal; real graphs are far smaller).
 
 ### Fixed (overnight hardening, 2026-09)
 - A network without a configured trust seed no longer renders a bogus
